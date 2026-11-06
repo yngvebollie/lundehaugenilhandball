@@ -1,33 +1,43 @@
 import { useState, type FormEvent } from "react";
 import { Users, UserRound } from "lucide-react";
-import { createTeam, inviteMember, renameTeam, saveProfile, type Member, type Snapshot } from "@/lib/beta";
+import { createTeam, inviteBatch, saveTeamDetails, saveProfile, type Member, type Snapshot } from "@/lib/beta";
 import type { Run } from "./program-builder";
+import {TeamEntry} from "./team-entry";
 
 export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
-  const [name,setName]=useState("");
+  const teamName=data.teams.find(t=>t.id===data.me.squad)?.name||"";
+  const [name,setName]=useState(teamName);
+  const savedLogo=data.teams.find(t=>t.id===data.me.squad)?.logo||"";
+  const [logo,setLogo]=useState(savedLogo);
+  const [newName,setNewName]=useState(""),[status,setStatus]=useState("");
   const [email,setEmail]=useState("");
   const [role,setRole]=useState<Member["role"]>("athlete");
-  const [url,setUrl]=useState("");
+  const [links,setLinks]=useState<{email:string;url:string}[]>([]);
   const [copied,setCopied]=useState(false);
   async function invite(e:FormEvent){
-    e.preventDefault();setCopied(false);setUrl("");
-    await run(async()=>setUrl(await inviteMember(data.me.squad,email.trim().toLowerCase(),role)));
+    e.preventDefault();setCopied(false);
+    await run(async()=>setLinks(await inviteBatch(data.me.squad,email,role)));
   }
   return <section className="panel panel-pad grid" id="team"><h2><Users/> Team management</h2>
     <p className="muted">Coaching staff · {data.roster.filter(m=>m.role==="coach").map(m=>m.name).join(", ")}</p>
-    <label>Team name<input value={name} maxLength={80} placeholder={data.teams.find(t=>t.id===data.me.squad)?.name} onChange={e=>setName(e.target.value)}/></label>
-    <div className="day-strip"><button className="btn" disabled={!name.trim()||busy} onClick={()=>run(()=>createTeam(data.me,name.trim()))}>Create team</button><button className="btn" disabled={!name.trim()||busy} onClick={()=>run(()=>renameTeam(data.me.squad,name.trim()))}>Rename current team</button></div>
-    <form className="grid" onSubmit={invite}><label>Invite email<input type="email" required value={email} maxLength={254} onChange={e=>setEmail(e.target.value)}/></label><label>Invite role<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option><option value="coach">Coach</option></select></label><button className="btn" disabled={busy}>Create invitation link</button></form>
-    {url&&<><label>Invitation link · valid for 7 days<input value={url} readOnly onFocus={e=>e.target.select()}/></label><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(url);setCopied(true);}catch{setCopied(false);}}}>{copied?"Copied":"Copy invitation link"}</button></>}
-  </section>;
+    <form className="grid" onSubmit={async e=>{e.preventDefault();const next=name.trim();if(next&&await run(()=>saveTeamDetails(data.me.squad,next,logo))){setName(next);setStatus("Team details saved.");}}}><label>Team name<input value={name} maxLength={80} required onChange={e=>{setName(e.target.value);setStatus("");}}/></label>
+    {logo&&<img src={logo} width={72} height={72} alt="Team logo preview"/>}<label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e=>{const file=e.target.files?.[0];if(file)try{setLogo(await thumbnail(file,true));}catch(err){setStatus((err as Error).message);}}}/></label>
+    {logo&&<button className="btn" type="button" onClick={()=>setLogo("")}>Remove logo</button>}<button className="btn primary" disabled={busy||!name.trim()||(name.trim()===teamName&&logo===savedLogo)}>Save</button></form>
+    <details className="library-tools"><summary>Add another team</summary><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
+    {status&&<p role="status">{status}</p>}
+    <form className="grid" onSubmit={invite}><label>Invite emails<textarea rows={3} required value={email} maxLength={26000} placeholder="Paste up to 100 email addresses" onChange={e=>setEmail(e.target.value)}/></label><label>Invite role<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option><option value="coach">Coach</option></select></label><button className="btn" disabled={busy}>Create invitation links</button></form>
+    {links.length>0&&<><div className="invite-results grid">{links.map(item=><label key={item.email}>Invitation link · {item.email}<input value={item.url} readOnly onFocus={e=>e.target.select()}/></label>)}</div><small>Links expire in seven days. Share each link with its matching recipient.</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(links.map(l=>l.email+" "+l.url).join("\n"));setCopied(true);}catch{setCopied(false);}}}>{copied?"Copied":"Copy recipient links"}</button></>}
+    <TeamEntry data={data} run={run} busy={busy}/></section>;
 }
-async function thumbnail(file:File){
+async function thumbnail(file:File,fit=false){
   if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>8_000_000)throw Error("Choose a JPG, PNG or WebP under 8 MB.");
   const img=await createImageBitmap(file);
   try{
     const canvas=document.createElement("canvas");canvas.width=canvas.height=200;
     const edge=Math.min(img.width,img.height);
-    canvas.getContext("2d")!.drawImage(img,(img.width-edge)/2,(img.height-edge)/2,edge,edge,0,0,200,200);
+    const ctx=canvas.getContext("2d")!;
+    if(fit){const scale=200/Math.max(img.width,img.height);ctx.fillStyle="#ffffff";ctx.fillRect(0,0,200,200);ctx.drawImage(img,(200-img.width*scale)/2,(200-img.height*scale)/2,img.width*scale,img.height*scale);}
+    else ctx.drawImage(img,(img.width-edge)/2,(img.height-edge)/2,edge,edge,0,0,200,200);
     return canvas.toDataURL("image/jpeg",0.82);
   }finally{img.close();}
 }

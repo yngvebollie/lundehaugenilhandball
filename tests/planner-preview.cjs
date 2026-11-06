@@ -4,7 +4,8 @@ const assert=require("node:assert/strict");
   const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});
   try{
     const page=await browser.newPage({viewport:{width:1440,height:1050}});
-    await page.goto(process.env.BETA_TEST_URL||"http://127.0.0.1:3217");
+    await page.goto((process.env.BETA_TEST_URL||"http://127.0.0.1:3217")+"/login");
+    await page.getByRole("button",{name:"Open workspace"}).click();
     await page.getByRole("button",{name:"How to use Coach AI"}).click();
     await page.getByText(/Describe the body focus/).waitFor();
     await page.getByRole("button",{name:"How to use Coach AI"}).click();

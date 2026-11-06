@@ -4,7 +4,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});
   try{
     const page=await browser.newPage();
-    await page.goto(process.env.BETA_TEST_URL||"http://127.0.0.1:3217");
+    await page.goto((process.env.BETA_TEST_URL||"http://127.0.0.1:3217")+"/login");
+    await page.getByRole("button",{name:"Open workspace"}).click();
     const lines=page.getByLabel("Exercises, one per line");
     await lines.fill("squat 3x8");
     await page.getByText("AI coach assistant",{exact:true}).click();

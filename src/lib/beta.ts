@@ -3,7 +3,7 @@ import { env, hasSupabaseEnv } from "./env";
 import type { Program, Feedback } from "./programs";
 import type { Exercise, EventKind } from "./workload";
 
-export type Team = {id:string;name:string};
+export type Team = {id:string;name:string;discoverable?:boolean;logo?:string};
 export type Member = { id: string; squad: string; name: string; role: "coach" | "athlete";position?:string;bio?:string;photo?:string;email?:string };
 export type Assignment = { id: string; athlete: string; squad: string; title: string; day: string; exercises: string[]; program_name?:string|null; kind?:EventKind; minutes?:number|null; start_time?:string|null;personal?:boolean };
 export type Check = { assignment: string; step: number };
@@ -30,7 +30,7 @@ async function pages<T>(fetchPage:(start:number,end:number)=>PromiseLike<{data:T
 function localRows<T>(kind: string): T[] {
   return Object.keys(localStorage).filter(k => k.startsWith(prefix + kind)).flatMap(k => JSON.parse(localStorage.getItem(k) || "[]"));
 }
-const seedTeam:Team={id:"demo",name:"NHF Women · Senior squad"};
+const seedTeam:Team={id:"demo",name:"NHF Women · Senior squad",discoverable:true};
 function demoMembers(){
   const members=new Map(roster.map(m=>[m.id,{...m,email:m.id+"@demo.test"} as Member]));
   localRows<Member>("member:").forEach(m=>members.set(m.id,m));
@@ -65,8 +65,8 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
   if(!session) return null;
   const client=db;
   const identity = (await client.from("beta_members").select("*").eq("id",session.user.id).maybeSingle().throwOnError()).data as Member|null;
-  if(!identity) throw Error("Open your team invitation to finish joining.");
-  const teams=await pages<Team>((s,e)=>client.from("beta_teams").select("id,name").order("id").range(s,e).throwOnError());
+  if(!identity) throw Error("Finish joining your team using the team directory.");
+  const teams=await pages<Team>((s,e)=>client.from("beta_teams").select("id,name,discoverable,logo").order("id").range(s,e).throwOnError());
   const me={...identity,squad:activeTeam(identity,teams)};
   const [usage,members,library,programs,feedback,plans,checks] = await Promise.all([
     me.role==="coach"?pages<Usage>((s,e)=>client.from("beta_exercise_usage").select("exercise_key,uses,last_used").eq("coach",me.id).order("exercise_key").range(s,e).throwOnError()):[],
@@ -93,11 +93,18 @@ export async function createTeam(me:Member,name:string){
     localStorage.setItem(prefix+"team:"+id,JSON.stringify({id,name}));
     localStorage.setItem(prefix+"membership:"+me.id+id,JSON.stringify({id:me.id,team:id}));
   }else id=(await db!.rpc("beta_new_team",{label:name}).throwOnError()).data as string;
-  selectTeam(me.id,id);
+  // Creating a team only extends the coach's switcher; publishing stays in the active team.
 }
-export async function renameTeam(id:string,name:string){
-  if(demo)localStorage.setItem(prefix+"team:"+id,JSON.stringify({id,name}));
-  else await db!.from("beta_teams").update({name}).eq("id",id).select("id").single().throwOnError();
+export async function saveTeamDetails(id:string,name:string,logo:string){
+  if(demo)localStorage.setItem(prefix+"team:"+id,JSON.stringify({...([seedTeam,...localRows<Team>("team:")].reverse().find(t=>t.id===id)),id,name,logo}));
+  else await db!.from("beta_teams").update({name,logo}).eq("id",id).select("id").single().throwOnError();
+}
+export async function inviteBatch(team:string,input:string,role:Member["role"]){
+  const addresses=Array.from(new Set(input.toLowerCase().split(/[\s,;]+/).filter(Boolean)));
+  if(!addresses.length||addresses.length>100||addresses.some(e=>e.length>254||!/^\S+@[^@\s]+\.[^@\s]+$/.test(e)))throw Error("Enter up to 100 valid email addresses, separated by spaces, commas or new lines.");
+  if(demo)return Promise.all(addresses.map(async email=>({email,url:await inviteMember(team,email,role)})));
+  const records=(await db!.rpc("beta_bulk_invite",{team_id:team,addresses,member_role:role}).throwOnError()).data as {email:string;token:string}[];
+  return records.map(r=>({email:r.email,url:location.origin+"/login?invite="+r.token}));
 }
 export async function inviteMember(team:string,email:string,role:Member["role"]){
   let token:string=crypto.randomUUID();
@@ -109,14 +116,69 @@ export function joinDemo(token:string,email:string,name:string){
   const invite=JSON.parse(localStorage.getItem(prefix+"invite:"+token)||"null");
   if(!invite||invite.expires<Date.now()||invite.email!==email)throw Error("This invitation needs its original email and browser, and expires after seven days.");
   const existing=demoMembers().find(m=>m.email===email);
-  if(existing&&(existing.role!==invite.role||(existing.role==="athlete"&&existing.squad!==invite.team)))throw Error("This account already has a different role or athlete team.");
-  const member:Member=existing||{id:crypto.randomUUID(),email,name,role:invite.role,squad:invite.team};
+  if(existing&&(existing.role!==invite.role||(existing.role==="athlete"&&existing.squad&&existing.squad!==invite.team)))throw Error("This account already has a different role or athlete team.");
+  const member:Member=existing?{...existing,squad:existing.squad||invite.team}:{id:crypto.randomUUID(),email,name,role:invite.role,squad:invite.team};
   localStorage.setItem(prefix+"member:"+member.id,JSON.stringify(member));
   if(member.role==="coach")localStorage.setItem(prefix+"membership:"+member.id+invite.team,JSON.stringify({id:member.id,team:invite.team}));
   localStorage.removeItem(prefix+"invite:"+token);
   sessionStorage.setItem("nhf-persona",member.id);selectTeam(member.id,invite.team);
 }
 export function demoAccounts(){return demoMembers();}
+export type Teammate={id:string;name:string;role:string;photo?:string;playing_position?:string};
+export async function teamDirectory(team:string):Promise<Teammate[]>{
+  if(demo){const links=localRows<{id:string;team:string}>("membership:");return demoMembers().filter(m=>m.squad===team||links.some(l=>l.id===m.id&&l.team===team)).map(m=>({id:m.id,name:m.name,role:m.role,photo:m.photo,playing_position:m.position}));}
+  return (await db!.rpc("beta_directory",{target:team}).throwOnError()).data as Teammate[];
+}
+export type TeamMessage={id:string;team:string;athlete:string;sender:string;body:string;created_at:string};
+export async function thread(team:string,athlete:string):Promise<TeamMessage[]>{
+  if(demo)return localRows<TeamMessage>("msg:").filter(m=>m.team===team&&m.athlete===athlete).sort((a,b)=>a.created_at.localeCompare(b.created_at)).slice(-100);
+  return ((await db!.from("beta_team_messages").select("*").match({team,athlete}).order("created_at",{ascending:false}).limit(100).throwOnError()).data as TeamMessage[]).reverse();
+}
+export async function sendTeamMessage(me:Member,athlete:string,body:string){
+  if(demo){const id=crypto.randomUUID();localStorage.setItem(prefix+"msg:"+id,JSON.stringify({id,team:me.squad,athlete,sender:me.id,body,created_at:new Date().toISOString()}));}
+  else await db!.from("beta_team_messages").insert({team:me.squad,athlete,body}).throwOnError();
+}
+export type Application={team:string;person:string;name:string;status:"Pending"|"Approved"|"Declined"};
+export function registerDemoAthlete(email:string,name:string){
+  if(demoMembers().some(m=>m.email===email))throw Error("That demo account already exists. Sign in to continue.");
+  const id=crypto.randomUUID();localStorage.setItem(prefix+"member:"+id,JSON.stringify({id,email,name,squad:"",role:"athlete"}));sessionStorage.setItem("nhf-persona",id);
+}
+export async function admissions(action:string,args:{target?:string;applicant?:string;value?:string;label?:string}={}){
+  if(!demo){const {data}=await db!.rpc("beta_admit",{action,...args}).throwOnError();return data;}
+  const me=demoMembers().find(m=>m.id===(sessionStorage.getItem("nhf-persona")||"coach"))!;
+  const teams=[...new Map([seedTeam,...localRows<Team>("team:")].map(t=>[t.id,t])).values()];
+  if(action==="list")return teams.filter(t=>t.discoverable);
+  if(action==="rotate"||action==="review"){
+    if(me.role!=="coach"||!(me.squad===args.target||localRows<{id:string;team:string}>("membership:").some(m=>m.id===me.id&&m.team===args.target)))throw Error("Coach access required.");
+    if(action==="rotate"){const code=crypto.randomUUID().slice(0,6).toUpperCase();localStorage.setItem(prefix+"code:"+args.target,JSON.stringify({team:args.target,code,expires:Date.now()+604800000}));return code;}
+    const key=prefix+"application:"+args.target+":"+args.applicant;
+    const app:Application=JSON.parse(localStorage.getItem(key)||"null");
+    if(!app||app.status!=="Pending")throw Error("Application already reviewed.");
+    if(args.value==="Approved"){
+      const athlete=demoMembers().find(m=>m.id===app.person);
+      if(!athlete||athlete.squad)throw Error("Athlete already belongs to a team.");
+      localStorage.setItem(prefix+"member:"+athlete.id,JSON.stringify({...athlete,squad:app.team}));
+    }
+    localStorage.setItem(key,JSON.stringify({...app,status:args.value}));return true;
+  }
+  if(me.squad)throw Error("You already belong to a team.");
+  if(action==="apply"){
+    if(!teams.some(t=>t.id===args.target&&t.discoverable))throw Error("Team is private.");
+    const key=prefix+"application:"+args.target+":"+me.id;if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({team:args.target,person:me.id,name:args.label,status:"Pending"}));return true;
+  }
+  const code=localRows<{team:string;code:string;expires:number}>("code:").find(c=>c.code===args.value?.trim().toUpperCase()&&c.expires>Date.now());
+  if(!code)return "Invalid or expired code.";
+  localStorage.setItem(prefix+"member:"+me.id,JSON.stringify({...me,name:args.label,squad:code.team}));return true;
+}
+export async function applications(team?:string):Promise<Application[]>{
+  if(demo)return localRows<Application>("application:").filter(a=>team?a.team===team:a.person===sessionStorage.getItem("nhf-persona"));
+  const q=db!.from("beta_applications").select("*");
+  return (await (team?q.eq("team",team):q).throwOnError()).data as Application[];
+}
+export async function teamVisibility(team:Team,discoverable:boolean){
+  if(demo)localStorage.setItem(prefix+"team:"+team.id,JSON.stringify({...team,discoverable}));
+  else await db!.from("beta_teams").update({discoverable}).eq("id",team.id).select("id").single().throwOnError();
+}
 export async function saveProfile(me:Member,fields:Pick<Member,"name"|"bio"|"photo"|"position">){
   if(demo)localStorage.setItem(prefix+"member:"+me.id,JSON.stringify({...demoMembers().find(m=>m.id===me.id),...fields}));
   else await db!.from("beta_members").update(fields).eq("id",me.id).select("id").single().throwOnError();

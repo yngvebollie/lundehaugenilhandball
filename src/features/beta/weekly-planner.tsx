@@ -5,6 +5,7 @@ import { trainingDay } from "@/lib/programs";
 import { monday, volume, weekPlans, type EventKind } from "@/lib/workload";
 import type { Run } from "./program-builder";
 import { WeekSuggestion } from "./week-suggestion";
+import {PublishingTeam} from "./publishing-team";
 
 function dayLabel(day:string){
   return new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(day+"T12:00Z"));
@@ -39,6 +40,7 @@ export function WeeklyPlanner({data,busy,run}:{data:Snapshot;busy:boolean;run:Ru
     if(await run(()=>publish(rows))){setWeek(monday(date));setNote(label+" scheduled for "+weeks+" week"+(weeks===1?"":"s")+".");}
   }
   return <div className="grid" id="weekly"><section className="panel panel-pad grid">
+    {coach&&<PublishingTeam data={data}/>}
     <header className="page-head"><h2><CalendarDays/> Weekly planner</h2><div className="day-strip"><button aria-label="Previous week" className="btn" onClick={()=>navigate(trainingDay(week,-7))}><ChevronLeft size={16}/></button><button className="btn" onClick={()=>navigate(today())}>This week</button><button aria-label="Next week" className="btn" onClick={()=>navigate(trainingDay(week,7))}><ChevronRight size={16}/></button></div></header>
     <div className="field-pair"><label>Week containing<input type="date" value={week} onChange={e=>{if(e.target.value)navigate(e.target.value);}}/></label>{coach&&<label>Planner athlete<select value={target} onChange={e=>setTarget(e.target.value)}><option value="">Entire team</option>{players.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}</div>
     {coach&&<WeekSuggestion key={week+target} data={data} run={run} week={week} target={target} busy={busy}/>}

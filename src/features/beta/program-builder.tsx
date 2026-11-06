@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SessionLibrary } from "./session-library";
+import {PublishingTeam} from "./publishing-team";
 import { CoachAI } from "./coach-ai";
 import type { QuickProgram } from "./quick-coach";
 import type { ExerciseDraft } from "@/lib/coach-ai";
@@ -50,6 +51,7 @@ export function ProgramBuilder({data,busy,run,initial}:{data:Snapshot;busy:boole
     }
   }
   return <div className="grid" id="builder"><section className="panel panel-pad grid">
+    <PublishingTeam data={data}/>
     <div className="feature-heading"><h2><ClipboardList/> Program builder</h2><a className="btn" href="#ai-coach">Ask Coach AI</a></div>
     <CoachAI key={active+"-"+loaded} source={current.text} apply={d=>{
       if(d.mode==="rewrite")edit({text:d.text,manual:true});

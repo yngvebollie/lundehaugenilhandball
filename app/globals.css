@@ -40,6 +40,11 @@ textarea {resize:vertical}
 .step.done {color:#91dfa6}
 .ai-text {white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
 .quick-coach {border-left:4px solid var(--yellow)}
+.mobile-coach-nav{display:none}.invite-results{max-height:340px;overflow:auto}.pad-maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.pad-surface{display:block;width:100%;aspect-ratio:5/3;border:2px solid #77989d;touch-action:manipulation;cursor:crosshair}.pad-controls{border:1px solid var(--border);padding:14px;min-width:0}.match-pad .btn,.match-pad select{min-height:48px}.match-pad fieldset{min-width:0}.match-pad h3{margin:7px 0}
+@media(max-width:980px){.beta .main,.beta .grid,.beta section,.beta .field-pair>*{min-width:0}.mobile-coach-nav{display:flex;flex-wrap:wrap;gap:5px}.mobile-coach-nav .nav-item{padding:8px;font-size:13px}.mobile-coach-nav svg{width:16px}.beta .account{max-width:100%}.beta select{max-width:100%}.beta .page-head{flex-wrap:wrap}}
+@media(max-width:640px){.pad-maps{grid-template-columns:1fr}.main .page-head{gap:12px}.beta-columns{grid-template-columns:minmax(0,1fr)}.invite-results input{width:100%}.beta .field-pair{align-items:stretch}}
+.publish-target{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding-bottom:10px}.publish-target div{display:grid;gap:2px;flex:1}.publish-target small{color:var(--muted)}.publish-target .btn{font-size:12px;padding:5px 10px}
+.role-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.about-platform {border-top:1px solid var(--border);padding-top:20px}.about-platform p{font-size:14px;color:var(--muted);line-height:1.5}
 .feature-heading,.lift-summary,.prompt-row {display:flex;align-items:center;justify-content:space-between;gap:12px}
 .feature-heading h3,.strength-picker label span {display:flex;align-items:center;gap:8px}
 .feature-heading>div {position:relative}
@@ -70,7 +75,7 @@ textarea {resize:vertical}
 .workload-note {border-left:3px solid var(--yellow);padding-left:10px}
 .mobile-shell .week-board {grid-template-columns:1fr}
 .mobile-shell .week-day {min-height:40px}
-.mobile-shell .athlete-nav {grid-template-columns:repeat(4,minmax(0,1fr))}
+.mobile-shell .athlete-nav {grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:760px){.week-board{grid-template-columns:repeat(2,minmax(0,1fr))}.week-day{min-height:62px}.field-pair{max-width:100%}}
 .day-strip,.program-preview li {display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .program-preview {margin:0;padding:0;display:grid;gap:8px}

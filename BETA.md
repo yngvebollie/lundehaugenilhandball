@@ -16,7 +16,7 @@ On this computer open http://127.0.0.1:3217/login for the running preview. To re
 
 ## Set up a shared pilot
 
-1. Run the beta SQL scripts in order: `install.sql`, `002_programs.sql`, `003_weekly_planner.sql`, `004_teams.sql`, and `005_coach_usage.sql` under `supabase/beta`. Existing installations run only the scripts they have not applied. Enable the Data API for the public schema. Keep `nhf_private` outside the exposed schemas.
+1. Run `supabase/beta/install.sql` followed by every numbered script in that folder, from `002_programs.sql` through `009_match_pad.sql`, in ascending order. Existing installations run only the scripts they have not applied. Enable the Data API for the public schema. Keep `nhf_private` outside the exposed schemas.
 2. Enable email/password signups with email confirmation. Configure the application origin and its login callback in Auth URL settings. Create the first confirmed coach account in Supabase and substitute its actual UUID below. Existing teams are migrated automatically. After bootstrap, coaches create/rename teams and generate seven-day, single-use invitations bound to email and role. Share the link privately. An invited user opens it, creates an account or signs in, confirms their email and accepts. Accounts without membership cannot access team data.
 
     ```sql
@@ -30,6 +30,14 @@ On this computer open http://127.0.0.1:3217/login for the running preview. To re
 5. Add your chosen subdomain under Custom Domain on that Railway service. At your DNS provider enter the DNS records Railway displays for that hostname. Wait for Railway to confirm verification and HTTPS, then repeat the two-device test on the subdomain.
 
 ## Verification
+
+### Teams and match day
+
+Use the role selector on /login. An athlete can register, verify their email, and visit /join to apply to a discoverable team or enter its six-character code. Email-addressed invitations still work for either role. Coaches enable discoverability and approve or decline applications on /team. Generating a team code replaces the previous one; codes last seven days. Hosted code entry is limited to five attempts per verified user per hour.
+
+Team management has separate forms for Save (current name and logo) and Create team. Creating a team keeps the current publishing team selected. Use Current team to switch. Paste up to 100 email addresses to generate individual invitation links, then distribute each matching link. The beta does not send invitation email automatically.
+
+From Match pad (/match), choose an opponent, date and lineup. Pick a shooter, outcome, and optional assister for a goal. Tap the attacking half court for shot origin. For goals and saves, also tap the goal target. Record the attempt. The maps display previous positions, and the table totals attempts, shots on goal, goals and assists for each player. Open Shot log or undo the latest entry. The recorder tracks the selected team's attack; opponent scoring and goalkeeper statistics are future features.
 
 ### Coach AI
 

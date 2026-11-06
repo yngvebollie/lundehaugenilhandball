@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Activity, CalendarDays, CheckCheck, ClipboardCheck, Dumbbell, UserRound } from "lucide-react";
+import { Activity, CalendarDays, CheckCheck, ClipboardCheck, Dumbbell, UserRound, Users, Mail } from "lucide-react";
 import { WeeklyPlanner } from "./weekly-planner";
+import { AthleteTeam,Conversation } from "./athlete-team";
 import { Profile } from "./team-tools";
 import { checkExercise, rateSession, today, type Snapshot } from "@/lib/beta";
 import type { Effort } from "@/lib/programs";
 import type { Run } from "./program-builder";
 
-const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Progress",icon:Activity},{name:"Profile",icon:UserRound}] as const;
+const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Progress",icon:Activity},{name:"Team",icon:Users},{name:"Messages",icon:Mail},{name:"Profile",icon:UserRound}] as const;
 const efforts:Effort[]=["Easy","Just right","Hard"];
 function longDate(day:string) {
   return new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(day+"T12:00:00Z"));
@@ -14,6 +15,7 @@ function longDate(day:string) {
 export function AthleteTraining({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [tab,setTab]=useState<string>("Today");
   const [selected,setSelected]=useState("");
+  const [shared,setShared]=useState("");
   const now=today();
   const plans=[...data.plans].sort((a,b)=>a.day.localeCompare(b.day));
   const shown=plans.filter(p=>tab==="Plan"?(!selected||selected===p.day):p.day===now);
@@ -21,10 +23,10 @@ export function AthleteTraining({data,busy,run}:{data:Snapshot;busy:boolean;run:
   const finished=plans.filter(p=>completed(p.id)===p.exercises.length);
   const due=plans.filter(p=>p.day<=now);
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
-  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":"My progress"}</h1></header>
+  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":tab==="Team"?"My team":tab==="Messages"?"My messages":"My progress"}</h1></header>
     <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name}</button>)}</nav>
     {tab==="Plan"&&<WeeklyPlanner data={data} busy={busy} run={run}/>}
-    {tab==="Profile"?<Profile me={data.me} busy={busy} run={run}/>:tab==="Progress"?<><section className="panel panel-pad grid"><h2><Activity/> Training record</h2><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
+    {tab==="Team"?<AthleteTeam data={data}/>:tab==="Messages"?<Conversation data={data}/>:tab==="Profile"?<Profile me={data.me} busy={busy} run={run}/>:tab==="Progress"?<><section className="panel panel-pad grid"><h2><Activity/> Training record</h2><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
     {tab==="Plan"&&<label>Training day<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">All dates</option>{Array.from(new Set(plans.map(p=>p.day))).map(d=><option key={d} value={d}>{longDate(d)}</option>)}</select></label>}
     {shown.map(p=>{
       const n=completed(p.id);
@@ -36,6 +38,7 @@ export function AthleteTraining({data,busy,run}:{data:Snapshot;busy:boolean;run:
           const checked=data.checks.some(c=>c.assignment===p.id&&c.step===i);
           return <label key={i} className={"exercise-row "+(checked?"checked":"")}><input type="checkbox" checked={checked} disabled={busy} onChange={e=>{const value=e.target.checked;void run(()=>checkExercise(p.id,i,value));}}/><span>{line}</span></label>;
         })}</fieldset>
+        {n===p.exercises.length&&<button className="btn" onClick={async()=>{const text="Completed "+p.title+" · "+p.day;try{if(navigator.share)await navigator.share({text});else {await navigator.clipboard.writeText(text);setShared(p.id);}}catch{setShared("");}}}>{shared===p.id?"Completion copied":"Share completion"}</button>}
         <fieldset className="effort"><legend>How did the session feel?</legend><div>{efforts.map(level=><button key={level} disabled={busy} aria-pressed={rating?.effort===level} className={rating?.effort===level?"selected":""} onClick={()=>run(()=>rateSession({assignment:p.id,effort:level},Boolean(rating)))}>{level}</button>)}</div>{rating&&<small className="trend"><CheckCheck size={14}/> Shared with coach</small>}</fieldset>
       </section>;
     })}{!shown.length&&<div className="panel panel-pad grid"><h2>No sessions scheduled</h2>{tab==="Today"&&<button className="btn" onClick={()=>setTab("Plan")}>View training plan</button>}</div>}</>}</>;

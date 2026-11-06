@@ -6,7 +6,10 @@ import { db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
 
 import { ProgramBuilder, type Run } from "./program-builder";
 import { AthleteTraining } from "./athlete-training";
+import { About } from "./about";
+import { Conversation } from "./athlete-team";
 
+import { MatchPad } from "./match-pad";
 import { TeamTools } from "./team-tools";
 import { WeeklyPlanner } from "./weekly-planner";
 import { QuickCoach,type QuickProgram } from "./quick-coach";
@@ -15,7 +18,7 @@ function message(error: unknown) {
   return error && typeof error==="object" && "message" in error ? String(error.message) : "Could not save. Please retry.";
 }
 function signedOut() { return db?.auth.signOut().then(({error})=>{if(error) throw error;}); }
-export function Workspace({ athlete = false }: { athlete?: boolean }) {
+export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match" }) {
   const [persona,setPersona]=useState(athlete?"liv":"coach");
   const [data,setData]=useState<Snapshot|null>(null);
   const [ready,setReady]=useState(false);
@@ -24,10 +27,12 @@ export function Workspace({ athlete = false }: { athlete?: boolean }) {
   const sequence=useRef(0);
   const reload=useCallback(async()=>{
     const request=++sequence.current;
+    if(demo&&persona==="coach"&&!sessionStorage.getItem("nhf-persona")&&!location.hash){location.replace("/login");return;}
     try {
       const next=await readBeta(persona);
+      if((!next&&!demo)||(next&&!next.me.squad)){location.replace(next?"/join":"/login");return;}
       if(request===sequence.current){setData(next);setError("");}
-    } catch(e){if(request===sequence.current){setData(null);setError(message(e));}}
+    } catch(e){if(request===sequence.current){if(message(e).startsWith("Finish joining")){location.replace("/join");return;}setData(null);setError(message(e));}}
     finally {if(request===sequence.current)setReady(true);}
   },[persona]);
   useEffect(()=>{
@@ -51,12 +56,13 @@ export function Workspace({ athlete = false }: { athlete?: boolean }) {
   if(!data) return <main className="login grid"><Brand/><h1>{ready?"Team sign-in":"Opening workspace..."}</h1>{notice}{ready && !demo && <form className="grid" onSubmit={login}><label>Email<input required name="email" type="email" autoComplete="username"/></label><label>Password<input required name="password" type="password" autoComplete="current-password"/></label><button disabled={busy} className="btn primary">Sign in</button></form>}{error && <button className="btn" onClick={()=>void run(async()=>{await signedOut();})}>Return to sign-in</button>}</main>;
   const coach=data.me.role==="coach";
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name;
-  const account=<div className="account"><strong>{data.me.name}</strong>{coach?<label>Current team<select value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
+  const account=<div className="account"><strong>{data.me.name}</strong>{coach?<label>Current team<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
     {demo&&<span className="badge orange">Local demo</span>}<button className="btn" onClick={async()=>{if(db){const {error}=await db.auth.signOut();if(error){setError(error.message);return;}}sessionStorage.removeItem("nhf-persona");location.assign("/login");}}><LogOut size={16}/>{demo?"Switch account":"Sign out"}</button></div>;
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<AthleteTraining key={data.me.id} data={data} busy={busy} run={run}/></div></main>;
-  return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section"><a className="nav-item active" href="#overview"><Activity/>Overview</a><a className="nav-item" href="#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="#monitor"><Activity/>Health monitor</a><a className="nav-item" href="#team"><Users/>Team management</a></nav><div className="sidebar-footer muted">Performance operations</div></aside>
-    <main className="main grid" id="overview"><header className="page-head"><div><span className="eyeline">NHF / Coach workspace</span><h1>Squad overview</h1></div>{account}</header>{notice}
-    <Coach key={data.me.squad} data={data} busy={busy} run={run}/></main></div>;
+  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Activity/>Match pad</a></>;
+  return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
+    <main className="main grid" id="overview"><header className="page-head"><div><span className="eyeline">NHF / Coach workspace</span><h1>{view==="team"?"Team settings":view==="match"?"Match day":"Squad overview"}</h1></div>{account}</header><nav className="mobile-coach-nav" aria-label="Coach sections">{navigation}</nav>{notice}
+    {view==="team"?<TeamTools key={data.me.squad} data={data} busy={busy} run={run}/>:view==="match"?<MatchPad key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><div className="brand-mark">NHF</div><div>Norges Håndballforbund<br/><small>Kvinner</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
@@ -73,7 +79,8 @@ function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   return <><section className="grid metric-grid">{[["Squad athletes",players.length],["Assigned sessions",data.plans.length],["Completed",data.plans.filter(p=>count(data,p.id)===p.exercises.length).length],["Exercises logged",data.checks.length]].map(([label,value])=><div className="panel panel-pad metric" key={label}><span className="muted">{label}</span><strong className="metric-value">{value}</strong></div>)}</section>
     <QuickCoach onApply={draft=>{setQuick({id:crypto.randomUUID(),draft});requestAnimationFrame(()=>document.getElementById("builder")?.scrollIntoView());}}/>
     <WeeklyPlanner data={data} busy={busy} run={run}/>
+    <details className="library-tools"><summary>Athlete messages</summary><Conversation data={data}/></details>
     <section className="grid beta-columns"><ProgramBuilder key={quick?.id} initial={quick?.draft} data={data} busy={busy} run={run}/>
-    <div className="grid roster"><TeamTools data={data} busy={busy} run={run}/><section className="panel panel-pad grid roster"><h2><Users/> Squad activity</h2>{players.map(p=>{const plans=data.plans.filter(w=>w.athlete===p.id);return <div className="result" key={p.id}><div>{p.photo&&<img src={p.photo} width={40} height={40} alt=""/>}<strong>{p.name}</strong><p className="muted">{p.position}</p>{p.bio&&<small>{p.bio}</small>}</div><span className="muted">{plans.filter(w=>count(data,w.id)===w.exercises.length).length} / {plans.length} sessions complete</span></div>;})}{!players.length && <p className="muted">Add athlete memberships to publish the first workout.</p>}</section></div></section>
+    <div className="grid roster"><section className="panel panel-pad grid roster"><h2><Users/> Squad activity</h2>{players.map(p=>{const plans=data.plans.filter(w=>w.athlete===p.id);return <div className="result" key={p.id}><div>{p.photo&&<img src={p.photo} width={40} height={40} alt=""/>}<strong>{p.name}</strong><p className="muted">{p.position}</p>{p.bio&&<small>{p.bio}</small>}</div><span className="muted">{plans.filter(w=>count(data,w.id)===w.exercises.length).length} / {plans.length} sessions complete</span></div>;})}{!players.length && <p className="muted">Add athlete memberships to publish the first workout.</p>}</section></div></section>
     <section className="panel panel-pad grid" id="schedule"><header className="page-head"><h2><CalendarDays/> Training schedule</h2><button onClick={report} className="btn"><Download size={16}/>CSV</button></header><label>Filter by day<input type="date" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{schedule.map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{p.day} · {players.find(a=>a.id===p.athlete)?.name}</p></div><span className="badge blue">{count(data,p.id)} / {p.exercises.length} done</span></div>)}{!schedule.length && <p>No workouts scheduled for this selection.</p>}</section></>;
 }
