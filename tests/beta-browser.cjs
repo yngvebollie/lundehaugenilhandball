@@ -1,0 +1,55 @@
+// Run against an isolated browser profile and a local demo build.
+const {chromium} = require(process.env.PLAYWRIGHT_PACKAGE || "playwright");
+const assert = require("node:assert/strict");
+(async()=>{
+  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL || "msedge"});
+  try {
+    const context=await browser.newContext();
+    const coach=await context.newPage();
+    const base=process.env.BETA_TEST_URL || "http://127.0.0.1:3217";
+    await coach.goto(base);
+    await coach.getByLabel("Session title").fill("Squat");
+    assert.match(await coach.getByLabel("Exercises, one per line").inputValue(), /Hip thrust/);
+    await coach.getByLabel("Program name").fill("Squad power week");
+    await coach.getByLabel("Assign to").selectOption("liv");
+    await coach.getByLabel("Exercises, one per line").fill("Squat 3 x 8\nPlank 30 sec");
+    await coach.getByRole("button",{name:"Add session"}).click();
+    await coach.getByLabel("Session title").fill("Recovery");
+    await coach.getByLabel("Day of program").fill("3");
+    await coach.getByRole("button",{name:"Save program",exact:true}).click();
+    await coach.getByText("Program saved to your library.").waitFor();
+    await coach.reload();
+    await coach.getByLabel("Program library").selectOption({label:"Squad power week"});
+    await coach.getByLabel("Assign to").selectOption("liv");
+    await coach.getByRole("button",{name:"Publish program"}).click();
+    await coach.getByText("2 sessions published for 1 athlete(s).").waitFor();
+    const player=await context.newPage();
+    await player.setViewportSize({width:375,height:812});
+    await player.goto(base+"/athlete");
+    const session=player.locator("section").filter({has:player.getByRole("heading",{name:"Squat",exact:true})});
+    await session.getByLabel("Squat 3 x 8").check();
+    await session.getByLabel("Squat 3 x 8").uncheck();
+    await session.getByLabel("Squat 3 x 8").check();
+    await session.getByLabel("Plank 30 sec").check();
+    await session.getByRole("button",{name:"Hard",exact:true}).click();
+    await session.getByText("Shared with coach").waitFor();
+    await session.getByText(/Workout complete/).waitFor();
+    await player.reload();
+    await session.getByText(/Workout complete/).waitFor();
+    assert.ok(await player.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await player.getByRole("button",{name:"Plan",exact:true}).click();
+    await player.getByRole("heading",{name:"Recovery",exact:true}).waitFor();
+    await player.getByRole("button",{name:"Progress",exact:true}).click();
+    await player.getByRole("heading",{name:"Training record"}).waitFor();
+    await coach.locator("#schedule .result").filter({hasText:"Squat"}).getByText("2 / 2 done").waitFor();
+    await coach.getByRole("button",{name:"Draft follow-up"}).click();
+    assert.match(await coach.getByLabel("Exercises, one per line").inputValue(), /Squat 2 x 8/);
+    assert.equal(await coach.getByLabel("Assign to").inputValue(),"liv");
+    await coach.getByRole("button",{name:"Publish workout"}).click();
+    await coach.getByText("Workout published.").waitFor();
+    const downloading=coach.waitForEvent("download");
+    await coach.getByRole("button",{name:"CSV"}).click();
+    assert.equal((await downloading).suggestedFilename(),"NHF-training.csv");
+    console.log("PASS: coach publishes, mobile athlete completes, refresh persists, coach sees result and exports CSV");
+  } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
