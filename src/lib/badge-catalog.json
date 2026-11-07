@@ -1,0 +1,560 @@
+[
+  {
+    "key": "on_fire",
+    "title": "Treningsrekke",
+    "icon": "Flame",
+    "description": "Møt på planlagte treninger på rad.",
+    "category": "Trening",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "iron_will",
+    "title": "Gode vaner",
+    "icon": "CalendarCheck",
+    "description": "Fullfør treningsøkter.",
+    "category": "Trening",
+    "levels": [
+      10,
+      50,
+      150
+    ]
+  },
+  {
+    "key": "early_bird",
+    "title": "Klar ved start",
+    "icon": "AlarmClock",
+    "description": "Møt forberedt før start.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "goal_getter",
+    "title": "Mitt treningsmål",
+    "icon": "Flag",
+    "description": "Nå egne treningsmål.",
+    "category": "Trening",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "extra_mile",
+    "title": "Ekstraøkta",
+    "icon": "CirclePlus",
+    "description": "Fullfør valgfrie økter.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "engine_builder",
+    "title": "Utholdenhet",
+    "icon": "HeartPulse",
+    "description": "Fullfør kondisjonsøkter.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      60
+    ]
+  },
+  {
+    "key": "consistency_king_queen",
+    "title": "Hele uka",
+    "icon": "CalendarDays",
+    "description": "Delta på alle planlagte treninger i en uke.",
+    "category": "Trening",
+    "levels": [
+      2,
+      8,
+      20
+    ]
+  },
+  {
+    "key": "hard_worker",
+    "title": "God innsats",
+    "icon": "Zap",
+    "description": "Vis ekstra innsats på trening.",
+    "category": "Trening",
+    "levels": [
+      5,
+      25,
+      75
+    ]
+  },
+  {
+    "key": "never_give_up",
+    "title": "Prøv igjen",
+    "icon": "RotateCcw",
+    "description": "Fullfør en vanskelig øvelse etter et tilbakeslag.",
+    "category": "Trening",
+    "levels": [
+      3,
+      12,
+      30
+    ]
+  },
+  {
+    "key": "precision_builder",
+    "title": "Treffsikker",
+    "icon": "Crosshair",
+    "description": "Gjennomfør utfordringer i skuddpresisjon.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "one_more_rep",
+    "title": "Én til",
+    "icon": "Repeat",
+    "description": "Fullfør utfordringer med ekstra repetisjoner.",
+    "category": "Trening",
+    "levels": [
+      5,
+      25,
+      75
+    ]
+  },
+  {
+    "key": "student_of_game",
+    "title": "Spillforståelse",
+    "icon": "BookOpen",
+    "description": "Gjennomfør taktiske læringsoppgaver.",
+    "category": "Trening",
+    "levels": [
+      3,
+      12,
+      30
+    ]
+  },
+  {
+    "key": "footwork_wizard",
+    "title": "Lette føtter",
+    "icon": "Footprints",
+    "description": "Fullfør fotarbeidsøvelser.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "mission_complete",
+    "title": "Oppdrag utført",
+    "icon": "ClipboardCheck",
+    "description": "Fullfør oppdrag fra treneren.",
+    "category": "Trening",
+    "levels": [
+      5,
+      20,
+      60
+    ]
+  },
+  {
+    "key": "better_every_week",
+    "title": "Ukas framgang",
+    "icon": "TrendingUp",
+    "description": "Nå ukentlige utviklingsmål.",
+    "category": "Trening",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "body_guardian",
+    "title": "Skadefri trening",
+    "icon": "ShieldPlus",
+    "description": "Gjennomfør forebyggende treningsrutiner.",
+    "category": "Trening",
+    "levels": [
+      5,
+      25,
+      75
+    ]
+  },
+  {
+    "key": "goal_machine",
+    "title": "Målscorer",
+    "icon": "Goal",
+    "description": "Score mål i bekreftede kamper.",
+    "category": "Kamp",
+    "levels": [
+      10,
+      50,
+      150
+    ]
+  },
+  {
+    "key": "sharpshooter",
+    "title": "Skuddpresisjon",
+    "icon": "Target",
+    "description": "Treff på minst 70 % med minst fem skuddforsøk i en kamp.",
+    "category": "Kamp",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "the_wall",
+    "title": "Siste skanse",
+    "icon": "Hand",
+    "description": "Gjør redninger som målvakt.",
+    "category": "Kamp",
+    "levels": [
+      20,
+      100,
+      300
+    ]
+  },
+  {
+    "key": "mvp",
+    "title": "Kampens spiller",
+    "icon": "Award",
+    "description": "Bli utpekt til kampens spiller av treneren.",
+    "category": "Kamp",
+    "levels": [
+      1,
+      5,
+      15
+    ]
+  },
+  {
+    "key": "game_warrior",
+    "title": "Kamperfaring",
+    "icon": "Ticket",
+    "description": "Delta i bekreftede kamper.",
+    "category": "Kamp",
+    "levels": [
+      10,
+      40,
+      100
+    ]
+  },
+  {
+    "key": "hat_trick_hero",
+    "title": "Tre på rad",
+    "icon": "ListOrdered",
+    "description": "Score minst tre mål i én kamp.",
+    "category": "Kamp",
+    "levels": [
+      3,
+      15,
+      40
+    ]
+  },
+  {
+    "key": "defensive_guardian",
+    "title": "Forsvarsinnsats",
+    "icon": "ShieldCheck",
+    "description": "Få bekreftet en særlig god forsvarsinnsats.",
+    "category": "Kamp",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "playmaker",
+    "title": "Målgiver",
+    "icon": "Share2",
+    "description": "Gi målgivende pasninger.",
+    "category": "Kamp",
+    "levels": [
+      10,
+      40,
+      100
+    ]
+  },
+  {
+    "key": "level_up",
+    "title": "Personlig rekord",
+    "icon": "ChartNoAxesColumnIncreasing",
+    "description": "Forbedre en bekreftet personlig rekord.",
+    "category": "Ferdigheter",
+    "levels": [
+      1,
+      5,
+      12
+    ]
+  },
+  {
+    "key": "game_iq",
+    "title": "Taktikkblikk",
+    "icon": "ScanEye",
+    "description": "Fullfør taktiske utfordringer.",
+    "category": "Ferdigheter",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "versatility_master",
+    "title": "Flere posisjoner",
+    "icon": "Shuffle",
+    "description": "Spill i ulike posisjoner.",
+    "category": "Ferdigheter",
+    "levels": [
+      2,
+      3,
+      4
+    ]
+  },
+  {
+    "key": "speed_demon",
+    "title": "Hurtighet",
+    "icon": "Timer",
+    "description": "Nå milepæler i hurtighet.",
+    "category": "Ferdigheter",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "skill_collector",
+    "title": "Teknikkbanken",
+    "icon": "Layers",
+    "description": "Mestre nye tekniske ferdigheter.",
+    "category": "Ferdigheter",
+    "levels": [
+      3,
+      10,
+      20
+    ]
+  },
+  {
+    "key": "comeback_kid",
+    "title": "Ny framgang",
+    "icon": "StepForward",
+    "description": "Fullfør personlige utviklingsperioder.",
+    "category": "Ferdigheter",
+    "levels": [
+      1,
+      3,
+      6
+    ]
+  },
+  {
+    "key": "team_player",
+    "title": "Lagbygger",
+    "icon": "Users",
+    "description": "Bidra positivt til laget.",
+    "category": "Lagånd",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "positive_energy",
+    "title": "Oppmuntreren",
+    "icon": "Sun",
+    "description": "Oppmuntre en lagkamerat.",
+    "category": "Lagånd",
+    "levels": [
+      5,
+      15,
+      40
+    ]
+  },
+  {
+    "key": "helping_hand",
+    "title": "Hjelpende hånd",
+    "icon": "HelpingHand",
+    "description": "Støtt en medspiller.",
+    "category": "Lagånd",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "rising_star",
+    "title": "I utvikling",
+    "icon": "Sprout",
+    "description": "Nå utviklingsmål bekreftet av treneren.",
+    "category": "Lagånd",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "fair_play_champion",
+    "title": "Rent spill",
+    "icon": "Scale",
+    "description": "Vis god sportsånd.",
+    "category": "Lagånd",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "fan_favorite",
+    "title": "Kampglimt",
+    "icon": "Star",
+    "description": "Få anerkjennelse for et kampøyeblikk.",
+    "category": "Anerkjennelse",
+    "levels": [
+      3,
+      10,
+      30
+    ]
+  },
+  {
+    "key": "everyones_teammate",
+    "title": "God lagvenn",
+    "icon": "Handshake",
+    "description": "Få anerkjennelse som lagvenn.",
+    "category": "Anerkjennelse",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "iron_defender",
+    "title": "Trygg i forsvar",
+    "icon": "Shield",
+    "description": "Få anerkjennelse for forsvarsspill.",
+    "category": "Anerkjennelse",
+    "levels": [
+      3,
+      10,
+      30
+    ]
+  },
+  {
+    "key": "simply_awesome",
+    "title": "Det lille ekstra",
+    "icon": "Sparkles",
+    "description": "Få anerkjennelse for et minneverdig bidrag.",
+    "category": "Anerkjennelse",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "spirit_leader",
+    "title": "Lagånd",
+    "icon": "Megaphone",
+    "description": "Få anerkjennelse for lagånd.",
+    "category": "Anerkjennelse",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "relentless_spirit",
+    "title": "Utrettelig",
+    "icon": "BatteryCharging",
+    "description": "Få anerkjennelse for utrettelig innsats.",
+    "category": "Anerkjennelse",
+    "levels": [
+      5,
+      20,
+      50
+    ]
+  },
+  {
+    "key": "mastermind",
+    "title": "Klokt spill",
+    "icon": "Lightbulb",
+    "description": "Få anerkjennelse for et klokt valg.",
+    "category": "Anerkjennelse",
+    "levels": [
+      3,
+      10,
+      30
+    ]
+  },
+  {
+    "key": "respect_champion",
+    "title": "Viser respekt",
+    "icon": "Heart",
+    "description": "Få anerkjennelse for god sportsånd.",
+    "category": "Anerkjennelse",
+    "levels": [
+      3,
+      10,
+      30
+    ]
+  },
+  {
+    "key": "beep",
+    "title": "BEEP",
+    "icon": "AudioLines",
+    "description": "Høyeste bekreftede nivå i beeptesten.",
+    "category": "Tester",
+    "levels": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ]
+  },
+  {
+    "key": "kmt",
+    "title": "KMT",
+    "icon": "Gauge",
+    "description": "Høyeste bekreftede hastighet i km/t.",
+    "category": "Tester",
+    "levels": [
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90,
+      95,
+      100,
+      105,
+      110
+    ]
+  }
+]

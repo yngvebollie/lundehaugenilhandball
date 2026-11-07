@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import {checkPeers} from "./peer-badges.mjs";
+import {checkClubRole} from "./club-role-cases.mjs";
 import {PGlite} from "@electric-sql/pglite";
 
 const pg = new PGlite();
@@ -33,6 +35,9 @@ try {
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107193802_squad_seasons.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107195210_report_team_labels.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107195640_player_season_identity.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107200508_athlete_badges.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107204036_challenge_exercises.sql",import.meta.url),"utf8"));
+  assert.equal((await pg.query("select count(*)::int n from nhf_private.badge_defs")).rows[0].n,45);
   assert.equal((await pg.query("select nhf_private.report_side_matches('KFUM','KFUM 1','KFUM 2') v")).rows[0].v,false);
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
@@ -56,6 +61,11 @@ try {
   assert.equal((await challenge("awards")).length,1);
   await login(1);const named=await challenge("create",null,{...days,title:"Named",unit:"reps",anonymous:false});
   await login(2);await challenge("log",named,{entry:uuid(5),amount:3});await login(3);assert.equal((await challenge("board",named))[0].label,"Tester 2");
+  await login(1);const mixed=await challenge("create",null,{...days,title:"Circuit",unit:"reps",anonymous:true,exercises:["Push-up","Squat"],instructions:"Count each rep",badge_key:"one_more_rep"});
+  await login(2);await assert.rejects(challenge("log",mixed,{amount:5,entry:uuid(26),exercise:"Wrong"}));
+  await challenge("log",mixed,{amount:5,entry:uuid(26),exercise:"Squat"});await assert.rejects(challenge("log",mixed,{amount:5,entry:uuid(26),exercise:"Push-up"}));
+  assert.deepEqual((await challenge("mine",mixed)).map(r=>[r.exercise,r.amount]),[["Squat",5]]);
+  await login(3);assert.equal((await challenge("mine",mixed)).length,0);await login(1);await assert.rejects(challenge("mine",mixed));
   const assign=(id,squad,athlete)=>pg.query("insert into beta_assignments(id,squad,athlete,title,day,exercises) values($1,$2,$3,'Strength',current_date,array['Squat','Plank'])",[uuid(id),uuid(squad),uuid(athlete)]);
   const check=(id,step)=>pg.query("insert into beta_checks values ($1,$2)",[uuid(id),step]);
   const size=async table=>(await pg.query("select * from "+table)).rows.length;
@@ -189,6 +199,46 @@ try {
   }
   const asOf=(await pg.query("select beta_player_form($1,$2) v",[team,m])).rows[0].v[projected[0].player_id];
   assert.deepEqual(asOf,{games:2,scored_games:2,goals:6,prior_games:1,prior_goals:5});
+  const badge=(action,ath,v={})=>pg.query("select beta_badges($1,$2,$3,$4) v",[action,team,uuid(ath),v]).then(r=>r.rows[0].v);
+  await checkClubRole(pg,login,uuid,team);
+  await pg.exec("reset role");
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107202100_opponent_match_lines.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107202429_invitation_codes.sql",import.meta.url),"utf8"));
+  await pg.query("insert into auth.users values ($1,'newcoach@test.local',now())",[uuid(211)]);
+  await pg.exec("set role authenticated");await login(1);
+  const codeAction=(action,kind,input="")=>pg.query("select beta_invitation_code($1,$2,$3,$4,'Coach Test','12345678') v",[action,team,kind,input]).then(r=>r.rows[0].v);
+  const inviteCode=await codeAction("issue","coach");assert.match(inviteCode.code,/^[A-Z2-9]{6}$/);
+  assert.equal((await codeAction("get","coach")).code,inviteCode.code);
+  await login(7);await assert.rejects(codeAction("issue","coach"));await assert.rejects(codeAction("get","coach"));
+  await login(211);assert.equal((await codeAction("redeem","coach",inviteCode.code)).id,team);assert.ok((await codeAction("redeem","coach",inviteCode.code)).error);
+  await login(1);assert.equal(await codeAction("get","coach"),null);assert.match((await codeAction("issue","athlete")).code,/^[A-F0-9]{6}$/);
+  const opponents=()=>pg.query("select beta_opponent_lines($1) v",[rid]).then(r=>r.rows[0].v);
+  assert.ok((await opponents()).every(x=>x.name==="Test away"&&!('birthdate' in x)));await login(7);await assert.rejects(opponents());await login(1);
+  await pg.exec("reset role;alter table auth.users add raw_user_meta_data jsonb default '{}',add last_sign_in_at timestamptz");
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107203214_verified_team_admission.sql",import.meta.url),"utf8"));
+  const registerIntent=async(id,kind,token)=>pg.query("insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)",[uuid(id),"coach"+id+"@test.local",{full_name:"Invited Test",contact_phone:"+47 5555 0123",club_invite_kind:kind,club_invite_token:token}]);
+  await pg.exec("set role authenticated");await login(1);
+  const capturedInvite=(await pg.query("select beta_application_link('issue_direct',$1,'coach') v",[team])).rows[0].v;
+  assert.ok(Date.parse(capturedInvite.expires)>Date.now()+85*86400000);
+  const single=await codeAction("issue","coach");await pg.exec("reset role");
+  for(const [id,kind,token] of [[212,"link",capturedInvite.token],[213,"coach_code",single.code],[214,"link",uuid(909)]]){
+    await registerIntent(id,kind,token);
+    assert.equal((await pg.query("select (raw_user_meta_data ? 'club_invite_token') leaked from auth.users where id=$1",[uuid(id)])).rows[0].leaked,false);
+    assert.equal((await pg.query("select count(*)::int n from beta_members where id=$1",[uuid(id)])).rows[0].n,0);
+    await pg.query("update auth.users set email_confirmed_at=now() where id=$1",[uuid(id)]);
+    const member=(await pg.query("select role,squad from beta_members where id=$1",[uuid(id)])).rows[0];
+    if(id===214)assert.equal(member,undefined);else assert.deepEqual(member,{role:"coach",squad:team});
+  }
+  await pg.exec("set role authenticated");await login(213);
+  assert.equal((await pg.query("select beta_signup_result($1) v",[single.code])).rows[0].v.id,team);
+  await login(1);assert.equal(await codeAction("get","coach"),null);
+  const measurement={day:"2025-01-01",key:"beep",quantity:7};
+  const bb=await badge("event",7,measurement);assert.equal(bb.counts.beep,7);assert.equal(bb.earned.filter(b=>b.key==="beep").length,3);
+  assert.deepEqual((await badge("event",7,measurement)).earned,bb.earned);
+  assert.equal((await badge("event",7,{...measurement,key:"kmt",quantity:110})).earned.filter(b=>b.key==="kmt").length,13);
+  await login(7);await assert.rejects(badge("event",7,measurement));await assert.rejects(badge("read",3));await assert.rejects(badge("recognize",7,{match:m,recipient:uuid(7),key:"fan_favorite"}));
+  await login(1);
+  await checkPeers(pg,login,uuid,team,rid);
   const squadLines=async()=>(await pg.query("select beta_squad_stat_lines($1) v",[rid])).rows[0].v;
   const lines=(await squadLines()).filter(r=>r.name==="Test home");
   assert.equal(lines.length,3);assert.equal(new Set(lines.map(r=>r.player)).size,1);

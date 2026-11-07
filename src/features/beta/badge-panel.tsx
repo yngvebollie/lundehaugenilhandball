@@ -1,0 +1,74 @@
+import {useEffect,useState} from "react";
+import {Flame,CalendarCheck,AlarmClock,Flag,CirclePlus,HeartPulse,CalendarDays,Zap,RotateCcw,Crosshair,Repeat,BookOpen,Footprints,ClipboardCheck,TrendingUp,ShieldPlus,Goal,Target,Hand,Award,Ticket,ListOrdered,ShieldCheck,Share2,ChartNoAxesColumnIncreasing,ScanEye,Shuffle,Timer,Layers,StepForward,Users,Sun,HelpingHand,Sprout,Scale,Star,Handshake,Shield,Sparkles,Megaphone,BatteryCharging,Lightbulb,Heart,AudioLines,Gauge,Award as Medal,Check} from "lucide-react";
+import {badges,badgeAction,coachBadges,automatic,reach,tier,type Badge,type BadgeState} from "@/lib/badges";
+import {today,type Snapshot} from "@/lib/beta";
+import {registrations,seasonMatches,matchAction,type Fixture,type Player} from "@/lib/match-journal";
+import "./merker.css";
+const icons={Flame,CalendarCheck,AlarmClock,Flag,CirclePlus,HeartPulse,CalendarDays,Zap,RotateCcw,Crosshair,Repeat,BookOpen,Footprints,ClipboardCheck,TrendingUp,ShieldPlus,Goal,Target,Hand,Award,Ticket,ListOrdered,ShieldCheck,Share2,ChartNoAxesColumnIncreasing,ScanEye,Shuffle,Timer,Layers,StepForward,Users,Sun,HelpingHand,Sprout,Scale,Star,Handshake,Shield,Sparkles,Megaphone,BatteryCharging,Lightbulb,Heart,AudioLines,Gauge};
+const recognition=badges.filter(b=>b.category==="Anerkjennelse");
+const groups=["Alle","Trening","Kamp","Ferdigheter","Lagånd","Anerkjennelse","Tester"];
+function Symbol({b,level}:{b:Badge;level:number}){const Icon=icons[b.icon as keyof typeof icons]||Medal;return <span aria-hidden="true" className={"merke-symbol ring-"+(b.category==="Tester"?(level===0?0:level===b.levels.length?3:level>=Math.ceil(b.levels.length/2)?2:1):level)}><Icon size={21}/></span>;}
+export function BadgePanel({data}:{data:Snapshot}){
+ const coach=data.me.role==="coach",players=data.roster.filter(p=>p.role==="athlete");
+ const [id,setId]=useState(coach?players[0]?.id||"":data.me.id);
+ return <section className="grid merker"><header className="feature-heading"><div><h2><Medal size={22}/> {coach?"Utøvermerker":"Mine merker"}</h2></div>
+ {coach&&players.length>0&&<label>Utøver<select value={id} onChange={e=>setId(e.target.value)}>{players.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label>}</header>
+ {id?<Collection key={data.me.squad+":"+id} data={data} id={id}/>:<p>Inviter en utøver til laget for å registrere merker.</p>}</section>;
+}
+type Send=(action:string,v:Record<string,unknown>,msg:string)=>Promise<void>;
+function Collection({data,id}:{data:Snapshot;id:string}){
+ const [state,setState]=useState<BadgeState>(),[note,setNote]=useState(""),[busy,setBusy]=useState(false),[category,setCategory]=useState("Alle"),[filter,setFilter]=useState("Alle nivåer"),[details,setDetails]=useState("");
+ const coach=data.me.role==="coach";
+ useEffect(()=>{let alive=true;const update=()=>badgeAction(data,id).then(v=>{if(alive)setState(v);}).catch(e=>{if(alive)setNote(e.message);});void update();window.addEventListener("focus",update);return()=>{alive=false;window.removeEventListener("focus",update);};},[data,id]);
+ const send:Send=async(action,v,message)=>{setBusy(true);setNote("");try{setState(await badgeAction(data,id,action,v));setNote(message);}catch(e){setNote((e as Error).message);}finally{setBusy(false);}};
+ if(!state)return <p role="status">{note||"Henter merker …"}</p>;
+ const catalog=badges.map(b=>({...b,levels:state.targets?.[b.key]||b.levels}));
+ const unseen=state.earned.filter(e=>!state.seen||Date.parse(e.at)>Date.parse(state.seen)).length+state.inbox.filter(e=>e.at&&(!state.seen||Date.parse(e.at)>Date.parse(state.seen))).length;
+ const levels=(b:Badge)=>reach(b,state.counts[b.key]||0),all=catalog.filter(b=>(category==="Alle"||category===b.category)&&(filter==="Alle nivåer"||filter==="Oppnådd"&&levels(b)>0||filter==="Låst"&&!levels(b)||tier(b,levels(b))===filter));
+ const closest=catalog.filter(b=>levels(b)<b.levels.length&&(state.counts[b.key]||0)>0).sort((a,b)=>(state.counts[b.key]||0)/b.levels[levels(b)]-(state.counts[a.key]||0)/a.levels[levels(a)])[0];
+ return <><div className="merke-summary"><div><strong>{catalog.filter(b=>levels(b)>0).length} / {badges.length}</strong><span>Oppnådde merker</span></div>{[1,2,3].map(i=><div key={i}><strong>{catalog.filter(b=>b.category!=="Tester"&&levels(b)===i).length}</strong><span>{["Bronse","Sølv","Gull"][i-1]}</span></div>)}</div>
+ {!coach&&state.notifications!==false&&unseen>0&&<div className="result" role="status"><strong>{unseen} nye merker eller anerkjennelser</strong><button className="btn" disabled={busy} onClick={()=>send("seen",{},"Oppdateringene er lest.")}>Marker som lest</button></div>}
+ {closest&&<p>Neste mål: <strong>{closest.title}</strong> · {state.counts[closest.key]} / {closest.levels[levels(closest)]}</p>}
+ {coach?<CoachBadgeTools data={data} id={id} state={state} send={send} busy={busy}/>:<PeerAwards state={state} send={send} busy={busy}/>}
+ {note&&<p className="km-status" role="status">{note}</p>}
+ <nav className="merke-categories" aria-label="Merkekategori">{groups.map(g=><button key={g} aria-pressed={g===category} onClick={()=>{setCategory(g);setDetails("");}}>{g}</button>)}</nav>
+ <label className="merke-filter">Nivå<select value={filter} onChange={e=>setFilter(e.target.value)}>{["Alle nivåer","Oppnådd","Låst","Bronse","Sølv","Gull"].map(v=><option key={v}>{v}</option>)}</select></label>
+ <div className="merke-list">{all.map(b=>{const n=state.counts[b.key]||0,l=levels(b),target=b.levels[l]??b.levels.at(-1)!;return <div className="merke-item" key={b.key}>
+ <button aria-expanded={details===b.key} onClick={()=>setDetails(details===b.key?"":b.key)}><Symbol b={b} level={l}/><span><strong>{b.title}</strong><small>{b.category} · {tier(b,l)}</small></span>
+ <span className="merke-progress"><small>{n} / {target}</small><progress max={target} value={Math.min(n,target)} aria-label={b.title}/></span></button>
+ {details===b.key&&<div className="merke-detail"><p>{b.description}</p><small>Kilde: {b.category==="Anerkjennelse"?"bekreftede lagkamerater i kamp":automatic.has(b.key)?"bekreftet trening eller kamp":b.category==="Tester"?"trenerregistrert test":"bekreftet av trener"}</small><ol>{b.levels.map((goal,i)=>{const unlocked=state.earned.find(e=>e.key===b.key&&e.level===i+1);return <li key={goal}><span>{tier(b,i+1)}{b.category!=="Tester"&&" · "+goal}</span>{unlocked&&<small>{new Date(unlocked.at).toLocaleDateString("nb-NO")}</small>}{n>=goal&&<Check size={15} aria-label="Oppnådd"/>}</li>;})}</ol></div>}</div>;})}</div>
+ {!all.length&&<p>Ingen merker i dette utvalget.</p>}</>;
+}
+function PeerAwards({state,send,busy}:{state:BadgeState;send:Send;busy:boolean}){
+ const [sel,setSel]=useState(""),[kind,setKind]=useState(recognition[0].key);
+ const [expanded,setExpanded]=useState(false);useEffect(()=>{if(new URLSearchParams(location.search).get("peer")==="1")setExpanded(true);},[]);
+ const matches=[...new Map(state.eligible.map(r=>[r.match,r])).values()],m=matches.find(r=>r.match===sel)||matches[0],rows=state.eligible.filter(r=>r.match===m?.match),count=rows.filter(r=>r.given&&!r.revoked).length;
+ return <details className="library-tools" open={expanded} onToggle={e=>setExpanded(e.currentTarget.open)}><summary>Anerkjennelser etter kamp</summary><div className="grid">
+ <label className="exercise-row"><input type="checkbox" checked={state.receive} disabled={busy} onChange={e=>send("privacy",{receive:e.target.checked},"Valget er lagret.")}/>Delta i anerkjennelser</label>
+ <label className="exercise-row"><input type="checkbox" checked={!!state.attribution} disabled={busy} onChange={e=>send("privacy",{receive:state.receive,attribution:e.target.checked},"Synlighet lagret.")}/>Vis mitt navn til den som mottar anerkjennelsen</label>
+ <label className="exercise-row"><input type="checkbox" checked={state.notifications!==false} disabled={busy} onChange={e=>send("privacy",{receive:state.receive,notifications:e.target.checked},"Varselvalg lagret.")}/>Vis nye merker og anerkjennelser</label>
+ {!!matches.length&&state.receive?<><label>Kamp<select value={m.match} onChange={e=>setSel(e.target.value)}>{matches.map(r=><option key={r.match} value={r.match}>{r.day} · {r.opponent}</option>)}</select></label>
+ <p>{3-count} av 3 anerkjennelser igjen · kan endres i 72 timer etter kampslutt</p>
+ <label>Anerkjennelse<select value={kind} onChange={e=>setKind(e.target.value)}>{recognition.map(b=><option key={b.key} value={b.key}>{b.title}</option>)}</select></label>
+ {rows.map(r=><div className="result" key={r.athlete}><strong>{r.name}</strong><small>{recognition.find(b=>b.key===r.given)?.title}</small><button className="btn" disabled={busy||!!r.revoked||!r.given&&count>=3} onClick={()=>send("recognize",{match:r.match,recipient:r.athlete,key:kind},"Anerkjennelsen er lagret.")}>{r.given?"Endre":"Gi anerkjennelse"}</button>{r.given&&!r.revoked&&<button className="btn" disabled={busy} onClick={()=>send("withdraw",{match:r.match,recipient:r.athlete},"Anerkjennelsen er trukket tilbake.")}>Trekk tilbake</button>}</div>)}</>:<p>Ingen åpne kamper for anerkjennelser.</p>}
+ {state.inbox.length>0&&<><h3>Mottatt fra laget</h3>{state.inbox.map((r,i)=><div key={i}>{recognition.find(b=>b.key===r.key)?.title} · {r.day}{r.from&&" · Fra "+r.from}</div>)}</>}</div></details>;
+}
+function CoachBadgeTools({data,id,state,send,busy}:{data:Snapshot;id:string;state:BadgeState;send:Send;busy:boolean}){
+ const [key,setKey]=useState("beep"),[day,setDay]=useState(today),[value,setValue]=useState(""),[games,setGames]=useState<Fixture[]>([]),[mid,setMid]=useState(""),[rows,setRows]=useState<Player[]>([]),[pid,setPid]=useState(""),[end,setEnd]=useState(""),[reason,setReason]=useState(""),[local,setLocal]=useState(""),[practice,setPractice]=useState(""),[attendance,setAttendance]=useState("present");
+ const [targetKey,setTargetKey]=useState("on_fire"),[targetText,setTargetText]=useState("");
+ const game=games.find(m=>m.id===mid);const [fromGame,setFromGame]=useState(false);
+ useEffect(()=>{const wanted=new URLSearchParams(location.search).get("game");if(wanted&&games.some(g=>g.id===wanted)){setMid(wanted);setFromGame(true);}},[games]);
+ useEffect(()=>{let alive=true;registrations(data.me.squad).then(rs=>seasonMatches(data.me.squad,rs)).then(all=>{if(alive)setGames(all.filter(m=>m.completed&&m.registration));}).catch(e=>{if(alive)setLocal(e.message);});return()=>{alive=false;};},[data.me.squad]);
+ useEffect(()=>{let alive=true;setRows([]);setPid("");setEnd("");if(mid)matchAction(data,"details",mid).then(r=>{if(alive)setRows(r.rows);}).catch(e=>{if(alive)setLocal(e.message);});return()=>{alive=false;};},[mid,data]);
+ const opts=data.plans.filter(p=>p.kind==="Practice"&&p.athlete===id&&p.day<=today());
+ return <details className="library-tools" open={fromGame||undefined}><summary>Trenerregistrering</summary><div className="grid">
+ <form className="km-fields" onSubmit={e=>{e.preventDefault();void send("event",{key,day,quantity:Number(value)},"Registreringen er lagret.");}}>
+ <label>Merke eller test<select value={key} onChange={e=>{setKey(e.target.value);setValue("");}}>{coachBadges.map(b=><option key={b.key} value={b.key}>{b.title}</option>)}</select></label><label>Dato<input type="date" required max={today()} value={day} onChange={e=>setDay(e.target.value)}/></label>
+ <label>{key==="beep"?"Oppnådd BEEP-nivå":key==="kmt"?"Hastighet (km/t)":"Antall denne dagen"}<input type="number" required min={0} step={1} max={key==="beep"?30:key==="kmt"?200:999} value={value} onChange={e=>setValue(e.target.value)}/></label><button className="btn primary" disabled={busy}>Lagre måling</button></form>
+ {opts.length>0&&<div className="km-fields"><label>Treningsoppmøte<select value={practice} onChange={e=>setPractice(e.target.value)}><option value="">Velg trening</option>{opts.map(p=><option key={p.id} value={p.id}>{p.day} · {p.title}</option>)}</select></label><label>Status<select value={attendance} onChange={e=>setAttendance(e.target.value)}><option value="present">Deltatt</option><option value="excused">Godkjent fravær</option><option value="missed">Ikke deltatt</option></select></label><button className="btn" disabled={busy||!practice} onClick={()=>send("attendance",{id:practice,status:attendance},"Oppmøte lagret.")}>Lagre oppmøte</button></div>}
+ <details className="library-tools" open={fromGame||undefined}><summary>Kamptilknytning og kampslutt</summary><div className="grid"><label>Spilt kamp<select value={mid} onChange={e=>setMid(e.target.value)}><option value="">Velg kamp</option>{games.map(m=><option key={m.id} value={m.id}>{m.day} · {m.home} – {m.away}</option>)}</select></label>
+ {game&&<><label>Spiller i rapporten<select value={pid} onChange={e=>setPid(e.target.value)}><option value="">Velg spiller</option>{rows.map(p=><option key={p.player_id} value={p.player_id}>#{p.shirt_number} {p.name}</option>)}</select></label><button disabled={!pid||busy} className="btn" onClick={()=>send("link",{reg:game.registration,player:pid},"Kampspilleren er knyttet til valgt utøver.")}>Knytt til valgt utøver</button>
+ <label>Kampslutt (norsk tid)<input type="time" value={end} onChange={e=>setEnd(e.target.value)}/></label><button className="btn" disabled={!end||busy} onClick={()=>send("finish",{match:mid,time:game.day+"T"+end},"Kampslutt lagret.")}>Lagre kampslutt</button></>}</div></details>
+ {data.admins.includes(data.me.id)&&<details className="library-tools"><summary>Mål for aktiv sesong</summary><form className="km-fields" onSubmit={e=>{e.preventDefault();void send("targets",{key:targetKey,levels:targetText.split(/[,;\s]+/).map(Number)},"Sesongmål lagret.");}}><label>Merke<select value={targetKey} onChange={e=>{setTargetKey(e.target.value);setTargetText("");}}>{badges.filter(b=>b.category!=="Tester").map(b=><option key={b.key} value={b.key}>{b.title}</option>)}</select></label><label>Bronse, sølv, gull<input required placeholder={(state.targets?.[targetKey]||badges.find(b=>b.key===targetKey)!.levels).join(", ")} value={targetText} onChange={e=>setTargetText(e.target.value)}/></label><button className="btn" disabled={busy}>Lagre nivågrenser</button></form></details>}
+ {state.moderate.length>0&&<><label>Grunn for tilbaketrekking<input value={reason} maxLength={200} onChange={e=>setReason(e.target.value)}/></label>{state.moderate.map(r=><div className="result" key={r.match+r.giver}><span>{r.day} · {recognition.find(b=>b.key===r.key)?.title}</span><button className="btn" disabled={busy||reason.trim().length<3} onClick={()=>send("revoke",{match:r.match,giver:r.giver,reason},"Anerkjennelsen er trukket tilbake.")}>Trekk tilbake</button></div>)}</>}{local&&<p role="alert">{local}</p>}</div></details>;
+}

@@ -20,7 +20,7 @@ export async function POST(req:Request){
   const cron=!!process.env.MATCH_CRON_SECRET&&token===process.env.MATCH_CRON_SECRET;
   const opts={auth:{persistSession:false,autoRefreshToken:false}};
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!serviceKey||!env.supabaseUrl)return reply(503,"NIF er ikke tilkoblet. Manuell registrering er tilgjengelig.");
+  if(!serviceKey||!env.supabaseUrl)return reply(503,"Direkte NIF-synk er ikke tilkoblet. Lagrede kamper beholdes. Åpne «Terminliste hos NHF» for siste terminliste.");
   const service=createClient(env.supabaseUrl,serviceKey,opts);
   const userDb=cron?service:createClient(env.supabaseUrl,env.supabaseAnonKey,{...opts,global:{headers:{Authorization:"Bearer "+token}}});
   if(!cron&&(await userDb.auth.getUser(token)).error)return reply(401,"Logg inn på nytt.");
