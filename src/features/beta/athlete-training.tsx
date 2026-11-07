@@ -7,9 +7,11 @@ import { checkExercise, rateSession, today, type Snapshot } from "@/lib/beta";
 import type { Effort } from "@/lib/programs";
 import type { Run } from "./program-builder";
 import { Celebration, ReviewForm } from "./workout-finish";
+import {AchievementBar,Challenges} from "./challenges";
+import {Trophy} from "lucide-react";
 import { AthleteNotices } from "./team-notices";
 
-const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Progress",icon:Activity},{name:"Team",icon:Users},{name:"Messages",icon:Mail},{name:"Profile",icon:UserRound}] as const;
+const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Progress",icon:Activity},{name:"Team",icon:Users},{name:"Messages",icon:Mail},{name:"Profile",icon:UserRound},{name:"Utfordringer",icon:Trophy}] as const;
 const efforts:Effort[]=["Easy","Just right","Hard"];
 function longDate(day:string) {
   return new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(day+"T12:00:00Z"));
@@ -27,12 +29,13 @@ export function AthleteTraining({data,busy,run}:{data:Snapshot;busy:boolean;run:
   const finished=plans.filter(p=>completed(p.id)===p.exercises.length);
   const due=plans.filter(p=>p.day<=now);
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
-  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":tab==="Team"?"My team":tab==="Messages"?"My messages":"My progress"}</h1></header>
+  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":"My progress"}</h1></header>
     <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name}</button>)}</nav>
+    <AchievementBar data={data}/>
     {tab!=="Messages"&&data.notices.some(n=>!n.read_at)&&<button className="btn" onClick={()=>setTab("Messages")}><Mail size={18}/>{data.notices.filter(n=>!n.read_at).length} team notice(s) to acknowledge</button>}
     {tab==="Messages"&&<AthleteNotices data={data} busy={busy} run={run}/>}
     {tab==="Plan"&&<WeeklyPlanner data={data} busy={busy} run={run}/>}
-    {tab==="Team"?<AthleteTeam data={data}/>:tab==="Messages"?<Conversation data={data}/>:tab==="Profile"?<Profile me={data.me} busy={busy} run={run}/>:tab==="Progress"?<><section className="panel panel-pad grid"><h2><Activity/> Training record</h2><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
+    {tab==="Utfordringer"?<Challenges data={data}/>:tab==="Team"?<AthleteTeam data={data}/>:tab==="Messages"?<Conversation data={data}/>:tab==="Profile"?<Profile me={data.me} busy={busy} run={run}/>:tab==="Progress"?<><section className="panel panel-pad grid"><h2><Activity/> Training record</h2><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
     {tab==="Plan"&&<label>Training day<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">All dates</option>{Array.from(new Set(plans.map(p=>p.day))).map(d=><option key={d} value={d}>{longDate(d)}</option>)}</select></label>}
     {shown.map(p=>{
       const n=completed(p.id);

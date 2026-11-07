@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import {discover,fixture} from "../src/lib/nif.ts";
+const r={org_id:101,season:55,tournament:8},base={matchId:1,seasonId:55,hometeamId:101,awayteamId:102,matchDate:"2026-02-11T00:00:00",matchStartTime:905,hometeam:"Our side",awayteam:"Visitors",tournamentId:8};
+const person={personId:1,firstName:"Test",lastName:"Only",memberType:"Player",teamOrgId:101,played:true,birthDate:"ignored"};
+let stored=[],day=1;
+const get=async path=>{
+  if(path.startsWith("ScheduledMatches/"))return [base,...(day===2?[{...base,matchId:2}]:[])];
+  if(path.startsWith("TournamentMatches?"))return [{...base,matchId:3,matchResult:{homeGoals:24,awayGoals:22}},{...base,seasonId:3,matchId:111}];
+  if(path.endsWith("/1"))return [person,{...person,personId:2,memberType:"Coach"},{...person,personId:3,teamOrgId:102}];
+  if(path.startsWith("MatchTeamMembers/"))throw Error("NIF 403");
+  if(path.startsWith("TeamMembers/"))return [{...person,personId:4}];
+  throw Error("Unexpected request: "+path);
+};
+const write=async(f,p,auth)=>stored.push({f,p,auth});
+await discover(r,[],get,write);assert.equal(stored.length,2);assert.equal(stored[0].p.length,1);assert.equal(stored[0].p[0].played,true);
+assert.ok(!("birthDate" in stored[0].p[0]));assert.equal(stored[1].p[0].played,null);assert.equal(stored[1].auth,false);
+assert.equal(stored[1].f.score,"24-22");assert.equal(stored[0].f.time,"09:05");
+day=2;stored=[];const msg=await discover(r,[1,3],get,write);assert.match(msg,/1 nye/);assert.ok(stored.find(x=>x.f.id===2));
+assert.equal(fixture({...base,nonPlayReason:"MatchCancelled",matchResult:"0-0"},r).completed,false);
+console.log("PASS: discovery, team/season isolation, scores, scoped Player import and unconfirmed roster fallback.");

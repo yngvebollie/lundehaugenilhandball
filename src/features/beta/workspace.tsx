@@ -9,7 +9,10 @@ import { AthleteTraining } from "./athlete-training";
 import { About } from "./about";
 import { Conversation } from "./athlete-team";
 
-import { MatchPad } from "./match-pad";
+import { Challenges } from "./challenges";
+import { CoachAgenda } from "./coach-agenda";
+import {Trophy,House,Ellipsis,UserRound} from "lucide-react";
+import { Kamper } from "./kamper";
 import {CoachNotices} from "./team-notices";
 import {ClubCrest} from "./club-crest";
 import { TeamTools } from "./team-tools";
@@ -20,7 +23,9 @@ function message(error: unknown) {
   return error && typeof error==="object" && "message" in error ? String(error.message) : "Could not save. Please retry.";
 }
 function signedOut() { return db?.auth.signOut().then(({error})=>{if(error) throw error;}); }
-export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match" }) {
+export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match"|"challenges" }) {
+  const [more,setMore]=useState(false),[hash,setHash]=useState("");
+  useEffect(()=>{const follow=()=>{setHash(location.hash);setMore(false);};follow();window.addEventListener("hashchange",follow);return()=>window.removeEventListener("hashchange",follow);},[]);
   const [persona,setPersona]=useState(athlete?"liv":"coach");
   const [data,setData]=useState<Snapshot|null>(null);
   const [ready,setReady]=useState(false);
@@ -61,10 +66,11 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   const account=<div className="account"><strong>{data.me.name}</strong>{coach?<label>Current team<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
     {demo&&<span className="badge orange">Local demo</span>}<button className="btn" onClick={async()=>{if(db){const {error}=await db.auth.signOut();if(error){setError(error.message);return;}}sessionStorage.removeItem("nhf-persona");location.assign("/login");}}><LogOut size={16}/>{demo?"Switch account":"Sign out"}</button></div>;
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<AthleteTraining key={data.me.id} data={data} busy={busy} run={run}/></div></main>;
-  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Activity/>Match pad</a></>;
+  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Trophy/>Kamper</a><a className={"nav-item "+(view==="challenges"?"active":"")} href="/challenges"><Trophy/>Utfordringer</a></>;
   return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
-    <main className="main grid" id="overview"><header className="page-head"><div><span className="eyeline">Lundehaugen IL / Coach workspace</span><h1>{view==="team"?"Team settings":view==="match"?"Match day":"Squad overview"}</h1></div>{account}</header><nav className="mobile-coach-nav" aria-label="Coach sections">{navigation}</nav>{notice}
-    {view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<MatchPad key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
+    <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {view==="match"?"Kamper":view==="team"?"Lagstyring":view==="challenges"?"Utfordringer":"Oversikt"}</span><h1>{view==="team"?"Team settings":view==="match"?"Kamper":view==="challenges"?"Utfordringer":"Squad overview"}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
+    <nav className="phone-tabs" aria-label="Trenervalg"><a className={view==="dashboard"&&hash!=="#weekly"?"current":""} href="/#overview"><House/>Oversikt</a><a className={view==="dashboard"&&hash==="#weekly"?"current":""} href="/#weekly"><CalendarDays/>Ukeplan</a><a className={view==="match"?"current":""} href="/match"><Trophy/>Kamper</a><button aria-expanded={more} onClick={()=>setMore(!more)}><Ellipsis/>Mer</button></nav>{notice}
+    {view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
@@ -85,7 +91,7 @@ function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     const csv=[["Date","Workout","Athlete","Exercises done","Exercises assigned"],...schedule.map(p=>[p.day,p.title,players.find(a=>a.id===p.athlete)?.name||"",String(count(data,p.id)),String(p.exercises.length)])].map(row=>row.map(escape).join(",")).join("\r\n");
     const url=URL.createObjectURL(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download="NHF-training.csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  return <><section className="grid metric-grid">{[["Squad athletes",players.length],["Assigned sessions",data.plans.length],["Completed",data.plans.filter(p=>count(data,p.id)===p.exercises.length).length],["Exercises logged",data.checks.length]].map(([label,value])=><div className="panel panel-pad metric" key={label}><span className="muted">{label}</span><strong className="metric-value">{value}</strong></div>)}</section>
+  return <><CoachAgenda data={data}/><section className="grid metric-grid">{[["Squad athletes",players.length],["Assigned sessions",data.plans.length],["Completed",data.plans.filter(p=>count(data,p.id)===p.exercises.length).length],["Exercises logged",data.checks.length]].map(([label,value])=><div className="panel panel-pad metric" key={label}><span className="muted">{label}</span><strong className="metric-value">{value}</strong></div>)}</section>
     <CoachNotices data={data} run={run} busy={busy}/>
     <WeeklyPlanner data={data} busy={busy} run={run} onDraft={openDraft} renderBuilder={show=><>
       <QuickCoach onApply={openDraft}/>

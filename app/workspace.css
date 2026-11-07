@@ -1,0 +1,76 @@
+.coach-main{min-width:0;background:var(--panel)}
+.challenge-work{max-width:760px;width:100%;align-content:start}
+.challenge-work h2,.challenge-work header small,.achievement-bar summary,.challenge-head,.challenge-log{display:flex;align-items:center;gap:9px}
+.challenge-head{justify-content:space-between;padding:16px 0;border-block:1px solid var(--border)}
+.challenge-head h3{font-size:22px}.challenge-head small{color:var(--muted)}
+.challenge-log{align-items:flex-end;flex-wrap:wrap}.challenge-log label{flex:1;min-width:100px}
+.score-table td:last-child,.score-table th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.my-score{background:var(--teal-soft)}.achievement-bar{border-block:1px solid var(--border);padding:10px 0}
+.achievement-bar summary{cursor:pointer}.achievement-bar summary svg{color:var(--orange)}.achievement-bar summary span{margin-left:auto;background:var(--teal-soft);border-radius:4px;padding:3px 8px}
+.achievement-bar>div{display:flex;gap:10px;padding:10px 0}.achievement-bar small{display:block;color:var(--muted)}.achievement-bar>p{font-size:14px;margin-top:8px;color:var(--muted)}
+.phone-brand,.phone-tabs,.phone-more,.coach-agenda{display:none}
+.sidebar .brand{color:white}.sidebar .brand small{font-size:12px;font-weight:500;color:#cbd2ce}
+.sidebar .nav-item:hover:not(.active){background:#363b3d}
+.match-main .page-head{align-items:center;margin:0;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.match-main .page-head h1{display:none}.match-main .eyeline{color:var(--text);font-weight:650}
+.squad-space{display:grid;grid-template-columns:minmax(160px,205px) minmax(0,1fr);gap:24px;min-width:0}
+.squad-space.detail-mode{grid-template-columns:minmax(0,1fr)}
+.squad-rail{border-right:1px solid var(--border);padding:12px 16px 24px 0}
+.squad-rail h3{margin:26px 0 10px}.squad-rail>small,.squad-rail button small,.competition-heading small,.match-summary small{color:var(--muted)}
+.squad-rail button{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 5px;padding:12px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:5px;overflow-wrap:anywhere}
+.squad-rail button small{display:block;margin-top:4px}
+.squad-rail button.current,.workspace-tabs .current{background:var(--yellow);color:var(--text);border-color:var(--yellow)}
+.squad-rail button.current small{color:var(--text)}.squad-rail .rail-add{margin-top:22px;justify-content:center}
+.squad-compact{display:none}.kamper{align-content:start;padding-block:8px}
+.squad-title,.squad-title>div,.competition-heading,.match-summary,.workspace-tabs,.source-tabs,.review-check,.report-totals,.fixture-line,.private-mark{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.squad-title,.competition-heading,.review-check{justify-content:space-between}
+.squad-title h1{overflow-wrap:anywhere}.id-tag,.private-mark{border:1px solid var(--border);border-radius:4px;padding:4px 7px;color:var(--muted);font-size:13px;font-weight:600}
+.workspace-tabs{border-bottom:1px solid var(--border);gap:6px;padding:6px 0 10px}
+.workspace-tabs>a,.workspace-tabs>button{background:transparent;color:var(--text);border:0;border-radius:4px;padding:9px 12px;font-size:14px;font-weight:650}
+.workspace-tabs .private-mark{margin-left:auto}
+.competition-heading h2{margin-bottom:5px}
+.fixture-list{border-block:1px solid var(--border)}
+.fixture-line{display:grid;grid-template-columns:minmax(70px,.9fr) 44px minmax(110px,1.5fr) auto minmax(70px,1fr) auto 18px;padding:14px 8px;border-left:3px solid transparent;font-size:14px;overflow-wrap:anywhere}
+.fixture-line+.fixture-line{border-top:1px solid var(--border)}
+.fixture-line.spotlight,.review-scroll tr.highlight,.game-event{background:var(--green-soft);border-left-color:var(--green)}
+.fixture-line:hover,.review-scroll tbody tr:hover{background:var(--teal-soft)}
+.fixture-line time,.fixture-line b{font-variant-numeric:tabular-nums}
+.match-summary{border:1px solid var(--border);border-radius:5px;padding:15px;font-size:14px}
+.match-summary .btn{margin-left:auto}
+.source-tabs{padding-bottom:8px}.review-check{padding:12px;background:var(--green-soft);color:var(--green);border-radius:4px}
+.review-check:has(strong[data-invalid=true]){background:#ffebdc;color:#7a3900}
+.review-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(215px,1fr);gap:20px;align-items:start}
+.review-scroll{overflow-x:auto}.review-scroll th,.review-scroll td{padding:9px 6px;font-variant-numeric:tabular-nums}
+.review-scroll tbody tr{cursor:pointer}.review-scroll tbody th>button{color:inherit;background:none;border:0;font-weight:700;text-align:left;padding:4px}
+.review-scroll th small{display:block;color:var(--muted);font-weight:400}
+.review-player{border-left:1px solid var(--border);padding-left:16px;display:grid;gap:8px}
+.review-player label{grid-template-columns:minmax(76px,1fr) minmax(90px,1fr);align-items:center}
+.report-meta summary,.feedback-list summary{cursor:pointer}.report-meta[open] summary{margin-bottom:12px}
+.report-totals span{background:var(--bg-soft);padding:7px 10px;border-radius:4px}
+.review-work input[type=file]{max-width:100%}
+@media(max-width:1200px){.fixture-line{grid-template-columns:75px 42px minmax(120px,1fr) auto auto 16px}.fixture-line>small:nth-of-type(2){display:none}.squad-space{gap:16px;grid-template-columns:170px minmax(0,1fr)}}
+@media(max-width:980px){
+ .coach-main{padding:0 18px 96px;gap:16px}.phone-brand,.phone-tabs{display:flex;align-items:center;background:var(--nav);color:var(--on-nav)}
+ .phone-brand{justify-content:space-between;margin:0 -18px;padding:12px 18px}.phone-brand .club-crest{width:36px;height:36px}.phone-brand .brand small{display:none}
+ .phone-brand button,.phone-tabs button{display:grid;place-items:center;color:inherit;background:transparent;border:0}
+ .phone-tabs{position:fixed;bottom:0;left:0;right:0;padding:5px 6px max(5px,env(safe-area-inset-bottom));z-index:12;display:grid;grid-template-columns:repeat(4,1fr)}
+ .phone-tabs>a,.phone-tabs button{display:grid;place-items:center;gap:3px;min-height:52px;color:#e7eeeb;font-size:12px}.phone-tabs .current{color:var(--yellow)}
+ .phone-more{position:fixed;z-index:13;bottom:calc(63px + env(safe-area-inset-bottom));left:8px;right:8px;max-height:70svh;overflow:auto;display:grid;border:1px solid var(--border-strong);background:var(--panel);padding:12px;border-radius:6px;box-shadow:0 4px 18px #0002}.phone-more .nav-item{color:var(--text)}.phone-more .account{margin-top:10px}
+ .coach-main>.page-head{margin:0}.coach-main>.page-head .account{display:none}.coach-main:has(.coach-agenda)>.page-head{display:none}
+ .coach-agenda{display:grid;gap:16px;border-bottom:1px solid var(--border);padding-bottom:20px}
+ .agenda-context small,.coach-agenda>p,.agenda-day>small,.agenda-day a small{color:var(--muted)}
+ .agenda-context label{display:flex;align-items:center;justify-content:space-between;margin-top:5px}.agenda-context select{border:0;padding:4px 0;font-size:20px;font-weight:750}
+ .coach-agenda h2{font-size:28px}.coach-agenda h2::first-letter{text-transform:uppercase}
+ .agenda-day h3{margin-bottom:8px}.agenda-day a,.follow-row{display:flex;gap:12px;padding:12px 4px;align-items:center;border-top:1px solid var(--border)}
+ .agenda-day a span{flex:1}.agenda-day a small{display:block;margin-top:4px}.agenda-day a.game-event{border-left:3px solid var(--green);padding-left:10px}
+ .follow-row span,.feedback-list summary span{color:var(--teal);font-size:13px;margin-left:auto}.feedback-list summary{display:flex;justify-content:space-between}
+ .feedback-list p{font-size:14px;padding:8px 0}.coach-agenda .btn{width:100%}
+}
+@media(max-width:760px){
+ .squad-space{display:block}.squad-rail{display:none}.squad-compact{display:grid}
+ .squad-title h1{font-size:24px}.squad-title .btn{min-height:40px;padding:8px}
+ .fixture-line{grid-template-columns:auto minmax(0,1fr) auto;gap:5px 9px}
+ .fixture-line time{grid-column:1}.fixture-line>small:first-of-type{grid-column:2}.fixture-line>strong{grid-column:1 / 3;grid-row:2}.fixture-line>b{grid-column:3;grid-row:2}.fixture-line>.badge{grid-column:3;grid-row:1}.fixture-line>svg{display:none}
+ .match-summary .btn{margin-left:0}.review-layout{grid-template-columns:minmax(0,1fr)}.review-player{border-left:0;border-top:1px solid var(--border);padding:12px 0}
+ .workspace-tabs>a,.workspace-tabs>button{padding:8px}.review-check{gap:6px}
+}
