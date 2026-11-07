@@ -2,7 +2,7 @@ import {useEffect,useState} from "react";
 import {ClipboardPaste,Download,FileText,Save,Upload} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
 import type {Fixture} from "@/lib/match-journal";
-import {importDraft,parsePaste,validateReport,type Report,type ReportPlayer,type ReportMatch} from "@/lib/report-text";
+import {importDraft,parsePaste,reportTeamMatches,validateReport,type Report,type ReportPlayer,type ReportMatch} from "@/lib/report-text";
 
 type Saved={digest:string;original:Report;reviewed:Report;revision:number};
 const digestText=async(text:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,"0")).join("");
@@ -34,9 +34,13 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     const res=await fetch("/api/matches/report?match="+encodeURIComponent(g.id),{method:"POST",body:f,headers:{"Content-Type":"application/pdf",...(token?{Authorization:"Bearer "+token}:{})}});
     const result=await res.json();if(!res.ok)throw Error(result.error);setFile(f);setPreview(URL.createObjectURL(f));previewImport(result.report,result.digest);
   }
+  function teamIssues(r:Report){
+    return reportTeamMatches(r.match.home,g.home,g.away)&&reportTeamMatches(r.match.away,g.away,g.home)?[]:
+      [`Rapport: ${r.match.home||"?"} – ${r.match.away||"?"}. Valgt kamp: ${g.home||"?"} – ${g.away||"?"}. Kontroller lagnavnene under Kampinformasjon.`];
+  }
   async function save(){
     if(!draft||!orig||!ready)return;
-    const issues=validateReport(draft,g.nif_id);if(issues.length)throw Error(issues.join(" "));
+    const issues=[...validateReport(draft,g.nif_id),...teamIssues(draft)];if(issues.length)throw Error(issues.join(" "));
     if(g.nif_id!==orig.match.nif_id)throw Error("Originalrapporten tilhører en annen kamp.");
     if(!demo&&file){const result=await db!.storage.from("kamprapporter").upload(privatePath(g,hash),file,{contentType:"application/pdf",upsert:false});
       if(result.error&&!/duplicate|already exists/i.test(result.error.message))throw result.error;}
@@ -45,7 +49,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     else await db!.rpc("beta_report",{action:"save",t:g.team,m:g.id,digest:hash,original:orig,reviewed:draft,expected:saved?.revision||0}).throwOnError();
     await read();await onSaved();setEditing(false);setText("");setFile(null);setNote("Rapport lagret. Du kan redigere den senere.");
   }
-  const issues=draft?validateReport(draft,g.nif_id):[];
+  const issues=draft?[...validateReport(draft,g.nif_id),...teamIssues(draft)]:[];
   const report=editing?draft:saved?.reviewed;
   const index=report?.players[picked]?.side===side?picked:(report?.players.findIndex(p=>p.side===side)??-1),player=report?.players[index];
   return <section className="grid review-work"><header className="feature-heading"><h3><FileText size={17}/> Kamprapport</h3>
@@ -53,7 +57,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     {saved&&<div className="day-strip"><small>Lagret · revisjon {saved.revision}</small><button className="btn" disabled={busy} onClick={()=>act(async()=>{const {downloadReport}=await import("@/lib/report-export");await downloadReport(saved.reviewed,saved.revision);setNote("PDF eksportert.");})}><Download size={16}/>Last ned PDF</button><button className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);}}>Rediger lagret rapport</button>
       {!demo&&saved.original.method!=="paste"&&<button className="btn" onClick={()=>act(async()=>{const result=await db!.storage.from("kamprapporter").download(privatePath(g,saved.digest));if(result.error)throw result.error;setPreview(URL.createObjectURL(result.data));})}>Vis original PDF</button>}</div>}
     {preview&&<object data={preview} type="application/pdf" width="100%" height="340"><a href={preview} target="_blank" rel="noreferrer">Åpne privat forhåndsvisning</a></object>}
-    {report&&<>{editing&&orig?.players.some(p=>p.participation_blank)&&<small>Blankt deltakerfelt i kilden foreslås som Ja. Kontroller før import.</small>}<div className="review-check"><span>Kilde: {report.method==="paste"?"innlimt NHF-rapport":"PDF"}</span><strong>{report.match.nif_id===g.nif_id?"✓ Kamp-ID stemmer":"Kontroller ResPIN"}</strong></div><details className="report-meta" open={editing&&!!saved||undefined}><summary>Kampinformasjon</summary><div className="km-fields">{(Object.keys(report.match) as (keyof ReportMatch)[]).map(k=><label key={k}>{{nif_id:"ResPIN",number:"Kampnummer",day:"Dato",time:"Klokkeslett",home:"Hjemmelag",away:"Bortelag",home_score:"Hjemmemål",away_score:"Bortemål",competition:"Turnering",venue:"Hall",half_home:"Pause hjemme",half_away:"Pause borte"}[k]}
+    {report&&<>{editing&&orig?.players.some(p=>p.participation_blank)&&<small>Blankt deltakerfelt i kilden foreslås som Ja. Kontroller før import.</small>}<div className="review-check"><span>Kilde: {report.method==="paste"?"innlimt NHF-rapport":"PDF"}</span><strong>{report.match.nif_id===g.nif_id?"✓ Kamp-ID stemmer":"Kontroller ResPIN"}</strong></div><details className="report-meta" open={editing&&(!!saved||!!teamIssues(report).length)||undefined}><summary>Kampinformasjon</summary><div className="km-fields">{(Object.keys(report.match) as (keyof ReportMatch)[]).map(k=><label key={k}>{{nif_id:"ResPIN",number:"Kampnummer",day:"Dato",time:"Klokkeslett",home:"Hjemmelag",away:"Bortelag",home_score:"Hjemmemål",away_score:"Bortemål",competition:"Turnering",venue:"Hall",half_home:"Pause hjemme",half_away:"Pause borte"}[k]}
       <input readOnly={!editing||k==="nif_id"} value={report.match[k]??""} onChange={e=>{const v=e.target.value;setDraft({...report,match:{...report.match,[k]:["home_score","away_score","half_home","half_away"].includes(k)?v===""?null:Number(v):v}});}}/></label>)}</div></details>
     <div className="day-strip">{(["A","B"] as const).map(s=><button className={"btn "+(s===side?"selected":"")} key={s} onClick={()=>setSide(s)}>{s==="A"?report.match.home:report.match.away} · {report.players.filter(p=>p.side===s).length} spillere</button>)}</div>
     <div className="review-layout"><div className="review-rows"><h3>{side==="A"?report.match.home:report.match.away} · Spillerlinjer</h3><div className="review-scroll"><table className="table"><thead><tr>{["Nr.","Deltatt","Spillemål","7 m","Totalt"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{report.players.map((p,i)=>p.side!==side?null:<tr key={i} className={i===index?"highlight":""} onClick={()=>pick(i)}><th><button type="button" aria-label={"Velg spiller "+p.shirt+" "+p.name} onClick={()=>pick(i)}>#{p.shirt} <small>{p.name}</small></button></th><td>{p.played===true?"✓":p.played===false?"Nei":"?"}</td><td>{p.goals??"?"}</td><td>{p.penalty??"?"}</td><td>{p.total??"?"}</td></tr>)}</tbody></table></div></div>
@@ -65,12 +69,12 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     {editing&&<>{[...report.issues,...issues].map((msg,i)=><small key={i}>{msg}</small>)}<div className="day-strip">
       <button disabled={!ready||busy||!!issues.length||orig?.match.nif_id!==g.nif_id} className="btn primary" onClick={()=>act(save)}><Save size={16}/>{saved?"Lagre rapportendringer":"Importer rapport"}</button>
       <button className="btn" onClick={()=>{setDraft({...report,players:[...report.players,{side,shirt:"",name:"",played:null,goals:0,penalty:0,total:0,warning:null,suspensions:0,disqualification:null}]});}}>Legg til rad</button>
-      <button className="btn" onClick={()=>setEditing(false)}>Avbryt</button></div></>}</>}
+      <button className="btn" onClick={()=>setEditing(false)}>Avbryt</button></div>{note&&<p role="alert">{note}</p>}</>}</>}
     <details className="library-tools" key={saved?"replace":"initial"} open={!saved||undefined}><summary>{saved?"Importer ny kamprapport":"Importer kamprapport"}</summary><div className="grid">
     <div className="source-tabs"><strong>Kilde</strong><button className={"btn "+(source==="paste"?"selected":"")} onClick={()=>setSource("paste")}><ClipboardPaste size={16}/>Lim inn tekst</button><button className={"btn "+(source==="pdf"?"selected":"")} onClick={()=>setSource("pdf")}><Upload size={16}/>PDF</button></div>
     {source==="paste"&&<label>Lim inn NHF-kamprapport<textarea rows={4} maxLength={120000} placeholder="Kopier kamprapporten med tabellkolonnene …" value={text} onChange={e=>setText(e.target.value)}/></label>}
     <div className="day-strip">{source==="paste"?<button className="btn" disabled={!text.trim()||busy} onClick={()=>act(async()=>{const r=parsePaste(text);setFile(null);setPreview("");previewImport(r,await digestText(text));setText("");})}><ClipboardPaste size={16}/>Les inn tekst</button>:
       <label className="btn"><Upload size={16}/>Last opp kamprapport<input type="file" accept="application/pdf" aria-label="Velg PDF" onChange={e=>{const f=e.target.files?.[0];if(f)void act(()=>pdf(f));e.target.value="";}}/></label>}</div>
 </div></details>
-    {note&&<p role="status">{note}</p>}</section>;
+    {note&&!editing&&<p role="status">{note}</p>}</section>;
 }

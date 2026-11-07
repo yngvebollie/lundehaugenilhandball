@@ -39,6 +39,11 @@ export function parsePaste(input:string):Report{
   if(!players.length)issues.push("Fant ingen spillerrader. Kopier tabellen med tabulatorene, eller bruk PDF.");
   return {match,players,issues,method:"paste",version:"nhf-tabs-1"};
 }
+export function reportTeamMatches(label:string|null,fixture:string|undefined,opponent:string|undefined){
+  const norm=(v:string|null|undefined)=>(v??"").trim().toLowerCase().replace(/\s+/g," ");
+  const r=norm(label),f=norm(fixture),o=norm(opponent),base=(v:string)=>v.replace(/ [0-9]+$/,"");
+  return !!r&&(r===f||(/ [0-9]+$/.test(f)&&r===base(f)&&r!==base(o)));
+}
 export function validateReport(r:Report,nif:number|undefined){
   const issues:string[]=[];
   if(!r.match.nif_id||nif&&r.match.nif_id!==nif)issues.push("ResPIN stemmer ikke med valgt kamp.");
