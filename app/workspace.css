@@ -34,6 +34,11 @@
 .fixture-line+.fixture-line{border-top:1px solid var(--border)}
 .fixture-line.spotlight,.review-scroll tr.highlight,.game-event{background:var(--green-soft);border-left-color:var(--green)}
 .fixture-line:hover,.review-scroll tbody tr:hover{background:var(--teal-soft)}
+.fixture-line.spotlight.outcome-loss{border-left-color:#a83232;background:#fcf0f0}
+.fixture-line.spotlight.outcome-draw{border-left-color:#967020;background:#faf6e9}
+.badge.result-win{background:var(--green-soft);color:var(--green)}
+.badge.result-loss{background:#fae1e1;color:#912929}.badge.result-draw{background:#f5ebd1;color:#705015}
+.badge.result-neutral{background:var(--teal-soft);color:var(--teal)}
 .fixture-line time,.fixture-line b{font-variant-numeric:tabular-nums}
 .match-summary{border:1px solid var(--border);border-radius:5px;padding:15px;font-size:14px}
 .match-summary .btn{margin-left:auto}

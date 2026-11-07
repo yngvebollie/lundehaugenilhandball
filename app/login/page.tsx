@@ -4,18 +4,22 @@ import { useEffect, useState, type FormEvent } from "react";
 import { db, demo, demoAccounts, joinDemo, registerDemoAthlete,selectTeam } from "@/lib/beta";
 import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList } from "lucide-react";
 import { PublicShell } from "@/features/beta/public-shell";
+import {SignupSuccess} from "@/features/beta/signup-success";
+import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
 
 export default function Login(){
   const [invite,setInvite]=useState("");
   const [email,setEmail]=useState("");
   const [name,setName]=useState("");
   const [phone,setPhone]=useState("");
+  const [teamCode,setTeamCode]=useState(""),[magic,setMagic]=useState(false);
   const [password,setPassword]=useState("");
   const [signup,setSignup]=useState(false);
   const [join,setJoin]=useState(false),[link,setLink]=useState("");
   const [role,setRole]=useState<"coach"|"athlete">("coach");
   const [selected,setSelected]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [mail,setMail]=useState<"created"|"sent"|"">("");
   const [message,setMessage]=useState("");
   const [account,setAccount]=useState("coach");
   const [signed,setSigned]=useState("");
@@ -27,23 +31,31 @@ export default function Login(){
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
-    const sub=db.auth.onAuthStateChange((_,s)=>setSigned(s?.user.email||""));
+    const sub=db.auth.onAuthStateChange((_,s)=>{setSigned(s?.user.email||"");if(s){setName(n=>n||s.user.user_metadata?.full_name||"");setPhone(n=>n||s.user.user_metadata?.contact_phone||"");}});
     return ()=>sub.data.subscription.unsubscribe();
   },[]);
   async function enter(e:FormEvent){
     e.preventDefault();setBusy(true);setMessage("");
     try{
+      const registering=signup||(join&&role==="athlete");
+      const joinPath="/join"+(teamCode?"?team_code="+encodeURIComponent(teamCode):"");
+      if((registering&&!signed||!demo&&signed&&invite)&&!validPhone(phone))throw Error("Enter a valid phone number.");
+      if(teamCode&&!validTeamCode(teamCode))throw Error("Enter the six-character team code.");
+      if(!demo&&!signed&&magic){
+        const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role;
+        await emailSignIn(email,path,registering,name,phone);setMail("sent");return;
+      }
       if(demo){
         if(invite)joinDemo(invite,email.trim().toLowerCase(),name.trim());
-        else if(join&&role==="athlete"){registerDemoAthlete(email.trim().toLowerCase(),name.trim());location.assign("/join");return;}
+        else if(join&&role==="athlete"){registerDemoAthlete(email.trim().toLowerCase(),name.trim());location.assign(joinPath);return;}
         else sessionStorage.setItem("nhf-persona",account);
       }else{
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:invite?location.href:location.origin+"/join",data:{full_name:name.trim(),contact_phone:phone.trim()}}});
+            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:invite?location.href:location.origin+joinPath,data:{full_name:name.trim(),contact_phone:phone.trim()}}});
             if(error)throw error;
-            if(!data.session){setMessage(invite?"Confirm your email, then reopen your invitation.":"Confirm your email, then sign in as an athlete to choose a team.");return;}
+            if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}
           }else{
             const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
           }
@@ -52,9 +64,10 @@ export default function Login(){
           const user=(await db.auth.getUser()).data.user;
           const member=await db.from("beta_members").select("role").eq("id",user?.id).maybeSingle().throwOnError();
           if(member.data&&member.data.role!==role)throw Error("Choose "+member.data.role+" sign-in for this account.");
-          if(!member.data){if(role==="athlete"){location.assign("/join");return;}throw Error("Accept a coach invitation to open the coach dashboard.");}
+          if(!member.data){if(role==="athlete"){location.assign(joinPath);return;}throw Error("Accept a coach invitation to open the coach dashboard.");}
         }
         if(invite){
+          if(signed){const {error}=await db.auth.updateUser({data:{full_name:name.trim(),contact_phone:phone.trim()}});if(error)throw error;}
           const team=(await db.rpc("beta_join",{code:invite,display_name:name.trim()}).throwOnError()).data;
           const {data}=await db.auth.getUser();if(data.user)selectTeam(data.user.id,String(team));
         }
@@ -63,6 +76,7 @@ export default function Login(){
       location.assign(invite?"/":role==="athlete"?"/athlete":"/");
     }catch(error){setMessage((error as Error).message||"Could not sign in.");}finally{setBusy(false);}
   }
+  if(mail&&!signed)return <PublicShell><div className="entry-content"><SignupSuccess name={name} email={email} known={mail==="created"}/><button className="btn" onClick={()=>{setMail("");setJoin(false);setSignup(false);}}>Til innlogging</button></div></PublicShell>;
   const choice=!selected&&!invite;
   return <PublicShell><div className="entry-content">
     {!choice&&!invite&&<a className="entry-back" href="/login"><ArrowLeft size={16}/>Choose another role</a>}
@@ -75,10 +89,12 @@ export default function Login(){
     <form className="grid" onSubmit={enter}>
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
       {(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
-      {!signed&&(signup||join)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
-      {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&<label>Password<input required type="password" minLength={signup?8:1} autoComplete={signup?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
+      {(!signed&&(signup||join)||signed&&invite)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
+      {join&&role==="athlete"&&!invite&&<label>Team code (optional)<input maxLength={6} minLength={6} autoCapitalize="characters" value={teamCode} onChange={e=>setTeamCode(e.target.value.toUpperCase().trim())}/></label>}
+      {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
-    <button className="btn primary" disabled={busy}>{invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
+    <button className="btn primary" disabled={busy}>{magic&&!signed?"Email me a sign-in link":invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
+    {!demo&&!signed&&<button className="btn" onClick={()=>{setMagic(!magic);setMessage("");}}>{magic?"Use a password":"Sign in with a magic link"}</button>}
     {!demo&&invite&&!signed&&<button className="btn" onClick={()=>setSignup(!signup)}>{signup?"Use existing account":"Create invited account"}</button>}</>}
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
     {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}

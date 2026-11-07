@@ -20,14 +20,14 @@ export function TeamStaff({data,busy,run}:Props){
   </div></details>;
 }
 export function ShareLink({data,busy,run}:Props){
-  const [role,setRole]=useState<Member["role"]>("athlete"),[record,setRecord]=useState<{token:string;expires:string}|null>(null),[note,setNote]=useState("");
+  const [role,setRole]=useState<Member["role"]>("athlete"),[record,setRecord]=useState<{token:string;expires:string;direct?:boolean}|null>(null),[note,setNote]=useState("");
   const team=data.me.squad,admin=data.admins.includes(data.me.id);
   useEffect(()=>{let alive=true;setRecord(null);setNote("");applicationLink(team,role,"get").then(r=>{if(alive)setRecord(r);}).catch(e=>{if(alive)setNote(e.message);});return ()=>{alive=false;};},[team,role]);
   const url=record?location.origin+"/apply?link="+record.token:"";
-  return <section className="grid"><h3><LinkIcon size={17}/> Share an application link</h3><p className="muted">No email address needed. Applicants request a place on this team; sharing the link does not grant access.</p>
-    <label>Application role<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option>{admin&&<option value="coach">Coach</option>}</select></label>
-    <div className="day-strip"><button className="btn" disabled={busy} onClick={()=>run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Application link ready.");})}>{url?"Replace application link":"Create application link"}</button>
+  return <section className="grid"><h3><LinkIcon size={17}/> Inviter med lenke</h3><p className="muted">Nye invitasjoner gir tilgang til dette laget etter e-postbekreftelse, uten manuell godkjenning. Del trenerlenker kun med personer som skal ha tilgang til utøverdata.</p>
+    <label>Rolle i laget<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option>{admin&&<option value="coach">Coach</option>}</select></label>
+    <div className="day-strip"><button className="btn" disabled={busy} onClick={()=>run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Invitasjonen er klar.");})}>{url?"Erstatt invitasjonslenke":"Opprett invitasjonslenke"}</button>
     {url&&<button className="btn" disabled={busy} onClick={()=>run(async()=>{await applicationLink(team,role,"revoke");setRecord(null);setNote("Link revoked.");})}>Revoke link</button>}</div>
-    {record&&<><label>Shareable team application link<input readOnly value={url} onFocus={e=>e.target.select()}/></label><small>Expires {new Date(record.expires).toLocaleDateString("en-GB")}</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(url);setNote("Link copied.");}catch{setNote("Select the link above to copy it.");}}}><Copy size={16}/>Copy application link</button></>}
+    {record&&!record.direct&&<p className="km-status">Denne gamle lenken krever godkjenning. Erstatt den for å dele en direkte invitasjon.</p>}{record&&<><label>Lagets invitasjonslenke<input readOnly value={url} onFocus={e=>e.target.select()}/></label><small>Expires {new Date(record.expires).toLocaleDateString("en-GB")}</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(url);setNote("Link copied.");}catch{setNote("Select the link above to copy it.");}}}><Copy size={16}/>Kopier invitasjonslenke</button></>}
     {note&&<p role="status">{note}</p>}</section>;
 }

@@ -249,31 +249,32 @@ export async function changeStaff(data:Snapshot,member:Member,action:"remove"|"p
   localStorage.removeItem(prefix+"application:"+team+":"+member.id);
   for(const k of Object.keys(localStorage).filter(k=>k.startsWith(prefix+"invite:"))){const v=JSON.parse(localStorage.getItem(k)!);if(v.team===team&&v.email===member.email)localStorage.removeItem(k);}
 }
-type LinkRecord={token:string;expires:string};
+type LinkRecord={token:string;expires:string;direct?:boolean};
 export async function applicationLink(team:string,role:Member["role"],action:"get"|"issue"|"revoke"){
-  if(!demo)return (await db!.rpc("beta_application_link",{action,t:team,member_role:role}).throwOnError()).data as LinkRecord|null;
+  if(!demo)return (await db!.rpc("beta_application_link",{action:action==="issue"?"issue_direct":action,t:team,member_role:role}).throwOnError()).data as LinkRecord|null;
   if(role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
   const key=prefix+"public-link:"+team+":"+role;
   if(action==="revoke")localStorage.removeItem(key);
-  if(action==="issue")localStorage.setItem(key,JSON.stringify({token:crypto.randomUUID(),expires:new Date(Date.now()+7*86400000).toISOString(),team,role}));
+  if(action==="issue")localStorage.setItem(key,JSON.stringify({token:crypto.randomUUID(),expires:new Date(Date.now()+7*86400000).toISOString(),team,role,direct:true}));
   const row=JSON.parse(localStorage.getItem(key)||"null");return row&&Date.parse(row.expires)>Date.now()?row as LinkRecord:null;
 }
-export type LinkInfo={id:string;name:string;role:Member["role"]};
+export type LinkInfo={id:string;name:string;role:Member["role"];direct?:boolean};
 export async function linkInfo(code:string):Promise<LinkInfo|null>{
   if(!/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(code))return null;
   if(!demo)return (await db!.rpc("beta_link_info",{code}).throwOnError()).data;
   const l=localRows<LinkRecord&{team:string;role:Member["role"]}>("public-link:").find(v=>v.token===code&&Date.parse(v.expires)>Date.now());
   const team=l&&[seedTeam,...localRows<Team>("team:")].reverse().find(t=>t.id===l.team);
-  return team&&l?{id:team.id,name:team.name,role:l.role}:null;
+  return team&&l?{id:team.id,name:team.name,role:l.role,direct:!!l.direct}:null;
 }
 export async function applyWithLink(code:string,name:string,phone:string,email:string){
   if(!demo){await db!.rpc("beta_application_link",{action:"submit",code,label:name,phone_number:phone}).throwOnError();return;}
   const info=await linkInfo(code);if(!info)throw Error("Invalid or expired link.");
   let me=demoMembers().find(m=>m.email===email);
   if(!me){registerDemoAthlete(email,name);me=demoMembers().find(m=>m.email===email)!;}
-  if(me.squad&&(me.role!==info.role||me.role==="athlete"||me.squad===info.id||localRows<{id:string;team:string}>("membership:").some(x=>x.id===me!.id&&x.team===info.id)))throw Error("Already belongs to this team or another role.");
+  if(me.squad&&(me.role!==info.role||me.role==="athlete"&&me.squad!==info.id))throw Error("Already belongs to this team or another role.");
   sessionStorage.setItem("nhf-persona",me.id);
-  localStorage.setItem(prefix+"application:"+info.id+":"+me.id,JSON.stringify({team:info.id,person:me.id,role:info.role,status:"Pending",name,phone,email}));
+  if(info.direct){localStorage.setItem(prefix+"member:"+me.id,JSON.stringify({...me,name,role:info.role,squad:me.squad||info.id}));if(info.role==="coach")localStorage.setItem(prefix+"membership:"+me.id+info.id,JSON.stringify({id:me.id,team:info.id}));}
+  localStorage.setItem(prefix+"application:"+info.id+":"+me.id,JSON.stringify({team:info.id,person:me.id,role:info.role,status:info.direct?"Approved":"Pending",name,phone,email}));
 }
 export async function teamVisibility(team:Team,discoverable:boolean){
   if(demo)localStorage.setItem(prefix+"team:"+team.id,JSON.stringify({...team,discoverable}));

@@ -1,5 +1,9 @@
 .public-shell{min-height:100svh;background:var(--bg);color:var(--text);padding:clamp(24px,6vh,72px) 22px 36px}
 .public-inner{max-width:540px;margin:auto}
+.signup-success{border-top:4px solid var(--yellow);padding:24px 0;margin-block:14px}
+.success-symbol{display:grid;place-items:center;background:var(--green-soft);color:var(--green);width:62px;height:62px;border-radius:8px}
+.signup-success p{line-height:1.6;overflow-wrap:anywhere}.signup-success small{color:var(--muted)}
+.success-team{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-block:1px solid var(--border)}.success-team span{color:var(--teal)}
 .public-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:24px;border-bottom:1px solid var(--border)}
 .public-brand{display:flex;align-items:center;gap:13px;font-weight:750;line-height:1.25}
 .public-brand small{display:block;color:var(--muted);font-size:13px;font-weight:450;margin-top:3px}

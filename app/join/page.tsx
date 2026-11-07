@@ -6,6 +6,7 @@ import {ClubCrest} from "@/features/beta/club-crest";
 export default function JoinTeam(){
   const [teams,setTeams]=useState<Team[]>([]),[requests,setRequests]=useState<Application[]>([]);
   const [name,setName]=useState(""),[code,setCode]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
+  useEffect(()=>{setCode((new URLSearchParams(location.search).get("team_code")||"").trim().toUpperCase().slice(0,6));},[]);
   const refresh=useCallback(async()=>{
     if(demo){
       const me=demoAccounts().find(m=>m.id===sessionStorage.getItem("nhf-persona"));

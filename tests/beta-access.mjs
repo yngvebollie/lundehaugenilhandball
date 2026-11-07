@@ -29,6 +29,7 @@ try {
   await pg.exec("create schema storage;create table storage.objects(bucket_id text,name text);create table storage.buckets(id text,name text,public boolean,file_size_limit int,allowed_mime_types text[])");
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107164338_match_report_import.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107181336_team_challenges.sql",import.meta.url),"utf8"));
+  for(const file of ["20261107190313_report_player_form","20261107190601_direct_team_invites"])await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
   await pg.exec("set role authenticated");
@@ -162,13 +163,26 @@ try {
   await pg.exec("reset role");assert.equal((await pg.query("select sum(matches_played)::int n from nhf_private.match_season_totals")).rows[0].n,1);
   await pg.exec("set role authenticated");await login(1);await ma("erase",team,m,b);
   const report={method:"paste",match:{nif_id:700,home:"Home",away:"Away",home_score:1,away_score:2},players:[
-    {side:"A",shirt:"1",name:"Test home",goals:1,penalty:0,total:1,suspensions:0},{side:"B",shirt:"1",name:"Test away",goals:1,penalty:1,total:2,suspensions:0}]};
+    {side:"A",shirt:"1",name:"Test home",played:true,warning:3,goals:1,penalty:0,total:1,suspensions:0},{side:"B",shirt:"1",name:"Test away",played:true,warning:false,goals:1,penalty:1,total:2,suspensions:0}]};
   const rep=async(action,v=report,expected=0)=>(await pg.query("select beta_report($1,$2,$3,$4,$5,$6,$7) r",[action,team,m,"a".repeat(64),report,v,expected])).rows[0].r;
   assert.equal(await rep("read"),null);assert.equal((await rep("save")).revision,1);
   await assert.rejects(rep("save",{...report,match:{...report.match,nif_id:701}},1));
   const correction=structuredClone(report);correction.players[0].suspensions=1;
   assert.equal((await rep("save",correction,1)).revision,2);await assert.rejects(rep("save",report,1));
   assert.equal((await rep("read")).original.players[0].suspensions,0);
+  const projected=(await ma("details",team,m)).rows.filter(p=>p.report_listed);
+  assert.equal(projected.length,1);assert.equal(projected[0].report_warnings,3);
+  const f=(await pg.query("select beta_player_form($1,$2) v",[team,m])).rows[0].v[projected[0].player_id];assert.equal(f.games,1);assert.equal(f.goals,1);
+  const invalid=structuredClone(report);invalid.players[0].warning=4;await assert.rejects(rep("save",invalid,2));
+  for(const [kid,day,goals] of [[701,"2025-01-02",5],[702,"2025-02-01",10]]){
+    await pg.exec("reset role;set role service_role");
+    const match=(await pg.query("select beta_import_fixture($1,$2,'[]',false) m",[rid,{...fixture,id:kid,day}])).rows[0].m;
+    await pg.exec("reset role;set role authenticated");await login(1);
+    const r=structuredClone(report);r.match.nif_id=kid;r.match.home_score=goals;r.players[0].goals=r.players[0].total=goals;
+    await pg.query("select beta_report('save',$1,$2,$3,$4,$4,0)",[team,match,"e".repeat(64),r]);
+  }
+  const asOf=(await pg.query("select beta_player_form($1,$2) v",[team,m])).rows[0].v[projected[0].player_id];
+  assert.deepEqual(asOf,{games:2,goals:6,prior_games:1,prior_goals:5});
   await login(6);await assert.rejects(rep("read"));await login(1);
   const staff=(action,t,id)=>pg.query("select beta_staff($1,$2,$3)",[action,t,id&&uuid(id)]);
   const link=async(action,t,role,token=null)=> (await pg.query("select beta_application_link($1,$2,$3,$4,'Test applicant','+47 5555 0123') as v",[action,t,role,token])).rows[0].v;
@@ -191,6 +205,8 @@ try {
   await login(6);assert.equal(await size("beta_assignments"),0);assert.equal(await size("beta_team_messages"),0);await assert.rejects(check(30,0));
   await login(4);assert.ok((await pg.query("select from beta_assignments where id=$1",[uuid(30)])).rows.length);
   await link("revoke",team,"athlete");await login(6);await assert.rejects(link("submit",team,"athlete",athleteLink.token));
+  await login(4);const direct=await link("issue_direct",team,"athlete");assert.equal(direct.direct,true);
+  await login(6);const added=await link("submit",uuid(20),"coach",direct.token);assert.equal(added.status,"Approved");assert.equal(added.team,team);await link("submit",null,"coach",direct.token);
   await pg.exec("reset role; set role anon"); await assert.rejects(size("beta_assignments"));
   assert.equal((await pg.query("select beta_link_info($1) as v",[coachLink.token])).rows[0].v.role,"coach");
   await assert.rejects(size("beta_focus_members"));

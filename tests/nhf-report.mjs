@@ -9,8 +9,8 @@ assert.deepEqual(r.match,{nif_id:8433205,number:"54041308009",competition:"Jente
 const a=r.players.filter(p=>p.side==="A"),b=r.players.filter(p=>p.side==="B");
 assert.equal(a.length,10);assert.equal(b.length,10);assert.equal(a.reduce((s,p)=>s+p.total,0),15);assert.equal(b.reduce((s,p)=>s+p.total,0),24);
 assert.deepEqual(b.map(p=>[+p.shirt,p.goals,p.penalty,p.total,p.played,p.warning,p.suspensions]),[
- [2,3,0,3,true,false,0],[8,2,0,2,true,false,0],[10,0,0,0,false,false,0],[13,1,0,1,true,false,0],[17,2,0,2,true,false,0],
- [20,1,0,1,true,false,0],[23,4,0,4,true,false,2],[25,3,0,3,true,true,0],[26,5,0,5,true,false,0],[27,3,0,3,true,false,0]]);
-assert.equal(a.find(p=>p.shirt==="11").warning,true);assert.equal(a.filter(p=>p.played).length,4);
+ [2,3,0,3,true,0,0],[8,2,0,2,true,0,0],[10,0,0,0,false,0,0],[13,1,0,1,true,0,0],[17,2,0,2,true,0,0],
+ [20,1,0,1,true,0,0],[23,4,0,4,true,0,2],[25,3,0,3,true,1,0],[26,5,0,5,true,0,0],[27,3,0,3,true,0,0]]);
+assert.equal(a.find(p=>p.shirt==="11").warning,1);assert.equal(a.filter(p=>p.played).length,4);
 assert.ok(!JSON.stringify(r).match(/\d{2}\.\d{2}\.\d{4}/));
 console.log("PASS: private NHF fixture, 20 player rows, score 15-24, participation, goals and discipline columns.");
