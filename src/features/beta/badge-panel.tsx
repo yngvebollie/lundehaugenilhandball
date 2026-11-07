@@ -1,6 +1,6 @@
 import {useEffect,useState} from "react";
 import {Flame,CalendarCheck,AlarmClock,Flag,CirclePlus,HeartPulse,CalendarDays,Zap,RotateCcw,Crosshair,Repeat,BookOpen,Footprints,ClipboardCheck,TrendingUp,ShieldPlus,Goal,Target,Hand,Award,Ticket,ListOrdered,ShieldCheck,Share2,ChartNoAxesColumnIncreasing,ScanEye,Shuffle,Timer,Layers,StepForward,Users,Sun,HelpingHand,Sprout,Scale,Star,Handshake,Shield,Sparkles,Megaphone,BatteryCharging,Lightbulb,Heart,AudioLines,Gauge,Award as Medal,Check} from "lucide-react";
-import {badges,badgeAction,coachBadges,automatic,reach,tier,type Badge,type BadgeState} from "@/lib/badges";
+import {badges,badgeAction,badgeUnit,catalogTargets,blankBadges,coachBadges,automatic,reach,tier,type Badge,type BadgeState} from "@/lib/badges";
 import {today,type Snapshot} from "@/lib/beta";
 import {registrations,seasonMatches,matchAction,type Fixture,type Player} from "@/lib/match-journal";
 import "./merker.css";
@@ -8,19 +8,31 @@ const icons={Flame,CalendarCheck,AlarmClock,Flag,CirclePlus,HeartPulse,CalendarD
 const recognition=badges.filter(b=>b.category==="Anerkjennelse");
 const groups=["Alle","Trening","Kamp","Ferdigheter","Lagånd","Anerkjennelse","Tester"];
 function Symbol({b,level}:{b:Badge;level:number}){const Icon=icons[b.icon as keyof typeof icons]||Medal;return <span aria-hidden="true" className={"merke-symbol ring-"+(b.category==="Tester"?(level===0?0:level===b.levels.length?3:level>=Math.ceil(b.levels.length/2)?2:1):level)}><Icon size={21}/></span>;}
+function Catalog({data}:{data:Snapshot}){
+ const [category,setCategory]=useState("Alle"),[query,setQuery]=useState(""),[targets,setTargets]=useState<Record<string,number[]>>({}),[note,setNote]=useState("");
+ useEffect(()=>{let live=true;catalogTargets(data.me.squad).then(v=>{if(live)setTargets(v);}).catch(()=>{if(live)setNote("Viser standardkrav. Lagets sesongkrav kunne ikke hentes.");});return()=>{live=false;};},[data.me.squad]);
+ const rows=badges.map(b=>({...b,levels:targets[b.key]||b.levels})).filter(b=>(category==="Alle"||b.category===category)&&(b.title+" "+b.description+" "+(badgeUnit[b.key]||"")).toLocaleLowerCase("nb").includes(query.toLocaleLowerCase("nb").trim()));
+ return <div className="grid"><div className="merke-catalog-bar"><h3>Merkekatalog <small>{rows.length} / {badges.length}</small></h3><label>Søk i katalogen<input type="search" placeholder="Navn eller kriterium" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>
+ <nav className="merke-categories" aria-label="Katalogkategori">{groups.map(g=><button key={g} aria-pressed={g===category} onClick={()=>setCategory(g)}>{g}</button>)}</nav>
+ {note&&<small role="status">{note}</small>}{groups.slice(1).map(g=>{const list=rows.filter(b=>b.category===g);return list.length?<section key={g} className="merke-category"><h3>{g} <small>{list.length}</small></h3>{list.map(b=><article className="merke-catalog-row" key={b.key}><Symbol b={b} level={0}/><div><h4>{b.title}</h4><p>{b.description}</p></div><div className="merke-criteria">{b.category==="Tester"?<><strong>{b.key==="beep"?"BEEP-nivå":"Hastighet i km/t"}</strong><span>{b.levels.join(" · ")}</span></>:<><strong>{badgeUnit[b.key]||"Mottatte anerkjennelser"}</strong><span>{b.levels.map((n,i)=><small key={i} className={"criterion-"+i}>{["Bronse","Sølv","Gull"][i]} {n}</small>)}</span></>}{targets[b.key]&&<small>Lagets sesongkrav</small>}</div></article>)}</section>:null;})}
+ {!rows.length&&<p>Ingen merker passer søket.</p>}</div>;
+}
 export function BadgePanel({data}:{data:Snapshot}){
- const coach=data.me.role==="coach",players=data.roster.filter(p=>p.role==="athlete");
- const [id,setId]=useState(coach?players[0]?.id||"":data.me.id);
- return <section className="grid merker"><header className="feature-heading"><div><h2><Medal size={22}/> {coach?"Utøvermerker":"Mine merker"}</h2></div>
- {coach&&players.length>0&&<label>Utøver<select value={id} onChange={e=>setId(e.target.value)}>{players.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label>}</header>
- {id?<Collection key={data.me.squad+":"+id} data={data} id={id}/>:<p>Inviter en utøver til laget for å registrere merker.</p>}</section>;
+ const coach=data.me.role==="coach",players=data.roster.filter(p=>p.role==="athlete"),[pick,setId]=useState(""),[mode,setMode]=useState("Merkekatalog");
+ const id=coach?(players.find(p=>p.id===pick)?.id||players[0]?.id||""):data.me.id;
+ const [sample,setSample]=useState("Med eksempelfremgang");
+ useEffect(()=>{if(coach&&new URLSearchParams(location.search).has("game"))setMode("Utøvere");},[coach]);
+ return <section className="grid merker"><header className="feature-heading"><h2><Medal size={22}/> {coach?"Merker og kvalifisering":"Mine merker"}</h2>
+ {coach&&mode==="Utøvere"&&players.length>0&&<label>Utøver<select aria-label="Utøver" value={id} onChange={e=>setId(e.target.value)}>{players.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label>}</header>
+ {coach&&<nav className="workspace-tabs" aria-label="Merkevisning">{["Merkekatalog","Utøvere","Utøvervisning"].map(v=><button key={v} className={mode===v?"current":""} aria-pressed={mode===v} onClick={()=>setMode(v)}>{v}</button>)}</nav>}
+ {coach&&mode==="Merkekatalog"?<Catalog data={data}/>:coach&&mode==="Utøvervisning"?<><div className="merke-preview"><div><strong>Forhåndsvisning av utøversiden</strong><small>Eksempelutøver · Ingen endringer lagres</small></div><label>Eksempel<select value={sample} onChange={e=>setSample(e.target.value)}><option>Med eksempelfremgang</option><option>Ny utøver</option></select></label></div><Collection key={sample} data={data} id="" preview={sample}/></>:id?<Collection key={data.me.squad+":"+id} data={data} id={id}/>:<p>Ingen registrerte utøvere på laget ennå. <a href="/team">Inviter en utøver</a></p>}</section>;
 }
 type Send=(action:string,v:Record<string,unknown>,msg:string)=>Promise<void>;
-function Collection({data,id}:{data:Snapshot;id:string}){
+function Collection({data,id,preview}:{data:Snapshot;id:string;preview?:string}){
  const [state,setState]=useState<BadgeState>(),[note,setNote]=useState(""),[busy,setBusy]=useState(false),[category,setCategory]=useState("Alle"),[filter,setFilter]=useState("Alle nivåer"),[details,setDetails]=useState("");
- const coach=data.me.role==="coach";
- useEffect(()=>{let alive=true;const update=()=>badgeAction(data,id).then(v=>{if(alive)setState(v);}).catch(e=>{if(alive)setNote(e.message);});void update();window.addEventListener("focus",update);return()=>{alive=false;window.removeEventListener("focus",update);};},[data,id]);
- const send:Send=async(action,v,message)=>{setBusy(true);setNote("");try{setState(await badgeAction(data,id,action,v));setNote(message);}catch(e){setNote((e as Error).message);}finally{setBusy(false);}};
+ const coach=data.me.role==="coach"&&!preview;
+ useEffect(()=>{if(preview){const v=blankBadges();if(preview==="Med eksempelfremgang"){v.counts={iron_will:12,on_fire:5,beep:8,kmt:65,fan_favorite:2};}setState(v);return;}let alive=true;const update=()=>badgeAction(data,id).then(v=>{if(alive)setState(v);}).catch(e=>{if(alive)setNote(e.message);});void update();window.addEventListener("focus",update);return()=>{alive=false;window.removeEventListener("focus",update);};},[data,id,preview]);
+ const send:Send=async(action,v,message)=>{if(preview)return;setBusy(true);setNote("");try{setState(await badgeAction(data,id,action,v));setNote(message);}catch(e){setNote((e as Error).message);}finally{setBusy(false);}};
  if(!state)return <p role="status">{note||"Henter merker …"}</p>;
  const catalog=badges.map(b=>({...b,levels:state.targets?.[b.key]||b.levels}));
  const unseen=state.earned.filter(e=>!state.seen||Date.parse(e.at)>Date.parse(state.seen)).length+state.inbox.filter(e=>e.at&&(!state.seen||Date.parse(e.at)>Date.parse(state.seen))).length;
@@ -29,14 +41,14 @@ function Collection({data,id}:{data:Snapshot;id:string}){
  return <><div className="merke-summary"><div><strong>{catalog.filter(b=>levels(b)>0).length} / {badges.length}</strong><span>Oppnådde merker</span></div>{[1,2,3].map(i=><div key={i}><strong>{catalog.filter(b=>b.category!=="Tester"&&levels(b)===i).length}</strong><span>{["Bronse","Sølv","Gull"][i-1]}</span></div>)}</div>
  {!coach&&state.notifications!==false&&unseen>0&&<div className="result" role="status"><strong>{unseen} nye merker eller anerkjennelser</strong><button className="btn" disabled={busy} onClick={()=>send("seen",{},"Oppdateringene er lest.")}>Marker som lest</button></div>}
  {closest&&<p>Neste mål: <strong>{closest.title}</strong> · {state.counts[closest.key]} / {closest.levels[levels(closest)]}</p>}
- {coach?<CoachBadgeTools data={data} id={id} state={state} send={send} busy={busy}/>:<PeerAwards state={state} send={send} busy={busy}/>}
+ {coach?<CoachBadgeTools data={data} id={id} state={state} send={send} busy={busy}/>:<PeerAwards state={state} send={send} busy={busy||!!preview}/>}
  {note&&<p className="km-status" role="status">{note}</p>}
  <nav className="merke-categories" aria-label="Merkekategori">{groups.map(g=><button key={g} aria-pressed={g===category} onClick={()=>{setCategory(g);setDetails("");}}>{g}</button>)}</nav>
  <label className="merke-filter">Nivå<select value={filter} onChange={e=>setFilter(e.target.value)}>{["Alle nivåer","Oppnådd","Låst","Bronse","Sølv","Gull"].map(v=><option key={v}>{v}</option>)}</select></label>
  <div className="merke-list">{all.map(b=>{const n=state.counts[b.key]||0,l=levels(b),target=b.levels[l]??b.levels.at(-1)!;return <div className="merke-item" key={b.key}>
  <button aria-expanded={details===b.key} onClick={()=>setDetails(details===b.key?"":b.key)}><Symbol b={b} level={l}/><span><strong>{b.title}</strong><small>{b.category} · {tier(b,l)}</small></span>
  <span className="merke-progress"><small>{n} / {target}</small><progress max={target} value={Math.min(n,target)} aria-label={b.title}/></span></button>
- {details===b.key&&<div className="merke-detail"><p>{b.description}</p><small>Kilde: {b.category==="Anerkjennelse"?"bekreftede lagkamerater i kamp":automatic.has(b.key)?"bekreftet trening eller kamp":b.category==="Tester"?"trenerregistrert test":"bekreftet av trener"}</small><ol>{b.levels.map((goal,i)=>{const unlocked=state.earned.find(e=>e.key===b.key&&e.level===i+1);return <li key={goal}><span>{tier(b,i+1)}{b.category!=="Tester"&&" · "+goal}</span>{unlocked&&<small>{new Date(unlocked.at).toLocaleDateString("nb-NO")}</small>}{n>=goal&&<Check size={15} aria-label="Oppnådd"/>}</li>;})}</ol></div>}</div>;})}</div>
+ {details===b.key&&<div className="merke-detail"><p>{b.description}</p><small>{badgeUnit[b.key]||"Mottatte anerkjennelser"} · Kilde: {b.category==="Anerkjennelse"?"bekreftede lagkamerater i kamp":automatic.has(b.key)?"bekreftet trening eller kamp":b.category==="Tester"?"trenerregistrert test":"bekreftet av trener"}</small><ol>{b.levels.map((goal,i)=>{const unlocked=state.earned.find(e=>e.key===b.key&&e.level===i+1);return <li key={goal}><span>{tier(b,i+1)}{b.category!=="Tester"&&" · "+goal}</span>{unlocked&&<small>{new Date(unlocked.at).toLocaleDateString("nb-NO")}</small>}{n>=goal&&<Check size={15} aria-label="Oppnådd"/>}</li>;})}</ol></div>}</div>;})}</div>
  {!all.length&&<p>Ingen merker i dette utvalget.</p>}</>;
 }
 function PeerAwards({state,send,busy}:{state:BadgeState;send:Send;busy:boolean}){

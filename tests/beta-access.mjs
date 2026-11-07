@@ -243,6 +243,10 @@ try {
   await pg.query("select beta_save_published_schedule($1,null,null,$2,$3)",[rid,JSON.stringify([publicRow]),jobId]);
   await assert.rejects(pg.query("select beta_save_published_schedule($1,null,null,'[]',$2)",[rid,jobId]));
   await pg.exec("reset role;set role authenticated");await login(1);
+  await pg.exec("reset role");await pg.exec(await readFile(new URL("../supabase/migrations/20261107220310_match_report_status.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");await login(1);
+  const some=async()=>(await pg.query("select beta_report_overview($1,$2::uuid[]) v",[team,[m]])).rows[0].v;
+  const summary=await some();assert.equal(summary[m].revision,2);assert.ok(summary[m].rows>=1);assert.equal(summary[m].reviewed,undefined);
+  await login(7);await assert.rejects(some());await login(1);
   const measurement={day:"2025-01-01",key:"beep",quantity:7};
   const bb=await badge("event",7,measurement);assert.equal(bb.counts.beep,7);assert.equal(bb.earned.filter(b=>b.key==="beep").length,3);
   assert.deepEqual((await badge("event",7,measurement)).earned,bb.earned);

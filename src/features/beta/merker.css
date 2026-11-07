@@ -15,3 +15,13 @@
 .merke-progress{font-variant-numeric:tabular-nums;text-align:right}.merke-progress progress{accent-color:var(--teal);width:100%;height:6px}
 .merke-detail{padding:4px 8px 12px}.merke-detail ol{margin:8px 0 0;padding:0;list-style:none}
 .merke-detail li{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.87rem;padding:4px 0}
+.merke-catalog-bar,.merke-preview{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.merke-catalog-bar small,.merke-category h3 small{color:var(--muted);font-size:.85rem;font-weight:500}
+.merke-category>h3{margin:0;padding:9px 0;border-bottom:2px solid var(--border-strong)}
+.merke-catalog-row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(220px,34%);gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.merke-catalog-row h4,.merke-catalog-row p{margin:0}.merke-catalog-row p,.merke-criteria span{font-size:.88rem}
+.merke-criteria{display:grid;gap:4px}.merke-criteria strong{font-size:.82rem;font-weight:600}.merke-criteria span{display:flex;gap:5px 12px;flex-wrap:wrap}
+.merke-criteria small{font-variant-numeric:tabular-nums}.criterion-0{color:#75421c}.criterion-1{color:#48576c}.criterion-2{color:#725700}
+.merke-preview{border-left:3px solid var(--teal);background:var(--teal-soft);padding:12px}.merke-preview small{display:block}
+@media(max-width:640px){.merke-catalog-row{grid-template-columns:38px minmax(0,1fr);gap:5px 10px}.merke-criteria{grid-column:2}}
+

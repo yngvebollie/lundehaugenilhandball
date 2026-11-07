@@ -3,9 +3,9 @@ import {ArrowLeft,CalendarDays,ChevronRight,ClipboardList,ExternalLink,Minus,Plu
 import {today,type Snapshot} from "@/lib/beta";
 import {handballId,leagueIds} from "@/lib/handball-id";
 import {matchResult} from "@/lib/match-result";
-import {playerForm,type PlayerForm} from "@/lib/match-journal";
+import {playerForm,reportOverview,type ReportStatus,type PlayerForm} from "@/lib/match-journal";
 import {seasonSettings,saveSeason,seasonMatches,type SeasonSettings} from "@/lib/match-journal";
-import {Volleyball} from "lucide-react";
+import {FileCheck2,Volleyball} from "lucide-react";
 import {blank,confirmed,editProfile,matchAction,metrics,refreshSeason,register,registrations,shooting,toggleRegistration,type Details,type Fixture,type Player,type Stats} from "@/lib/match-journal";
 import type {Registration} from "@/lib/nif";
 import {ReportEditor} from "./report-editor";
@@ -14,14 +14,14 @@ import {SquadStats} from "./squad-stats";
 import "./kamper.css";
 
 export function Kamper({data}:{data:Snapshot}){
-  const [view,setView]=useState(""),[id,setId]=useState(""),[all,setAll]=useState<Fixture[]>([]),[regs,setRegs]=useState<Registration[]>([]),[counts,setCounts]=useState<Record<string,number>>({});
+  const [view,setView]=useState(""),[id,setId]=useState(""),[all,setAll]=useState<Fixture[]>([]),[regs,setRegs]=useState<Registration[]>([]),[reports,setReports]=useState<Record<string,ReportStatus>>({});
   const [when,setWhen]=useState("Spilte"),[league,setLeague]=useState(""),[busy,setBusy]=useState(false),[note,setNote]=useState("");
   const [org,setOrg]=useState(""),[squadName,setSquadName]=useState(""),[cup,setCup]=useState(""),[adding,setAdding]=useState(false);
   const squad=data.me.squad,localTeam=data.teams.find(t=>t.id===squad)?.name,admin=data.admins.includes(data.me.id);
   const [seasons,setSeasons]=useState<SeasonSettings>({active:null,options:[]});
   const [profile,setProfile]=useState("");
   const game=all.find(x=>x.id===id),active=regs.find(r=>r.id===(game?.registration||profile))||regs[0];
-  const load=useCallback(async()=>{const settings=await seasonSettings(squad),rs=await registrations(squad,settings);setSeasons(settings);setRegs(rs);setAll(await seasonMatches(squad,rs));setCounts(await matchAction(data,"counts"));},[squad]);
+  const load=useCallback(async()=>{const settings=await seasonSettings(squad),rs=await registrations(squad,settings);const fixtures=await seasonMatches(squad,rs),overview=await reportOverview(squad,fixtures);setSeasons(settings);setRegs(rs);setAll(fixtures);setReports(overview);},[squad]);
   useEffect(()=>{void load().catch(e=>setNote(e.message));const url=new URLSearchParams(location.search),key="kamper-profile:"+data.me.id+":"+squad;const pointed=url.get("reg");setProfile(pointed||sessionStorage.getItem(key)||"");if(pointed)sessionStorage.setItem(key,pointed);setView(url.get("view")||"");setId(url.get("game")||"");if(url.get("view")==="teams"&&url.get("add")==="1"){setAdding(true);setOrg(url.get("lagid")||"");setCup(url.get("turnid")||"");setSquadName((url.get("name")||"").slice(0,100));}},[load]);
   function choose(value:string){setProfile(value);sessionStorage.setItem("kamper-profile:"+data.me.id+":"+squad,value);setLeague("");setWhen("Spilte");setId("");setNote("");setAdding(false);history.replaceState(null,"",view?"/match?view="+view:"/match");}
   async function run(fn:()=>Promise<void>){setNote("");setBusy(true);try{await fn();await load();}catch(e){setNote((e as Error).message);}finally{setBusy(false);}}
@@ -57,12 +57,15 @@ export function Kamper({data}:{data:Snapshot}){
       </>:<>
         <header className="competition-heading"><div><h2>{league||(leagues.length===1?leagues[0]:"Terminliste")}</h2><small>{active?.tournament?"Liga "+(active.leagues?.join(", ")||active.tournament):"Terminliste"}</small></div>
         <div className="day-strip">{leagues.length>1&&<select aria-label="Turnering" value={league} onChange={e=>setLeague(e.target.value)}><option value="">Alle turneringer</option>{leagues.map(l=><option key={l}>{l}</option>)}</select>}<div className="stat-switch" role="group" aria-label="Kampstatus">{[["Spilte",played.length],["Kommende",coming.length]].map(([v,n])=><button type="button" key={v} aria-pressed={when===v} onClick={()=>setWhen(String(v))}>{v} <b>{n}</b></button>)}</div></div></header>
-        <div className="fixture-list">{filter.map(m=><a className={"fixture-line outcome-"+matchResult(m).kind+" "+(m.id===latest?.id?"spotlight":"")} href={"/match?game="+m.id} key={m.id}><time dateTime={m.day}>{new Date(m.day+"T12:00:00").toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})}</time><small>{m.start_time?.slice(0,5)||"–"}</small><strong>{m.home||localTeam} – {m.away||m.opponent}</strong><b>{m.score}</b><small>{m.venue}</small><span className={"badge result-"+matchResult(m).kind}>{matchResult(m).label}</span><ChevronRight size={17}/></a>)}</div>
+        <div className="fixture-list">{filter.map(m=><a className={"fixture-line outcome-"+matchResult(m).kind+" "+(m.id===latest?.id?"spotlight":"")} href={"/match?game="+m.id} key={m.id}><time dateTime={m.day}>{new Date(m.day+"T12:00:00").toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})}</time><small>{m.start_time?.slice(0,5)||"–"}</small><strong className="fixture-teams">{m.home||localTeam} – {m.away||m.opponent}{reports[m.id]?.revision&&<ReportMark revision={reports[m.id].revision!}/>}</strong><b>{m.score}</b><small>{m.venue}</small><span className={"badge result-"+matchResult(m).kind}>{matchResult(m).label}</span><ChevronRight size={17}/></a>)}</div>
         {!filter.length&&<p>Ingen kamper i dette utvalget.</p>}
-        {latest&&<div className="match-summary"><strong>Kampdetaljer</strong><span>ResPIN {latest.nif_id||"–"}</span><small>{counts[latest.id]||0} spillerlinjer</small><a className="btn primary" href={"/match?game="+latest.id}>Åpne kamprapport <ChevronRight size={16}/></a></div>}
+        {latest&&<div className="match-summary"><strong>Kampdetaljer</strong><span>ResPIN {latest.nif_id||"–"}</span><small>{reports[latest.id]?.rows??0} spillerlinjer</small>{reports[latest.id]?.revision?<ReportMark revision={reports[latest.id].revision!}/>:latest.completed&&reports[latest.id]?<small>Ingen lagret rapport</small>:null}<a className="btn primary" href={"/match?game="+latest.id}>Åpne kamprapport <ChevronRight size={16}/></a></div>}
         {!active&&admin&&<button className="btn" onClick={add}><Plus size={16}/>Legg til lag</button>}
       </>}
     </>}</section></div>;
+}
+function ReportMark({revision}:{revision:number}){
+  return <span className="report-saved-mark" title={"Lagret kamprapport · revisjon "+revision}><FileCheck2 size={14} aria-hidden="true"/> Rapport lagt til</span>;
 }
 function SeasonPicker({settings,admin,busy,onSave}:{settings:SeasonSettings;admin:boolean;busy:boolean;onSave:(id:number,label:string)=>void}){
   const options=settings.options.some(s=>s.id===201068)?settings.options:[{id:201068,label:"2026/27"},...settings.options];

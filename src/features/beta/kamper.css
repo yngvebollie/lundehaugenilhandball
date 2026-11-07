@@ -6,4 +6,7 @@
 .km-player{display:grid;gap:5px;padding:12px;text-align:left;background:var(--panel);color:inherit;border:1px solid var(--border);border-radius:5px;cursor:pointer;overflow-wrap:anywhere}.km-player.active{border-color:var(--yellow)}.km-editor{border-top:2px solid var(--yellow);padding-top:16px}
 .km-step{display:grid;grid-template-columns:38px minmax(40px,1fr) 38px}.km-step input{text-align:center;min-width:0}.km-step button,.km-star{background:var(--bg-soft);color:var(--orange);border:1px solid var(--border);cursor:pointer;min-height:42px}.km-star{width:42px;border-radius:4px}.km-status{padding:10px;border-left:3px solid var(--yellow)}
 .km-existing{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-left:3px solid var(--teal);background:var(--teal-soft)}
+.fixture-teams{display:grid;gap:3px}
+.report-saved-mark{display:inline-flex;align-items:center;gap:4px;color:#236449;font-size:.78rem;font-weight:650;line-height:1.35}
+
 

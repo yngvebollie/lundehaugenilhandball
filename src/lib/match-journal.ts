@@ -34,6 +34,14 @@ function demoPlayers(m:Fixture){
     Object.assign(row,{report_listed:true,report_played:p.played,report_goals:p.total,report_warnings:p.warning==null?null:Number(p.warning)});
   }return rows;
 }
+export type ReportStatus={revision:number|null;rows:number};
+export async function reportOverview(team:string,fixtures:Fixture[]):Promise<Record<string,ReportStatus>>{
+  if(demo)return Object.fromEntries(fixtures.map(g=>[g.id,{revision:JSON.parse(sessionStorage.getItem("kamper-private-report:"+team+":"+g.id)||"null")?.revision??null,
+    rows:demoPlayers(g).filter(p=>p.report_listed||p.stats).length}]));
+  const result:Record<string,ReportStatus>={};
+  for(let i=0;i<fixtures.length;i+=500)Object.assign(result,(await db!.rpc("beta_report_overview",{t:team,ids:fixtures.slice(i,i+500).map(g=>g.id)}).throwOnError()).data);
+  return result;
+}
 export async function playerForm(g:Fixture):Promise<Record<string,PlayerForm>>{
   if(!demo)return (await db!.rpc("beta_player_form",{t:g.team,m:g.id}).throwOnError()).data;
   const totals:Record<string,PlayerForm>={};
