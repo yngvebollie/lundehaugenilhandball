@@ -53,6 +53,12 @@
 .report-meta summary,.feedback-list summary{cursor:pointer}.report-meta[open] summary{margin-bottom:12px}
 .report-totals span{background:var(--bg-soft);padding:7px 10px;border-radius:4px}
 .review-work input[type=file]{max-width:100%}
+.season-picker{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--border)}.season-picker small{align-self:center;color:var(--muted)}
+.player-list-wrap{min-width:0}.player-list-wrap>p{font-size:13px;margin-bottom:10px}.player-list-scroll{overflow-x:auto}
+.player-list{font-variant-numeric:tabular-nums}.player-list td,.player-list thead th:not(:first-child){text-align:right;white-space:nowrap}
+.player-list th:first-child{min-width:135px}.player-list tbody th{color:var(--text)}.player-list tbody th button{border:0;background:none;text-align:left;color:inherit;padding:4px 0;font:inherit}
+.player-list tbody tr{cursor:pointer}.player-list tbody tr:hover,.player-list tr.highlight{background:var(--teal-soft)}.player-list small{color:var(--muted)}
+.gold-ball{display:inline-flex;vertical-align:middle;color:#785107}.gold-ball svg{fill:#f3c84e}
 @media(max-width:1200px){.fixture-line{grid-template-columns:75px 42px minmax(120px,1fr) auto auto 16px}.fixture-line>small:nth-of-type(2){display:none}.squad-space{gap:16px;grid-template-columns:170px minmax(0,1fr)}}
 @media(max-width:980px){
  .coach-main{padding:0 18px 96px;gap:16px}.phone-brand,.phone-tabs{display:flex;align-items:center;background:var(--nav);color:var(--on-nav)}

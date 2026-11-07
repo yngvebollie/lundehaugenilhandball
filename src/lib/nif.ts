@@ -1,5 +1,5 @@
 type Row=Record<string,unknown>;
-export type Registration={id:string;team:string;org_id:number;season:number;tournament:number|null;leagues?:number[];profile_note?:string;active:boolean;synced_at?:string;sync_result?:string};
+export type Registration={id:string;team:string;org_id:number;season:number;display_name?:string;tournament:number|null;leagues?:number[];profile_note?:string;active:boolean;synced_at?:string;sync_result?:string};
 export type NifGet=(path:string)=>Promise<unknown>;
 function array(value:unknown):Row[]{
   if(!Array.isArray(value))throw Error("Uventet svarformat fra NIF.");

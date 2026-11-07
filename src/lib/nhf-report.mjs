@@ -33,7 +33,8 @@ export function layout(pages,method){
         const value=(s)=>s===""&&method==="text"?0:integer(s);
         const mark=(s)=>s===""?method==="text"?false:null:/^x$/i.test(s)?true:null;
         const marks=susp.map(z=>mark(c(z.x-4,z.x+8)));
-        players.push({side,shirt:nr.text,name,played:mark(c(birth.x-22,birth.x-2)),
+        const attendance=c(birth.x-22,birth.x-2);
+        players.push({side,shirt:nr.text,name,played:/^(nei|no|0|-)$/i.test(attendance)?false:mark(attendance),participation_blank:method==="text"&&attendance==="",
           goals:value(c(goals.x-5,pen.x-7)),penalty:value(c(pen.x-7,total.x-7)),total:value(c(total.x-7,total.x+18)),
           warning:((s)=>s===""?(method==="text"?0:null):/^[0-3]$/.test(s)?Number(s):/^x{1,3}$/i.test(s)?s.length:null)(c(warn.x-3,susp[0].x-4)),suspensions:marks.some(v=>v===null)?null:marks.filter(Boolean).length,
           disqualification:mark(c(disq.x-3,disq.x+10)),page:i+1,x:nr.x,y,source_key:side+":"+nr.text});

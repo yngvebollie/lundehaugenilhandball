@@ -30,6 +30,7 @@ try {
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107164338_match_report_import.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107181336_team_challenges.sql",import.meta.url),"utf8"));
   for(const file of ["20261107190313_report_player_form","20261107190601_direct_team_invites"])await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107193802_squad_seasons.sql",import.meta.url),"utf8"));
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
   await pg.exec("set role authenticated");
@@ -142,7 +143,7 @@ try {
   await login(6);assert.equal(await size("beta_shots"),0);await assert.rejects(shot(92,6,7));
   const ma=async(action,t,m,p=null,v={})=>(await pg.query("select beta_match_action($1,$2,$3,$4,$5) v",[action,t,m,p,v])).rows[0].v;
   await assert.rejects(ma("details",team,uuid(90)));
-  await login(1);const rid=(await pg.query("insert into beta_team_seasons(team,org_id,season) values ($1,20,99) returning id",[team])).rows[0].id;
+  await login(1);await pg.query("select beta_season_settings('save',$1,99,'2024/25')",[team]);const rid=(await pg.query("insert into beta_team_seasons(team,org_id,season) values ($1,20,99) returning id",[team])).rows[0].id;
   const fixture={id:700,opponent:"Away",day:"2025-01-05",home:"Home",away:"Away",status:"Ferdig",completed:true,score:"12-11"};
   const imported=[{id:123,name:"External",played:true,best:true,listed:true}];
   const imp=(p)=>pg.query("select beta_import_fixture($1,$2,$3,true) m",[rid,fixture,JSON.stringify(p)]);

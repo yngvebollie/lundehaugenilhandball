@@ -25,10 +25,12 @@ export async function POST(req:Request){
   const userDb=cron?service:createClient(env.supabaseUrl,env.supabaseAnonKey,{...opts,global:{headers:{Authorization:"Bearer "+token}}});
   if(!cron&&(await userDb.auth.getUser(token)).error)return reply(401,"Logg inn på nytt.");
   let input;try{input=await req.json();}catch{return reply(400,"Ugyldig forespørsel.");}
-  if(cron&&input?.list){const {data,error}=await service.from("beta_team_seasons").select("id").eq("active",true);return error?reply(500,"Kan ikke hente lag."):Response.json({ids:data.map(x=>x.id)});}
+  const {data:targets,error:targetError}=await service.rpc("beta_sync_targets");
+  if(targetError)return reply(500,"Kan ikke hente aktive sesonger.");
+  if(cron&&input?.list)return Response.json({ids:targets});
   if(!/^[a-f0-9-]{36}$/i.test(input?.id||""))return reply(400,"Velg et registrert lag.");
   const {data:r}=await userDb.from("beta_team_seasons").select("*").eq("active",true).eq("id",input.id).maybeSingle();
-  if(!r)return reply(403,"Mangler tilgang til dette laget.");
+  if(!r||!Array.isArray(targets)||!targets.includes(r.id))return reply(403,"Velg et lag i den lagrede sesongen.");
   try{
     const allowed=JSON.parse(process.env.NIF_ALLOWED_TEAMS||"{}");
     const includePlayers=Array.isArray(allowed[r.team])&&allowed[r.team].includes(r.org_id)&&(process.env.NIF_SCOPES||"").split(/\s+/).includes("data_ta_person_read");

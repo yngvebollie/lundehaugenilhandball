@@ -1,8 +1,8 @@
 import {useEffect,useState} from "react";
 import {CalendarDays,ChevronRight} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
-import {matches} from "@/lib/matches";
-import {registrations,type Fixture} from "@/lib/match-journal";
+
+import {registrations,seasonMatches,type Fixture} from "@/lib/match-journal";
 import type {Registration} from "@/lib/nif";
 import {monday,weekLabel,weekPlans} from "@/lib/workload";
 import {trainingDay} from "@/lib/programs";
@@ -11,14 +11,14 @@ const dateLabel=(date:string,options:Intl.DateTimeFormatOptions)=>new Date(date+
 export function CoachAgenda({data}:{data:Snapshot}){
   const [regs,setRegs]=useState<Registration[]>([]),[games,setGames]=useState<Fixture[]>([]),[chosen,setChosen]=useState(""),[error,setError]=useState("");
   const key="kamper-profile:"+data.me.id+":"+data.me.squad;
-  useEffect(()=>{let live=true;async function load(){const r=await registrations(data.me.squad);const g=await matches(data.me.squad);if(live){setRegs(r);setGames(g);setChosen(sessionStorage.getItem(key)||r[0]?.id||"");setError("");}}
+  useEffect(()=>{let live=true;async function load(){const r=await registrations(data.me.squad);const g=await seasonMatches(data.me.squad,r);if(live){setRegs(r);setGames(g);setChosen(sessionStorage.getItem(key)||r[0]?.id||"");setError("");}}
     load().catch(()=>{if(live)setError("Kampoversikten kunne ikke lastes.");});return()=>{live=false;};},[key,data.me.squad]);
   const active=regs.find(r=>r.id===chosen)||regs[0],day=today(),week=monday(day),tomorrow=trainingDay(day,1),end=trainingDay(week,6);
   const weekRows=weekPlans(data.plans,week,""),ids=new Set(weekRows.map(p=>p.id));
   const feedback=data.feedback.filter(f=>ids.has(f.assignment));
   const hard=new Set(weekRows.filter(p=>feedback.some(f=>f.assignment===p.id&&f.effort==="Hard")).map(p=>p.athlete)).size;
   return <section className="coach-agenda"><div className="agenda-context"><small>{data.teams.find(t=>t.id===data.me.squad)?.name} · Treningsgruppe</small>
-    {active&&<label><select aria-label="Spillelag i oversikten" value={active.id} onChange={e=>{setChosen(e.target.value);sessionStorage.setItem(key,e.target.value);}}>{regs.map(r=><option key={r.id} value={r.id}>{r.org_id===226751?"Hundvåg J13":"Spillelag "+r.org_id}</option>)}</select><span className="id-tag">NIF {active.org_id}</span></label>}</div>
+    {active&&<label><select aria-label="Spillelag i oversikten" value={active.id} onChange={e=>{setChosen(e.target.value);sessionStorage.setItem(key,e.target.value);}}>{regs.map(r=><option key={r.id} value={r.id}>{r.display_name||"Spillelag "+r.org_id}</option>)}</select><span className="id-tag">NIF {active.org_id}</span></label>}</div>
     <h2>{dateLabel(day,{weekday:"long",day:"numeric",month:"long"})}</h2>
     <p>Uke {weekLabel(day).split(" ")[1]} · {dateLabel(week,{day:"numeric",month:"short"})} – {dateLabel(end,{day:"numeric",month:"short"})}</p>
     {[day,tomorrow].map((d,i)=>{const sessions=[...new Map(data.plans.filter(p=>p.day===d&&!p.personal).map(p=>[p.title+":"+p.start_time,p])).values()];

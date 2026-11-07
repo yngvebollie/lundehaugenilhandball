@@ -1,10 +1,13 @@
 export type ReportMatch={nif_id:number|null;number:string|null;competition:string|null;day:string|null;time:string|null;venue:string|null;home:string|null;away:string|null;home_score:number|null;away_score:number|null;half_home:number|null;half_away:number|null};
-export type ReportPlayer={side:"A"|"B";shirt:string;name:string;played:boolean|null;goals:number|null;penalty:number|null;total:number|null;warning:number|boolean|null;suspensions:number|null;disqualification:boolean|null};
+export type ReportPlayer={side:"A"|"B";shirt:string;name:string;played:boolean|null;participation_blank?:boolean;goals:number|null;penalty:number|null;total:number|null;warning:number|boolean|null;suspensions:number|null;disqualification:boolean|null};
 export type Report={match:ReportMatch;players:ReportPlayer[];issues:string[];method:string;version:string};
 const num=(s:string|undefined)=>s&&/^\d+$/.test(s.trim())?Number(s):null;
 const mark=(s:string|undefined)=>s===undefined?null:!s.trim()?false:/^x$/i.test(s.trim())?true:null;
 export const warningCount=(v:ReportPlayer["warning"])=>v==null?null:Number(v);
 const parseWarnings=(s:string|undefined)=>s===undefined?null:s===""?0:/^[0-3]$/.test(s)?Number(s):/^[xX]{1,3}$/.test(s)?s.length:null;
+export function importDraft(raw:Report):Report{
+  return {...structuredClone(raw),players:raw.players.map(p=>({...p,played:p.participation_blank?true:p.played}))};
+}
 export function parsePaste(input:string):Report{
   if(input.length>120000)throw Error("Rapporten er for lang.");
   const t=input.replace(/\r/g,""),grab=(re:RegExp)=>t.match(re)?.[1]?.trim()||null;
@@ -28,7 +31,8 @@ export function parsePaste(input:string):Report{
     if(!aligned)issues.push("Manglende tabellkolonner, lag "+side+" nr. "+nr);
     const n=(i:number)=>!aligned||cells[i]===undefined?null:!cells[i]?0:num(cells[i]);
     const susp=[1,2,3].map(i=>mark(cells[i]));
-    players.push({side,shirt:nr,name,played:mark(cols[dob-1]),warning:aligned?parseWarnings(cells[0]):null,
+    const attendance=cols[dob-1];
+    players.push({side,shirt:nr,name,played:/^(nei|no|0|-)$/i.test(attendance)?false:mark(attendance),participation_blank:attendance==="",warning:aligned?parseWarnings(cells[0]):null,
       suspensions:aligned&&!susp.includes(null)?susp.filter(Boolean).length:null,disqualification:aligned?mark(cells[4]):null,
       goals:n(7),penalty:n(8),total:n(9)});
   }

@@ -2,7 +2,7 @@ import {useEffect,useState} from "react";
 import {ClipboardPaste,Download,FileText,Save,Upload} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
 import type {Fixture} from "@/lib/match-journal";
-import {parsePaste,validateReport,type Report,type ReportPlayer,type ReportMatch} from "@/lib/report-text";
+import {importDraft,parsePaste,validateReport,type Report,type ReportPlayer,type ReportMatch} from "@/lib/report-text";
 
 type Saved={digest:string;original:Report;reviewed:Report;revision:number};
 const digestText=async(text:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,"0")).join("");
@@ -22,12 +22,17 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
   useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview);},[preview]);
   const act=async(fn:()=>Promise<void>)=>{setBusy(true);setNote("");try{await fn();}catch(e){setNote((e as Error).message);}finally{setBusy(false);}};
   function open(r:Report,source:Report,d:string){setDraft(structuredClone(r));setOrig(source);setHash(d);setEditing(true);setSide("A");pick(0);}
+  function previewImport(raw:Report,d:string){
+    // Reopening the identical source preserves the coach's confirmed corrections.
+    if(saved?.digest===d){open(saved.reviewed,saved.original,d);return;}
+    open(importDraft(raw),raw,d);
+  }
   function change(i:number,p:Partial<ReportPlayer>){if(draft)setDraft({...draft,players:draft.players.map((x,n)=>i===n?{...x,...p}:x)});}
   async function pdf(f:File){
     if(f.size>4_000_000)throw Error("Maksimalt 4 MB.");
     const token=(await db?.auth.getSession())?.data.session?.access_token;
     const res=await fetch("/api/matches/report?match="+encodeURIComponent(g.id),{method:"POST",body:f,headers:{"Content-Type":"application/pdf",...(token?{Authorization:"Bearer "+token}:{})}});
-    const result=await res.json();if(!res.ok)throw Error(result.error);setFile(f);setPreview(URL.createObjectURL(f));open(result.report,result.report,result.digest);
+    const result=await res.json();if(!res.ok)throw Error(result.error);setFile(f);setPreview(URL.createObjectURL(f));previewImport(result.report,result.digest);
   }
   async function save(){
     if(!draft||!orig||!ready)return;
@@ -48,7 +53,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     {saved&&<div className="day-strip"><small>Lagret · revisjon {saved.revision}</small><button className="btn" disabled={busy} onClick={()=>act(async()=>{const {downloadReport}=await import("@/lib/report-export");await downloadReport(saved.reviewed,saved.revision);setNote("PDF eksportert.");})}><Download size={16}/>Last ned PDF</button><button className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);}}>Rediger lagret rapport</button>
       {!demo&&saved.original.method!=="paste"&&<button className="btn" onClick={()=>act(async()=>{const result=await db!.storage.from("kamprapporter").download(privatePath(g,saved.digest));if(result.error)throw result.error;setPreview(URL.createObjectURL(result.data));})}>Vis original PDF</button>}</div>}
     {preview&&<object data={preview} type="application/pdf" width="100%" height="340"><a href={preview} target="_blank" rel="noreferrer">Åpne privat forhåndsvisning</a></object>}
-    {report&&<><div className="review-check"><span>Kilde: {report.method==="paste"?"innlimt NHF-rapport":"PDF"}</span><strong>{report.match.nif_id===g.nif_id?"✓ Kamp-ID stemmer":"Kontroller ResPIN"}</strong></div><details className="report-meta" open={editing&&!!saved||undefined}><summary>Kampinformasjon</summary><div className="km-fields">{(Object.keys(report.match) as (keyof ReportMatch)[]).map(k=><label key={k}>{{nif_id:"ResPIN",number:"Kampnummer",day:"Dato",time:"Klokkeslett",home:"Hjemmelag",away:"Bortelag",home_score:"Hjemmemål",away_score:"Bortemål",competition:"Turnering",venue:"Hall",half_home:"Pause hjemme",half_away:"Pause borte"}[k]}
+    {report&&<>{editing&&orig?.players.some(p=>p.participation_blank)&&<small>Blankt deltakerfelt i kilden foreslås som Ja. Kontroller før import.</small>}<div className="review-check"><span>Kilde: {report.method==="paste"?"innlimt NHF-rapport":"PDF"}</span><strong>{report.match.nif_id===g.nif_id?"✓ Kamp-ID stemmer":"Kontroller ResPIN"}</strong></div><details className="report-meta" open={editing&&!!saved||undefined}><summary>Kampinformasjon</summary><div className="km-fields">{(Object.keys(report.match) as (keyof ReportMatch)[]).map(k=><label key={k}>{{nif_id:"ResPIN",number:"Kampnummer",day:"Dato",time:"Klokkeslett",home:"Hjemmelag",away:"Bortelag",home_score:"Hjemmemål",away_score:"Bortemål",competition:"Turnering",venue:"Hall",half_home:"Pause hjemme",half_away:"Pause borte"}[k]}
       <input readOnly={!editing||k==="nif_id"} value={report.match[k]??""} onChange={e=>{const v=e.target.value;setDraft({...report,match:{...report.match,[k]:["home_score","away_score","half_home","half_away"].includes(k)?v===""?null:Number(v):v}});}}/></label>)}</div></details>
     <div className="day-strip">{(["A","B"] as const).map(s=><button className={"btn "+(s===side?"selected":"")} key={s} onClick={()=>setSide(s)}>{s==="A"?report.match.home:report.match.away} · {report.players.filter(p=>p.side===s).length} spillere</button>)}</div>
     <div className="review-layout"><div className="review-rows"><h3>{side==="A"?report.match.home:report.match.away} · Spillerlinjer</h3><div className="review-scroll"><table className="table"><thead><tr>{["Nr.","Deltatt","Spillemål","7 m","Totalt"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{report.players.map((p,i)=>p.side!==side?null:<tr key={i} className={i===index?"highlight":""} onClick={()=>pick(i)}><th><button type="button" aria-label={"Velg spiller "+p.shirt+" "+p.name} onClick={()=>pick(i)}>#{p.shirt} <small>{p.name}</small></button></th><td>{p.played===true?"✓":p.played===false?"Nei":"?"}</td><td>{p.goals??"?"}</td><td>{p.penalty??"?"}</td><td>{p.total??"?"}</td></tr>)}</tbody></table></div></div>
@@ -64,7 +69,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
     <details className="library-tools" key={saved?"replace":"initial"} open={!saved||undefined}><summary>{saved?"Importer ny kamprapport":"Importer kamprapport"}</summary><div className="grid">
     <div className="source-tabs"><strong>Kilde</strong><button className={"btn "+(source==="paste"?"selected":"")} onClick={()=>setSource("paste")}><ClipboardPaste size={16}/>Lim inn tekst</button><button className={"btn "+(source==="pdf"?"selected":"")} onClick={()=>setSource("pdf")}><Upload size={16}/>PDF</button></div>
     {source==="paste"&&<label>Lim inn NHF-kamprapport<textarea rows={4} maxLength={120000} placeholder="Kopier kamprapporten med tabellkolonnene …" value={text} onChange={e=>setText(e.target.value)}/></label>}
-    <div className="day-strip">{source==="paste"?<button className="btn" disabled={!text.trim()||busy} onClick={()=>act(async()=>{const r=parsePaste(text);setFile(null);setPreview("");open(r,r,await digestText(text));setText("");})}><ClipboardPaste size={16}/>Les inn tekst</button>:
+    <div className="day-strip">{source==="paste"?<button className="btn" disabled={!text.trim()||busy} onClick={()=>act(async()=>{const r=parsePaste(text);setFile(null);setPreview("");previewImport(r,await digestText(text));setText("");})}><ClipboardPaste size={16}/>Les inn tekst</button>:
       <label className="btn"><Upload size={16}/>Last opp kamprapport<input type="file" accept="application/pdf" aria-label="Velg PDF" onChange={e=>{const f=e.target.files?.[0];if(f)void act(()=>pdf(f));e.target.value="";}}/></label>}</div>
 </div></details>
     {note&&<p role="status">{note}</p>}</section>;
