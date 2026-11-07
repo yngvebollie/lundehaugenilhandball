@@ -5,7 +5,8 @@ const assert=require("node:assert/strict");
   try{
     const page=await browser.newPage({viewport:{width:1440,height:1050}});
     await page.goto((process.env.BETA_TEST_URL||"http://127.0.0.1:3217")+"/login");
-    await page.getByRole("button",{name:"Open workspace"}).click();
+    await page.getByRole("link",{name:"Coach login",exact:true}).click();
+    await page.getByRole("button",{name:"Sign in",exact:true}).click();
     await page.getByRole("button",{name:"How to use Coach AI"}).click();
     await page.getByText(/Describe the body focus/).waitFor();
     await page.getByRole("button",{name:"How to use Coach AI"}).click();
@@ -32,6 +33,7 @@ const assert=require("node:assert/strict");
     await planner.getByRole("button",{name:"Suggest week",exact:true}).click();
     await planner.getByText(/No additional sessions fit/).waitFor();
     await page.goto(new URL("/login",page.url()).href);
+    await page.getByRole("link",{name:"Coach login",exact:true}).click();
     await page.getByRole("button",{name:"Create account",exact:true}).click();
     await page.getByLabel("Team invitation link or code").waitFor();
     console.log("PASS: visible help and prompt, 50 lifts, muscle zones, persistent ranking, free and loaded weeks, account setup.");

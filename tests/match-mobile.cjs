@@ -5,7 +5,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   try{
     const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(12000);
     const base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217";
-    await page.goto(base+"/login");await page.getByRole("button",{name:"Open workspace"}).click();
+    await page.goto(base+"/login");await page.getByRole("link",{name:"Coach login",exact:true}).click();
+    await page.getByRole("button",{name:"Sign in",exact:true}).click();
     await page.getByRole("link",{name:"Team management",exact:true}).click();
     const pic=await page.evaluate(()=>document.createElement("canvas").toDataURL().split(",")[1]);
     await page.getByLabel("Team logo",{exact:true}).setInputFiles({name:"club.png",mimeType:"image/png",buffer:Buffer.from(pic,"base64")});

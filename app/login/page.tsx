@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { db, demo, demoAccounts, joinDemo, registerDemoAthlete,selectTeam } from "@/lib/beta";
-import { About } from "@/features/beta/about";
+import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList } from "lucide-react";
+import { PublicShell } from "@/features/beta/public-shell";
 
 export default function Login(){
   const [invite,setInvite]=useState("");
@@ -12,6 +13,7 @@ export default function Login(){
   const [signup,setSignup]=useState(false);
   const [join,setJoin]=useState(false),[link,setLink]=useState("");
   const [role,setRole]=useState<"coach"|"athlete">("coach");
+  const [selected,setSelected]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [account,setAccount]=useState("coach");
@@ -20,7 +22,8 @@ export default function Login(){
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
-    if(new URLSearchParams(location.search).get("role")==="athlete"){setRole("athlete");setAccount("liv");}
+    const param=new URLSearchParams(location.search).get("role");
+    if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
     const sub=db.auth.onAuthStateChange((_,s)=>setSigned(s?.user.email||""));
@@ -59,18 +62,26 @@ export default function Login(){
       location.assign(invite?"/":role==="athlete"?"/athlete":"/");
     }catch(error){setMessage((error as Error).message||"Could not sign in.");}finally{setBusy(false);}
   }
-  return <main className="login grid"><div className="brand"><div className="brand-mark">NHF</div>Performance Platform</div>
-    <h1>{invite?"Join your team":join?"Create an account":"Team sign-in"}</h1>{demo&&<span className="badge orange">Browser-local demo</span>}
-    {!invite&&<nav className="role-nav" aria-label="Account role">{(["coach","athlete"] as const).map(r=><button key={r} className={"btn "+(role===r?"selected":"")} aria-pressed={role===r} onClick={()=>{setRole(r);setAccount(accounts.find(a=>a.role===r)?.id||"");setMessage("");}}>{r==="coach"?"Coach login":"Athlete login"}</button>)}</nav>}
-    {!invite&&<div className="day-strip">{["Sign in","Create account"].map((t,i)=><button className={"btn "+(join===Boolean(i)?"selected":"")} aria-pressed={join===Boolean(i)} key={t} onClick={()=>{setJoin(Boolean(i));setMessage("");}}>{t}</button>)}</div>}
+  const choice=!selected&&!invite;
+  return <PublicShell><div className="entry-content">
+    {!choice&&!invite&&<a className="entry-back" href="/login"><ArrowLeft size={16}/>Choose another role</a>}
+    <h1>{choice?"Team sign-in":invite?"Join your team":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1>
+    {choice?<><p className="entry-lead">Choose your role to continue.</p><nav className="entry-roles" aria-label="Account role">
+      <a className="entry-role athlete" href="/login?role=athlete" aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
+      <a className="entry-role coach" href="/login?role=coach" aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
+    </nav></>:<>
     {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{const url=new URL(link.trim(),location.origin);const code=url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign("/login?new=1&invite="+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require a coach invitation.</p><button className="btn primary">Continue with invitation</button></form>:<>
     <form className="grid" onSubmit={enter}>
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
       {(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
       {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&<label>Password<input required type="password" minLength={signup?8:1} autoComplete={signup?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
-    <button className="btn primary" disabled={busy}>{invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Open workspace"}</button></form>
+    <button className="btn primary" disabled={busy}>{invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
     {!demo&&invite&&!signed&&<button className="btn" onClick={()=>setSignup(!signup)}>{signup?"Use existing account":"Create invited account"}</button>}</>}
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
-    <About/></main>;
+    {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}
+    </>}
+    {demo&&<small className="entry-demo">Browser-local demo</small>}
+    <footer className="entry-footer"><a href="/documentation"><BookOpen size={17}/>Platform documentation<ArrowRight size={15}/></a></footer>
+    </div></PublicShell>;
 }

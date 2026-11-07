@@ -1,0 +1,28 @@
+.public-shell{min-height:100svh;background:#0b1115;color:#edf1f2;padding:clamp(24px,6vh,72px) 22px 36px}
+.public-inner{max-width:540px;margin:auto}
+.public-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:24px;border-bottom:1px solid #354149}
+.public-brand{display:flex;align-items:center;gap:13px;font-weight:750;line-height:1.25}
+.public-brand small{display:block;color:#b4bfc4;font-size:13px;font-weight:450;margin-top:3px}
+.public-brand .brand-mark{flex:none;width:42px;height:42px;background:#cc343a;box-shadow:none}
+.court-mark{width:108px;flex:none;color:#54666c}
+.entry-content{padding-top:42px}.entry-content h1{font-size:36px;line-height:1.15}
+.entry-lead{margin-top:10px;color:#b9c5ca;line-height:1.5}
+.entry-roles{display:grid;margin:26px 0 0;gap:12px}
+.entry-role{display:grid;grid-template-columns:46px 1fr 20px;align-items:center;gap:16px;padding:19px 16px;border:1px solid #35424a;border-radius:6px;background:#141d22}
+.role-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:6px}
+.athlete .role-icon{color:#8ad4c0;background:#203932}.coach .role-icon{color:#ffdc6e;background:#3b3321}
+.entry-role>svg{color:#b9c5ca}.entry-role:hover{border-color:#848e93;background:#1b262b}
+.entry-role strong{display:block;font-size:18px}.entry-role small{display:block;margin-top:4px;color:#bac5cb;line-height:1.4}
+.entry-content form{margin-top:26px}.entry-content label{color:#c5d0d4}.entry-content input,.entry-content select{min-height:46px}
+.entry-content .btn.primary{background:#ffda55;color:#11171b;border:0}
+.entry-back,.entry-footer a{display:inline-flex;align-items:center;gap:8px;min-height:40px;font-size:14px;color:#c7d2d7}
+.entry-back{margin-bottom:12px}.entry-footer{margin-top:28px;border-top:1px solid #344148;padding-top:10px}
+.entry-footer a:hover,.entry-back:hover{text-decoration:underline;color:white}
+.entry-alternate{margin-top:18px;color:#b8c3c8;font-size:14px}.entry-alternate button{background:none;border:0;color:#ffda55;padding:10px 4px}
+.entry-demo{display:block;margin-top:18px;color:#a8b6be}.entry-content [role=status]{margin-top:16px}
+.public-shell :focus-visible{outline:2px solid #ffda55;outline-offset:4px}
+.public-doc h2{margin:28px 0 10px}.public-doc p,.doc-features dd{color:#c1cbcf;line-height:1.65}
+.public-doc .doc-credit{color:#f6d77d;margin-top:10px;font-size:14px}
+.doc-features{margin:0}.doc-features div{padding:14px 0;border-bottom:1px solid #303c42}.doc-features dt{display:flex;gap:10px;align-items:center;font-weight:650}.doc-features dt svg{color:#91cdbb;flex:none}.doc-features dd{margin:6px 0 0 29px;font-size:15px}
+@media(max-width:480px){.court-mark{width:64px}.entry-content{padding-top:28px}.entry-content h1{font-size:29px}.entry-role{gap:12px;padding:16px 12px}.public-shell{padding-inline:18px}.public-header{padding-bottom:18px}}
+@media(max-width:360px){.court-mark{display:none}}
