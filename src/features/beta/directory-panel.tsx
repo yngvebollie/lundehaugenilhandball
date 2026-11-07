@@ -16,7 +16,7 @@ export function DirectoryPanel({data}:{data:Snapshot}){
     <div className="player-list-scroll"><table className="table stat-table"><thead><tr>{(tab==="Lag"?["Lag","Trenere","Utøvere"]:tab==="Invitasjoner"?["Invitasjon","Rolle","Lag","Status","Utløper"]:["Navn","Rolle","Lag"]).map(c=><th key={c}>{c}</th>)}</tr></thead>
       <tbody>{tab==="Lag"?teams.filter(t=>by(t.name)).map(t=><tr key={t.id}><th>{t.name}</th><td>{members.filter(m=>m.team===t.id&&m.role==="coach").length}</td><td>{members.filter(m=>m.team===t.id&&m.role==="athlete").length}</td></tr>):
         tab==="Invitasjoner"?invites.filter(i=>by((i.email||i.kind)+" "+teamLabel(i.team)+" "+(i.role==="coach"?"Trener":"Utøver"))).map((i,n)=><tr key={n}><th>{i.email||i.kind}</th><td>{i.role==="coach"?"Trener":"Utøver"}</td><td>{teamLabel(i.team)}</td><td>{i.expired?"Utløpt":"Åpen"}</td><td>{new Date(i.expires).toLocaleDateString("nb-NO")}</td></tr>):
-        list.map(([id,p])=><tr key={id}><th>{p.name}</th><td>{p.role==="coach"?"Trener":"Utøver"}</td><td>{p.teams.join(" · ")}</td></tr>)}</tbody></table></div>
+        list.map(([id,p])=><tr key={id}><th>{p.role==="athlete"&&data.roster.some(m=>m.id===id)?<a href={"/spillerstats?athlete="+id}>{p.name}</a>:p.name}</th><td>{p.role==="coach"?"Trener":"Utøver"}</td><td>{p.teams.join(" · ")}</td></tr>)}</tbody></table></div>
     {tab==="Invitasjoner"&&!invites.length&&<p>Ingen invitasjoner i dette utvalget.</p>}{!["Lag","Invitasjoner"].includes(tab)&&!list.length&&<p>Ingen brukere i dette utvalget.</p>}
   </section>;
 }

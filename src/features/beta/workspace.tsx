@@ -11,11 +11,12 @@ import { Conversation } from "./athlete-team";
 
 import { Challenges } from "./challenges";
 import { CoachAgenda } from "./coach-agenda";
-import {Medal,ContactRound,Volleyball,Trophy,House,Ellipsis,UserRound} from "lucide-react";
+import {ChartNoAxesColumn,Medal,ContactRound,Volleyball,Trophy,House,Ellipsis,UserRound} from "lucide-react";
 import { Kamper } from "./kamper";
 import {CoachNotices} from "./team-notices";
 import {ClubCrest} from "./club-crest";
 import {BadgePanel} from "./badge-panel";
+import {PlayerStatistics} from "./player-statistics";
 import {DirectoryPanel} from "./directory-panel";
 import { TeamTools } from "./team-tools";
 import { WeeklyPlanner } from "./weekly-planner";
@@ -25,7 +26,7 @@ function message(error: unknown) {
   return error && typeof error==="object" && "message" in error ? String(error.message) : "Could not save. Please retry.";
 }
 function signedOut() { return db?.auth.signOut().then(({error})=>{if(error) throw error;}); }
-export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match"|"challenges"|"directory"|"badges" }) {
+export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match"|"challenges"|"directory"|"badges"|"players" }) {
   const [more,setMore]=useState(false),[hash,setHash]=useState("");
   useEffect(()=>{const follow=()=>{setHash(location.hash);setMore(false);};follow();window.addEventListener("hashchange",follow);return()=>window.removeEventListener("hashchange",follow);},[]);
   const [persona,setPersona]=useState(athlete?"liv":"coach");
@@ -68,22 +69,22 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   const account=<div className="account"><strong>{data.me.name}</strong>{data.club?.eligible&&<label>Arbeidsrolle<select aria-label="Arbeidsrolle" disabled={busy} value={data.club.active?"club":"coach"} onChange={e=>{const mode=e.target.value as "club"|"coach";void run(async()=>{await clubRole(mode);sessionStorage.removeItem("nhf-team:"+data.me.id);setData(null);setReady(false);});}}><option value="coach">Trener</option><option value="club">Klubbadmin</option></select></label>}{coach?<label>Current team<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
     {demo&&<span className="badge orange">Local demo</span>}<button className="btn" onClick={async()=>{if(db){const {error}=await db.auth.signOut();if(error){setError(error.message);return;}}sessionStorage.removeItem("nhf-persona");location.assign("/login");}}><LogOut size={16}/>{demo?"Switch account":"Sign out"}</button></div>;
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<AthleteTraining key={data.me.id} initialTab={view==="badges"?"Merker":view==="challenges"?"Utfordringer":"Today"} data={data} busy={busy} run={run}/></div></main>;
-  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><a className={"nav-item "+(view==="challenges"?"active":"")} href="/challenges"><Trophy/>Utfordringer</a><a className={"nav-item "+(view==="badges"?"active":"")} href="/merker"><Medal/>Merker</a><a className={"nav-item "+(view==="directory"?"active":"")} href="/directory"><ContactRound/>Brukeroversikt</a></>;
+  const navigation=<><a className={"nav-item "+(view==="dashboard"&&(!hash||hash==="#overview")?"active":"")} href="/#overview"><Activity/>Overview</a><a className={"nav-item "+(hash==="#builder"?"active":"")} href="/#builder"><Dumbbell/>Workout builder</a><a className={"nav-item "+(hash==="#weekly"?"active":"")} href="/#weekly"><CalendarDays/>Weekly planner</a><a className={"nav-item "+(hash==="#monitor"?"active":"")} href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><a className={"nav-item "+(view==="players"?"active":"")} href="/spillerstats"><ChartNoAxesColumn/>Spillerstats</a><a className={"nav-item "+(view==="challenges"?"active":"")} href="/challenges"><Trophy/>Utfordringer</a><a className={"nav-item "+(view==="badges"?"active":"")} href="/merker"><Medal/>Merker</a><a className={"nav-item "+(hash==="#messages"?"active":"")} href="/#messages"><Users/>Meldinger</a><a className={"nav-item "+(view==="directory"?"active":"")} href="/directory"><ContactRound/>Brukeroversikt</a></>;
   return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
-    <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {view==="badges"?"Merker":view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="team"?"Lagstyring":view==="challenges"?"Utfordringer":"Oversikt"}</span><h1>{view==="team"?"Team settings":view==="badges"?"Merker":view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="challenges"?"Utfordringer":"Squad overview"}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
+    <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {view==="players"?"Spillerstats":view==="badges"?"Merker":view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="team"?"Lagstyring":view==="challenges"?"Utfordringer":"Oversikt"}</span><h1>{view==="team"?"Team settings":view==="players"?"Spillerstats":view==="badges"?"Merker":view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="challenges"?"Utfordringer":"Squad overview"}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
     <nav className="phone-tabs" aria-label="Trenervalg"><a className={view==="dashboard"&&hash!=="#weekly"?"current":""} href="/#overview"><House/>Oversikt</a><a className={view==="dashboard"&&hash==="#weekly"?"current":""} href="/#weekly"><CalendarDays/>Ukeplan</a><a className={view==="match"?"current":""} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><button aria-expanded={more} onClick={()=>setMore(!more)}><Ellipsis/>Mer</button></nav>{notice}
-    {view==="badges"?<BadgePanel key={data.me.squad} data={data}/>:view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
+    {view==="players"?<PlayerStatistics key={data.me.squad} data={data}/>:view==="badges"?<BadgePanel key={data.me.squad} data={data}/>:view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} hash={hash} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
-function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
+function Coach({data,busy,run,hash}:{data:Snapshot;busy:boolean;run:Run;hash:string}){
   const [quick,setQuick]=useState<{id:string;draft:QuickProgram}>();
   const dirty=useRef(false);
   const flagDraft=useCallback((value:boolean)=>{dirty.current=value;},[]);
   function openDraft(draft:QuickProgram){
     if(dirty.current&&!window.confirm("Replace the current program draft? Saved programs will not change."))return;
     setQuick({id:crypto.randomUUID(),draft});
-    requestAnimationFrame(()=>document.getElementById("builder")?.scrollIntoView());
+    location.hash="builder";requestAnimationFrame(()=>document.getElementById("builder")?.scrollIntoView());
   }
   const players=data.roster.filter(p=>p.role==="athlete");
   const [filter,setFilter]=useState("");
@@ -93,14 +94,12 @@ function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     const csv=[["Date","Workout","Athlete","Exercises done","Exercises assigned"],...schedule.map(p=>[p.day,p.title,players.find(a=>a.id===p.athlete)?.name||"",String(count(data,p.id)),String(p.exercises.length)])].map(row=>row.map(escape).join(",")).join("\r\n");
     const url=URL.createObjectURL(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download="NHF-training.csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  return <><CoachAgenda data={data}/><section className="grid metric-grid">{[["Squad athletes",players.length],["Assigned sessions",data.plans.length],["Completed",data.plans.filter(p=>count(data,p.id)===p.exercises.length).length],["Exercises logged",data.checks.length]].map(([label,value])=><div className="panel panel-pad metric" key={label}><span className="muted">{label}</span><strong className="metric-value">{value}</strong></div>)}</section>
-    <CoachNotices data={data} run={run} busy={busy}/>
+  if(!hash||hash==="#overview")return <CoachAgenda data={data}/>;
+  if(hash==="#messages")return <><CoachNotices data={data} run={run} busy={busy}/><Conversation data={data}/></>;
+  return <>
     <WeeklyPlanner data={data} busy={busy} run={run} onDraft={openDraft} renderBuilder={show=><>
       <QuickCoach onApply={openDraft}/>
       <ProgramBuilder key={quick?.id} initial={quick?.draft} data={data} busy={busy} run={run} onDirty={flagDraft} onCalendar={show}/>
     </>}/>
-    <details className="library-tools"><summary>Athlete messages</summary><Conversation data={data}/></details>
-    <section className="grid">
-    <div className="grid roster"><section className="panel panel-pad grid roster"><h2><Users/> Squad activity</h2>{players.map(p=>{const plans=data.plans.filter(w=>w.athlete===p.id);return <div className="result" key={p.id}><div>{p.photo&&<img src={p.photo} width={40} height={40} alt=""/>}<strong>{p.name}</strong><p className="muted">{p.position}</p>{p.bio&&<small>{p.bio}</small>}</div><span className="muted">{plans.filter(w=>count(data,w.id)===w.exercises.length).length} / {plans.length} sessions complete</span></div>;})}{!players.length && <p className="muted">Add athlete memberships to publish the first workout.</p>}</section></div></section>
     <section className="panel panel-pad grid" id="schedule"><header className="page-head"><h2><CalendarDays/> Training schedule</h2><button onClick={report} className="btn"><Download size={16}/>CSV</button></header><label>Filter by day<input type="date" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{schedule.map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{p.day} · {players.find(a=>a.id===p.athlete)?.name}</p></div><span className="badge blue">{count(data,p.id)} / {p.exercises.length} done</span></div>)}{!schedule.length && <p>No workouts scheduled for this selection.</p>}</section></>;
 }

@@ -55,7 +55,7 @@ function InviteCode({team,role,busy,run}:{team:string;role:Member["role"];busy:b
   async function copy(s:string){try{await navigator.clipboard.writeText(s);setNote("Kopiert.");}catch{setNote("Marker feltet og kopier.");}}
   return <section className="grid"><h3>{coach?"Trenerkode":"Utøverkode"}</h3><small>{coach?"Engangskode · gyldig i 24 timer · gir vanlig trenerrolle":"Lagkode · gyldig i 7 dager · kan brukes av flere utøvere"}</small>
     {record&&<><label>Aktiv kode<input readOnly value={record.code} onFocus={e=>e.target.select()}/></label><small>Utløper {new Date(record.expires).toLocaleString("nb-NO")}</small><div className="day-strip"><button className="btn primary" onClick={()=>copy(record.code)}><Copy size={16}/>Kopier kode</button>
-      {coach&&<button className="btn" onClick={()=>copy(clubLink("/apply?coach_code="+record.code,demo?location.origin:undefined))}><LinkIcon size={16}/>Kopier registreringslenke</button>}</div></>}
+      <button className="btn" onClick={()=>copy(clubLink("/apply?"+role+"_code="+record.code,demo?location.origin:undefined))}><LinkIcon size={16}/>Kopier registreringslenke</button></div></>}
     <div className="day-strip"><button className={record?"btn":"btn primary"} disabled={busy||!ready} onClick={()=>{if(record&&!confirm("Erstatte koden? Den gamle slutter å virke."))return;void run(async()=>{setRecord(await invitationCode(team,role,"issue"));setNote("Koden er klar til deling.");});}}><RefreshCw size={16}/>{record?"Erstatt kode":"Opprett "+name}</button>
     {record&&<button className="btn" disabled={busy} onClick={()=>run(async()=>{setRecord(await invitationCode(team,role,"revoke"));setNote("Koden er deaktivert.");})}>Deaktiver kode</button>}</div>
     {note&&<p role="status">{note}</p>}</section>;
@@ -73,9 +73,9 @@ async function thumbnail(file:File,fit=false){
   }finally{img.close();}
 }
 export function Profile({me,busy,run}:{me:Member;busy:boolean;run:Run}){
-  const [name,setName]=useState(me.name),[position,setPosition]=useState(me.position||""),[bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
+  const [name,setName]=useState(me.name),[shirt,setShirt]=useState(me.shirt_number||""),[position,setPosition]=useState(me.position||""),[bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
   return <section className="panel panel-pad grid"><h2><UserRound/> Athlete profile</h2>{photo&&<img src={photo} width={80} height={80} alt="Profile portrait"/>}
     <label>Profile photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e=>{const f=e.target.files?.[0];if(f)try{setPhoto(await thumbnail(f));setNote("");}catch(err){setNote((err as Error).message);}}}/></label>{photo&&<button className="btn" onClick={()=>setPhoto("")}>Remove photo</button>}
-    <label>Display name<input value={name} maxLength={100} onChange={e=>setName(e.target.value)}/></label><label>Playing position<input value={position} maxLength={80} onChange={e=>setPosition(e.target.value)}/></label><label>About me<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
-    <button className="btn primary" disabled={busy||!name.trim()} onClick={async()=>{if(await run(()=>saveProfile(me,{name:name.trim(),position,bio,photo})))setNote("Profile saved.");}}>Save profile</button>{note&&<p role="status">{note}</p>}</section>;
+    <label>Display name<input value={name} maxLength={100} onChange={e=>setName(e.target.value)}/></label><label>Draktnummer<input type="text" inputMode="numeric" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label><label>Playing position<input value={position} maxLength={80} onChange={e=>setPosition(e.target.value)}/></label><label>About me<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
+    <button className="btn primary" disabled={busy||!name.trim()||!!shirt&&!/^[1-9][0-9]{0,2}$/.test(shirt)} onClick={async()=>{if(await run(()=>saveProfile(me,{name:name.trim(),position,bio,photo,shirt_number:shirt||null})))setNote("Profile saved.");}}>Save profile</button>{note&&<p role="status">{note}</p>}</section>;
 }

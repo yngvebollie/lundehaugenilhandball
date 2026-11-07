@@ -7,8 +7,8 @@ export type Fixture=Match&{registration?:string;nif_id?:number;home?:string;away
 export const metrics={shots_hit:"Mål",shots_missed:"Bomskudd",technical_errors:"Tekniske feil",goalkeeper_saves:"Redninger"} as const;
 export type Stats=Record<keyof typeof metrics,number>&{rating:number|null;notes:string;is_best_player:boolean};
 export const blank:Stats={shots_hit:0,shots_missed:0,technical_errors:0,goalkeeper_saves:0,rating:null,notes:"",is_best_player:false};
-export type Player={player_id:string;name:string;shirt_number?:string;position?:string;local_played:boolean|null;nif_played:boolean|null;report_listed?:boolean;report_played?:boolean|null;report_goals?:number|null;report_warnings?:number|null;nif_best_player?:boolean;discrepancy?:boolean;stats:Stats|null};
-export type PlayerForm={games:number;scored_games:number;goals:number|null;prior_games:number;prior_goals:number|null};
+export type Player={player_id:string;name:string;shirt_number?:string;position?:string;local_played:boolean|null;nif_played:boolean|null;report_listed?:boolean;report_played?:boolean|null;report_goals?:number|null;report_warnings?:number|null;report_suspensions?:number|null;nif_best_player?:boolean;discrepancy?:boolean;stats:Stats|null};
+export type PlayerForm={games:number;scored_games:number;goals:number|null;prior_games:number;prior_goals:number|null;game_suspensions:number|null;season_suspensions:number|null;season_warnings:number|null};
 export type Details={rows:Player[];catalog:{id:string;name:string}[]};
 const key="nhf-kamper:";
 function read<T>(k:string,initial:T):T{return JSON.parse(localStorage.getItem(key+k)||"null")??initial;}
@@ -31,7 +31,7 @@ function demoPlayers(m:Fixture){
   for(const p of doc?.players.filter(x=>x.side===side)||[]){
     const id="report:"+m.registration+":"+p.name.toLowerCase().trim()+":"+p.shirt;
     const row=rows.find(x=>x.player_id===id)||(rows[rows.length]={player_id:id,name:p.name,shirt_number:p.shirt,local_played:null,nif_played:null,stats:null,report_listed:false,report_played:null,report_goals:null,report_warnings:null});
-    Object.assign(row,{report_listed:true,report_played:p.played,report_goals:p.total,report_warnings:p.warning==null?null:Number(p.warning)});
+    Object.assign(row,{report_listed:true,report_played:p.played,report_goals:p.total,report_warnings:p.warning==null?null:Number(p.warning),report_suspensions:p.suspensions});
   }return rows;
 }
 export type ReportStatus={revision:number|null;rows:number};
@@ -52,8 +52,10 @@ export async function playerForm(g:Fixture):Promise<Record<string,PlayerForm>>{
   const key=(p:Player)=>p.player_id.startsWith("report:")&&!ambiguous.has(norm(p))?"name:"+norm(p):p.player_id;
   for(const m of season){
     if(!m.completed||m.day>g.day||m.registration!==g.registration||m.day===g.day&&m.id!==g.id&&(!m.start_time||!g.start_time||m.start_time>=g.start_time))continue;
-    for(const p of demoPlayers(m)){const goals=p.report_goals??p.stats?.shots_hit;if(!confirmed(p))continue;
-      const a=totals[key(p)]??={games:0,scored_games:0,goals:null,prior_games:0,prior_goals:null};a.games++;if(goals!=null){a.scored_games++;a.goals=(a.goals??0)+goals;if(m.id!==g.id){a.prior_games++;a.prior_goals=(a.prior_goals??0)+goals;}}}
+    for(const p of demoPlayers(m)){const goals=p.report_goals??p.stats?.shots_hit;const a=totals[key(p)]??={games:0,scored_games:0,goals:null,prior_games:0,prior_goals:null,game_suspensions:null,season_suspensions:null,season_warnings:null};
+      if(p.report_listed&&p.report_warnings!=null)a.season_warnings=(a.season_warnings??0)+p.report_warnings;
+      if(p.report_listed&&p.report_suspensions!=null){a.season_suspensions=(a.season_suspensions??0)+p.report_suspensions;if(m.id===g.id)a.game_suspensions=p.report_suspensions;}
+      if(!confirmed(p))continue;a.games++;if(goals!=null){a.scored_games++;a.goals=(a.goals??0)+goals;if(m.id!==g.id){a.prior_games++;a.prior_goals=(a.prior_goals??0)+goals;}}}
   }return Object.fromEntries(demoPlayers(g).filter(p=>totals[key(p)]).map(p=>[p.player_id,totals[key(p)]]));
 }
 export type StatLine={match_id:string;day:string;home:boolean|null;player:string;name:string;shirt:string|null;played:boolean;

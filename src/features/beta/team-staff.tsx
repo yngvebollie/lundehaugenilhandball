@@ -13,7 +13,7 @@ export function TeamStaff({data,busy,run}:Props){
         if(action==="remove"&&!window.confirm("Remove "+m.name+" from this team? Their account and training history are kept."+(m.role==="athlete"?" The team's six-character join code will expire.":"")))return;
         if(await run(()=>changeStaff(data,m,action)))setNote(action==="remove"?"Member removed from this team.":"Coach permissions saved.");
       }
-      return <div className="result" key={m.id}><div><strong>{m.name}</strong><p>{elevated?"Admin coach":m.role==="coach"?"Coach":"Athlete"}</p></div><div className="day-strip">
+      return <div className="result" key={m.id}><div><strong>{m.role==="athlete"?<a href={"/spillerstats?athlete="+m.id}>{m.name}</a>:m.name}</strong><p>{elevated?"Admin coach":m.role==="coach"?"Coach":"Athlete"}</p></div><div className="day-strip">
         {admin&&m.role==="coach"&&<button className="btn" disabled={busy||last} title={last?"Promote a second admin first":undefined} onClick={()=>change(elevated?"demote":"promote")}>{elevated?"Make coach":"Make admin coach"}</button>}
         {(admin||m.role==="athlete")&&<button aria-label={"Remove "+m.name} title={last?"Promote a second admin first":"Remove from this team"} disabled={busy||last} className="btn" onClick={()=>change("remove")}><UserMinus size={16}/></button>}
       </div></div>;

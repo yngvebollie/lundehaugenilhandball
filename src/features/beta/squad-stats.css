@@ -12,7 +12,7 @@
 .stat-table tbody th{text-align:left}
 .stat-table tbody tr:nth-child(even):not(.highlight){background:#f3f6f5}
 .stat-table .stat-groups th{background:#e5ecea;color:#223834;text-align:center;border-inline-end:2px solid white}
-.stat-table:has(.stat-groups) tbody td:nth-child(5){border-left:2px solid var(--border)}
+.stat-table:has(.stat-groups) tbody td:nth-child(6){border-left:2px solid var(--border)}
 .squad-stats .stat-table{min-width:650px}
 .squad-stats .workspace-tabs{flex-wrap:wrap}
 .season-balls{display:inline-flex;gap:2px;vertical-align:middle;flex-wrap:wrap}
@@ -20,4 +20,20 @@
 .opponent-fixture{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding:9px 0;flex-wrap:wrap;color:inherit}
 .opponent-fixture time{font-variant-numeric:tabular-nums}
 .opponent-fixture>span:first-of-type{flex:1 1 130px}
+.stat-player-name{display:inline-flex;align-items:center;text-align:left;gap:4px;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+.stat-player-details{display:grid;gap:6px;text-align:left;padding:6px;white-space:normal}
+.player-profile{max-width:960px}.player-profile header img{vertical-align:middle}
+.coach-feed .feed-scroll{max-height:350px;overflow:auto}.feed-scroll ol{list-style:none;padding:0;margin:0}
+.feed-scroll li{display:grid;grid-template-columns:minmax(75px,100px) minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid var(--border)}
+.feed-scroll li a{font-weight:650}.feed-scroll li time,.feed-scroll small{color:var(--muted);font-size:.82rem}.feed-scroll p{margin:2px 0}
+.coach-main .coach-agenda{display:grid;gap:22px;border:0;padding-bottom:4px}
+.agenda-heading,.profile-index a,.next-fixture a{display:flex;align-items:center;justify-content:space-between;gap:10px}.agenda-heading h2::first-letter{text-transform:uppercase}
+.agenda-heading small,.agenda-entry small,.next-fixture small,.next-fixture span{color:var(--muted)}
+.agenda-columns{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:25px}.agenda-columns h3{margin:12px 0 6px}
+.agenda-entry,.next-fixture{display:grid;gap:5px;padding:10px 0;border-top:1px solid var(--border)}
+.agenda-entry{grid-template-columns:minmax(94px,auto) minmax(0,1fr) auto 15px;align-items:center}.agenda-entry time,.next-fixture span{font-size:.85rem}
+.next-fixture a{display:grid;justify-content:start}.profile-index{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));gap:4px 16px}.profile-index a{padding:9px 0;border-bottom:1px solid var(--border)}
+@media(max-width:760px){.agenda-columns{grid-template-columns:1fr;gap:9px}.agenda-entry{grid-template-columns:78px minmax(0,1fr) auto}.agenda-entry>svg{display:none}.coach-feed .feed-scroll{max-height:300px}}
+
+
 

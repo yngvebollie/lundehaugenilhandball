@@ -12,7 +12,7 @@ export default function Login(){
   const [invite,setInvite]=useState("");
   const [email,setEmail]=useState("");
   const [name,setName]=useState("");
-  const [phone,setPhone]=useState("");
+  const [phone,setPhone]=useState(""),[shirt,setShirt]=useState("");
   const [teamCode,setTeamCode]=useState(""),[magic,setMagic]=useState(false);
   const [password,setPassword]=useState("");
   const [signup,setSignup]=useState(false);
@@ -28,7 +28,7 @@ export default function Login(){
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
-    const param=new URLSearchParams(location.search).get("role");
+    const qp=new URLSearchParams(location.search);const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
@@ -44,7 +44,7 @@ export default function Login(){
       if(teamCode&&!validTeamCode(teamCode))throw Error("Enter the six-character team code.");
       if(!demo&&!signed&&magic){
         const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role;
-        await emailSignIn(email,path,registering,name,phone,invite?{kind:"email",token:invite}:undefined);setMail("sent");return;
+        await emailSignIn(email,path,registering,name,phone,invite?{kind:"email",token:invite,shirt}:teamCode?{kind:"athlete_code",token:teamCode,shirt}:undefined);setMail("sent");return;
       }
       if(demo){
         if(invite)joinDemo(invite,email.trim().toLowerCase(),name.trim());
@@ -54,7 +54,7 @@ export default function Login(){
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),contact_phone:phone.trim(),...(invite?{club_invite_kind:"email",club_invite_token:invite}:{})}}});
+            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,...(invite?{club_invite_kind:"email",club_invite_token:invite}:teamCode?{club_invite_kind:"athlete_code",club_invite_token:teamCode}:{})}}});
             if(error)throw error;
             if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}
           }else{
@@ -92,6 +92,7 @@ export default function Login(){
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
       {(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
       {(!signed&&(signup||join)||signed&&invite)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
+      {(invite||join&&role==="athlete")&&<label>Draktnummer (utøver, valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label>}
       {join&&role==="athlete"&&!invite&&<label>Team code (optional)<input maxLength={6} minLength={6} autoCapitalize="characters" value={teamCode} onChange={e=>setTeamCode(e.target.value.toUpperCase().trim())}/></label>}
       {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}

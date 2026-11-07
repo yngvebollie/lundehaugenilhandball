@@ -25,4 +25,19 @@ export async function checkPeers(pg,login,uuid,team,reg){
  await pg.exec("set role authenticated");await login(302);assert.equal((await rpc("read",302)).counts.everyones_teammate??0,0);
  await pg.exec("reset role");await pg.query("update nhf_private.badge_finish set finished_at=now()-interval '73 hours' where match_id=$1",[mid]);
  await pg.exec("set role authenticated");await login(301);await assert.rejects(give(301,304));await login(1);
+ // Two levels, one duplicate NIF match, and a different season.
+ await pg.exec("reset role");
+ await pg.query("update nhf_private.match_participants set report_goals=4 where match_id=$1 and player_id=$2",[mid,uuid(321)]);
+ const addReg=async(org,season)=>(await pg.query("insert into beta_team_seasons(team,org_id,season) values($1,$2,$3) returning id",[team,org,season])).rows[0].id;
+ const second=await addReg(202,99),previous=await addReg(203,98);
+ for(const [regId,no,nif,goals] of [[second,330,9999,4],[second,331,9998,6],[previous,332,9997,7]]){
+   await pg.query("insert into beta_matches(id,team,registration,nif_id,opponent,day,home,away,lineup,completed) values ($1,$2,$3,$4,'Other',$5,'Test','Other','{}',true)",[uuid(no),team,regId,nif,day]);
+   await pg.query("insert into nhf_private.match_participants(team,match_id,player_id,local_played,report_goals) values($1,$2,$3,true,$4)",[team,uuid(no),uuid(321),goals]);
+   await pg.query("insert into nhf_private.badge_links(reg,player,athlete) values($1,$2,$3) on conflict do nothing",[regId,uuid(321),uuid(301)]);
+ }
+ await pg.exec("set role authenticated");await login(1);
+ const current=await rpc("read",301);assert.equal(current.counts.goal_machine,10);assert.equal(current.earned.filter(x=>x.key==="goal_machine").length,1);
+ await pg.query("select beta_season_settings('save',$1,98,'Earlier')",[team]);
+ const earlier=await rpc("read",301);assert.equal(earlier.counts.goal_machine,7);assert.equal(earlier.earned.filter(x=>x.key==="goal_machine").length,0);
+ await pg.query("select beta_season_settings('save',$1,99,'2024/25')",[team]);assert.equal((await rpc("read",301)).counts.goal_machine,10);
 }

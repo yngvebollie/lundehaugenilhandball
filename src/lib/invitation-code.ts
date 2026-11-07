@@ -11,6 +11,16 @@ export async function invitationCode(team:string,kind:Member["role"],action:"get
   }
   const row=JSON.parse(localStorage.getItem(key)||"null");return row&&row.expires>Date.now()?{code:row.code,expires:new Date(row.expires).toISOString()}:null;
 }
+export async function redeemAthleteCode(input:string,name:string,phone:string,email:string):Promise<LinkInfo>{
+  if(!demo){const {data}=await db!.rpc("beta_redeem_athlete_code",{code:input,label:name,phone}).throwOnError();if(data.error)throw Error(data.error);return data;}
+  {let me=demoAccounts().find(p=>p.email===email);if(!me){registerDemoAthlete(email,name);me=demoAccounts().find(p=>p.email===email)!;}sessionStorage.setItem("nhf-persona",me.id);}
+  const result=await admissions("code",{value:input,label:name});if(result!==true)throw Error(String(result));
+  const me=demoAccounts().find(p=>p.email===email)!;return {id:me.squad,name:JSON.parse(localStorage.getItem(prefix+"team:"+me.squad)||"null")?.name||"Demolaget",role:"athlete",direct:true};
+}
+export async function saveSignupShirt(value:string){if(!value)return;if(!/^[1-9][0-9]{0,2}$/.test(value))throw Error("Draktnummer må være mellom 1 og 999.");
+ if(demo){const id=sessionStorage.getItem("nhf-persona"),me=demoAccounts().find(p=>p.id===id);if(me?.role==="athlete")localStorage.setItem(prefix+"member:"+id,JSON.stringify({...me,shirt_number:value}));return;}
+ const user=(await db!.auth.getUser()).data.user;if(!user)throw Error("Logg inn.");await db!.from("beta_members").update({shirt_number:value}).eq("id",user.id).eq("role","athlete").throwOnError();
+}
 export async function redeemCoachCode(input:string,name:string,phone:string,email:string):Promise<LinkInfo>{
   if(!demo){const {data}=await db!.rpc("beta_invitation_code",{action:"redeem",t:null,kind:"coach",input,label:name,phone}).throwOnError();if(data.error)throw Error(data.error);return data;}
   const key=Object.keys(localStorage).find(k=>k.startsWith(prefix+"coach-code:")&&JSON.parse(localStorage.getItem(k)!).code===input);

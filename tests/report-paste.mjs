@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {parsePaste,validateReport,importDraft,reportTeamMatches} from "../src/lib/report-text.ts";
+import {parsePaste,validateReport,importDraft,reportTeamMatches,canReviewTeamLabels} from "../src/lib/report-text.ts";
 const line=(shirt,played,goals,penalty,susp=0)=>[shirt," ","Test "+shirt,played?"X":"","01.01.2000","",susp?"X":"","","","","","",goals||"",penalty||"",goals+penalty||""].join("\t");
 const raw=["KAMPRAPPORT","Turnering: Jenter 13, A-serie 04","Kamp Nr\t54041311009\tResPIN\t8432765\tTilskuere\t60",
 " Hundvåghallen A\t01.11.2026 - 13:20","A\tHjemmelag"," Hundvåg","mot","B\tBortelag"," Sola","Sluttresultat\tA","20\tB","21","Halv tid\tA","B","Full tid\tA","20\tB","21",
@@ -16,4 +16,7 @@ assert.equal(reportTeamMatches(" KFUM ", "KFUM 1","Hundvåg"),true);
 assert.equal(reportTeamMatches("KFUM 2","KFUM 1","Hundvåg"),false);
 assert.equal(reportTeamMatches("KFUM","KFUM 1","KFUM 2"),false);
 assert.equal(reportTeamMatches("Hundvåg","KFUM 1","Hundvåg"),false);
+const numbered={...r,match:{...r.match,nif_id:8429015,day:"2026-09-26",home:"Hundvåg",away:"Sola 4",home_score:20,away_score:18}};
+const fixture={nif_id:8429015,day:"2026-09-26",home:"Hundvåg",away:"Sola 3",score:"20-18"};
+assert.ok(canReviewTeamLabels(numbered,fixture));for(const bad of [{nif_id:1},{day:"2026-09-25"},{score:"19-18"},{home:"Sola 3",away:"Hundvåg"},{away:"Nærbø 3"}])assert.equal(canReviewTeamLabels(numbered,{...fixture,...bad}),false);
 

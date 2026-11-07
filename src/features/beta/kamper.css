@@ -8,5 +8,9 @@
 .km-existing{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-left:3px solid var(--teal);background:var(--teal-soft)}
 .fixture-teams{display:grid;gap:3px}
 .report-saved-mark{display:inline-flex;align-items:center;gap:4px;color:#236449;font-size:.78rem;font-weight:650;line-height:1.35}
+.report-conflict{display:grid;gap:8px;border-left:3px solid #b5791c;background:#fff8e8;color:#392e17;padding:12px}
+.report-conflict dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:6px 16px;margin:0}
+.report-conflict dt{font-size:.8rem}.report-conflict dd{margin:0;font-weight:650}.report-conflict .btn{justify-self:start}
+
 
 

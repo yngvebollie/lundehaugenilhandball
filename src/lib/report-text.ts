@@ -1,6 +1,6 @@
 export type ReportMatch={nif_id:number|null;number:string|null;competition:string|null;day:string|null;time:string|null;venue:string|null;home:string|null;away:string|null;home_score:number|null;away_score:number|null;half_home:number|null;half_away:number|null};
 export type ReportPlayer={side:"A"|"B";shirt:string;name:string;played:boolean|null;participation_blank?:boolean;goals:number|null;penalty:number|null;total:number|null;warning:number|boolean|null;suspensions:number|null;disqualification:boolean|null};
-export type Report={match:ReportMatch;players:ReportPlayer[];issues:string[];method:string;version:string};
+export type Report={match:ReportMatch;players:ReportPlayer[];issues:string[];method:string;version:string;team_review?:{reported_home:string|null;reported_away:string|null;fixture_home:string;fixture_away:string}};
 const num=(s:string|undefined)=>s&&/^\d+$/.test(s.trim())?Number(s):null;
 const mark=(s:string|undefined)=>s===undefined?null:!s.trim()?false:/^x$/i.test(s.trim())?true:null;
 export const warningCount=(v:ReportPlayer["warning"])=>v==null?null:Number(v);
@@ -43,6 +43,14 @@ export function reportTeamMatches(label:string|null,fixture:string|undefined,opp
   const norm=(v:string|null|undefined)=>(v??"").trim().toLowerCase().replace(/\s+/g," ");
   const r=norm(label),f=norm(fixture),o=norm(opponent),base=(v:string)=>v.replace(/ [0-9]+$/,"");
   return !!r&&(r===f||(/ [0-9]+$/.test(f)&&r===base(f)&&r!==base(o)));
+}
+// Offer manual side reconciliation only for the same dated, scored fixture and club names.
+export function canReviewTeamLabels(r:Report,g:{nif_id?:number;home?:string;away?:string;day:string;score?:string}){
+  const m=r.match,score=g.score?.trim().match(/^(\d+)\s*[-–:]\s*(\d+)$/);
+  const base=(v:string|null|undefined)=>(v||"").trim().toLowerCase().replace(/\s+/g," ").replace(/ [0-9]+$/,"");
+  if(!g.nif_id||m.nif_id!==g.nif_id||m.day!==g.day||!score||m.home_score!==Number(score[1])||m.away_score!==Number(score[2]))return false;
+  return !!base(m.home)&&!!base(m.away)&&base(m.home)!==base(m.away)&&base(m.home)===base(g.home)&&base(m.away)===base(g.away)
+    &&(!reportTeamMatches(m.home,g.home,g.away)||!reportTeamMatches(m.away,g.away,g.home));
 }
 export function validateReport(r:Report,nif:number|undefined){
   const issues:string[]=[];

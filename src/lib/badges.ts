@@ -8,12 +8,12 @@ export async function catalogTargets(team:string):Promise<Record<string,number[]
 export const badgeUnit:Record<string,string>={
  on_fire:"treninger på rad",iron_will:"økter",early_bird:"oppmøter",goal_getter:"mål oppnådd",extra_mile:"ekstraøkter",engine_builder:"kondisjonsøkter",consistency_king_queen:"hele treningsuker",
  hard_worker:"økter",never_give_up:"øvelser",precision_builder:"utfordringer",one_more_rep:"utfordringer",student_of_game:"læringsaktiviteter",footwork_wizard:"utfordringer",
- mission_complete:"oppdrag",better_every_week:"uker",body_guardian:"økter",goal_machine:"mål",sharpshooter:"kamper med minst 70 % treff på minst 5 skudd",the_wall:"redninger",mvp:"utmerkelser",game_warrior:"kamper",hat_trick_hero:"kamper med minst 3 mål",defensive_guardian:"kamper",playmaker:"målgivende pasninger",
+ mission_complete:"oppdrag",better_every_week:"uker",body_guardian:"økter",goal_machine:"mål denne sesongen",sharpshooter:"kamper med minst 70 % treff på minst 5 skudd",the_wall:"redninger",mvp:"utmerkelser",game_warrior:"kamper",hat_trick_hero:"kamper med minst 3 mål",defensive_guardian:"kamper",playmaker:"målgivende pasninger",
  level_up:"rekordforbedringer",game_iq:"utfordringer",versatility_master:"ulike posisjoner",speed_demon:"milepæler",skill_collector:"ferdigheter",comeback_kid:"utviklingsperioder",
  team_player:"lagbidrag",positive_energy:"oppmuntringer",helping_hand:"bidrag",rising_star:"milepæler",fair_play_champion:"sportslige handlinger",beep:"nivå",kmt:"km/t"
 };
 export type Badge=(typeof catalog)[number];
-export type BadgeState={counts:Record<string,number>;targets?:Record<string,number[]>;seen?:string|null;attribution?:boolean;notifications?:boolean;earned:{key:string;level:number;at:string}[];receive:boolean;
+export type BadgeState={counts:Record<string,number>;goal_season?:string|null;targets?:Record<string,number[]>;seen?:string|null;attribution?:boolean;notifications?:boolean;earned:{key:string;level:number;at:string}[];receive:boolean;
  eligible:{match:string;day:string;athlete:string;name:string;given:string|null;revoked:boolean|null;opponent?:string}[];
  inbox:{key:string;day:string;at?:string;from?:string|null}[];moderate:{match:string;giver:string;day:string;key:string}[]};
 export const automatic=new Set(["on_fire","iron_will","consistency_king_queen","goal_machine","sharpshooter","the_wall","mvp","game_warrior","hat_trick_hero","versatility_master"]);
