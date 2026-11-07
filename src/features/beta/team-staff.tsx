@@ -1,6 +1,7 @@
+import {clubLink} from "@/lib/club-url";
 import {useEffect,useState} from "react";
 import {Copy,Link as LinkIcon,ShieldCheck,UserMinus} from "lucide-react";
-import {applicationLink,changeStaff,type Member,type Snapshot} from "@/lib/beta";
+import {demo,applicationLink,changeStaff,type Member,type Snapshot} from "@/lib/beta";
 import type {Run} from "./program-builder";
 type Props={data:Snapshot;busy:boolean;run:Run};
 export function TeamStaff({data,busy,run}:Props){
@@ -23,7 +24,7 @@ export function ShareLink({data,busy,run}:Props){
   const [role,setRole]=useState<Member["role"]>("athlete"),[record,setRecord]=useState<{token:string;expires:string;direct?:boolean}|null>(null),[note,setNote]=useState("");
   const team=data.me.squad,admin=data.admins.includes(data.me.id);
   useEffect(()=>{let alive=true;setRecord(null);setNote("");applicationLink(team,role,"get").then(r=>{if(alive)setRecord(r);}).catch(e=>{if(alive)setNote(e.message);});return ()=>{alive=false;};},[team,role]);
-  const url=record?location.origin+"/apply?link="+record.token:"";
+  const url=record?clubLink("/apply?link="+encodeURIComponent(record.token),demo?location.origin:undefined):"";
   return <section className="grid"><h3><LinkIcon size={17}/> Inviter med lenke</h3><p className="muted">Nye invitasjoner gir tilgang til dette laget etter e-postbekreftelse, uten manuell godkjenning. Del trenerlenker kun med personer som skal ha tilgang til utøverdata.</p>
     <label>Rolle i laget<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option>{admin&&<option value="coach">Coach</option>}</select></label>
     <div className="day-strip"><button className="btn" disabled={busy} onClick={()=>run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Invitasjonen er klar.");})}>{url?"Erstatt invitasjonslenke":"Opprett invitasjonslenke"}</button>

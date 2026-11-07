@@ -5,6 +5,7 @@ import { db, demo, demoAccounts, joinDemo, registerDemoAthlete,selectTeam } from
 import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList } from "lucide-react";
 import { PublicShell } from "@/features/beta/public-shell";
 import {SignupSuccess} from "@/features/beta/signup-success";
+import {clubLink} from "@/lib/club-url";
 import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
 
 export default function Login(){
@@ -53,7 +54,7 @@ export default function Login(){
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:invite?location.href:location.origin+joinPath,data:{full_name:name.trim(),contact_phone:phone.trim()}}});
+            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),contact_phone:phone.trim()}}});
             if(error)throw error;
             if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}
           }else{

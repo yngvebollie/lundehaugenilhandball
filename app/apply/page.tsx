@@ -3,6 +3,7 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 import {PublicShell} from "@/features/beta/public-shell";
 import {SignupSuccess} from "@/features/beta/signup-success";
 import {applications,applyWithLink,db,demo,linkInfo,selectTeam,type LinkInfo,type Application} from "@/lib/beta";
+import {clubLink} from "@/lib/club-url";
 import {emailSignIn,validPhone} from "@/lib/invite-auth";
 
 export default function Apply(){
@@ -38,7 +39,7 @@ export default function Apply(){
         const path="/apply?link="+encodeURIComponent(code)+"&finish=1";
         if(magic){await emailSignIn(email,path,!existing,name,phone);setMail("sent");return;}
         if(existing){const {error}=await db!.auth.signInWithPassword({email,password});if(error)throw error;}
-        else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),contact_phone:phone.trim()},emailRedirectTo:location.origin+path}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
+        else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),contact_phone:phone.trim()},emailRedirectTo:clubLink(path)}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
       }
       await join(signed||email);
     }catch(err){setNote((err as Error).message||"Registrering mislyktes.");}finally{setBusy(false);}
@@ -46,7 +47,7 @@ export default function Apply(){
   async function openTeam(){if(!info)return;const id=demo?sessionStorage.getItem("nhf-persona"):(await db?.auth.getUser())?.data.user?.id;if(id)selectTeam(id,info.id);location.assign(info.role==="coach"?"/":"/athlete");}
   const success=info&&(mail||request?.status==="Approved");
   return <PublicShell><section className="entry-content grid">
-    {success?<SignupSuccess name={name} email={email||signed} team={info.name} role={info.role} known={mail==="created"} joined={request?.status==="Approved"} onOpen={request?.status==="Approved"?openTeam:undefined}/>:<>
+    {success?<><SignupSuccess name={name} email={email||signed} team={info.name} role={info.role} known={mail==="created"} joined={request?.status==="Approved"} onOpen={request?.status==="Approved"?openTeam:undefined}/>{mail&&!request&&<button className="btn" type="button" disabled={busy} onClick={()=>{setMail("");setExisting(true);setMagic(false);setReturning(true);setNote(signed?"":"Logg inn med passordet ditt for å bli med på laget.");}}>Jeg har bekreftet e-posten</button>}</>:<>
     <h1>{info?"Bli med i "+info.name:"Laginvitasjon"}</h1>
     {!ready?<p>Kontrollerer invitasjonen …</p>:!info?<p>Lenken har utløpt eller er erstattet. Be om en ny invitasjon.</p>:<>
     <strong>{info.role==="coach"?"Invitasjon som trener":"Invitasjon som utøver"}</strong>

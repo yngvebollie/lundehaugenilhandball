@@ -1,3 +1,4 @@
+import {clubLink} from "./club-url";
 import { createSupabaseBrowserClient } from "./supabase/client";
 import { env, hasSupabaseEnv } from "./env";
 import type { Program, Feedback } from "./programs";
@@ -155,14 +156,14 @@ export async function inviteBatch(team:string,input:string,role:Member["role"]){
   const addresses=inviteAddresses(input);
   if(demo)return Promise.all(addresses.map(async email=>({email,url:await inviteMember(team,email,role)})));
   const records=(await db!.rpc("beta_bulk_invite",{team_id:team,addresses,member_role:role}).throwOnError()).data as {email:string;token:string}[];
-  return records.map(r=>({email:r.email,url:location.origin+"/login?invite="+r.token}));
+  return records.map(r=>({email:r.email,url:clubLink("/login?new=1&invite="+encodeURIComponent(r.token),demo?location.origin:undefined)}));
 }
 export async function inviteMember(team:string,email:string,role:Member["role"]){
   let token:string=crypto.randomUUID();
   if(demo&&role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
   if(demo)localStorage.setItem(prefix+"invite:"+token,JSON.stringify({team,email,role,expires:Date.now()+7*86400000}));
   else token=(await db!.rpc("beta_invite",{team_id:team,address:email,member_role:role}).throwOnError()).data as string;
-  return location.origin+"/login?invite="+token;
+  return clubLink("/login?new=1&invite="+encodeURIComponent(token),demo?location.origin:undefined);
 }
 export function joinDemo(token:string,email:string,name:string){
   const invite=JSON.parse(localStorage.getItem(prefix+"invite:"+token)||"null");
