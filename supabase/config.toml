@@ -1,0 +1,6 @@
+project_id = "lundehaugenilhandball"
+
+[functions.nhf-public-schedule]
+# User requests verify the bearer with Auth; scheduled requests claim a scoped,
+# one-use database job. Neither path grants direct access to privileged RPCs.
+verify_jwt = false

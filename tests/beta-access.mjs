@@ -232,6 +232,17 @@ try {
   await pg.exec("set role authenticated");await login(213);
   assert.equal((await pg.query("select beta_signup_result($1) v",[single.code])).rows[0].v.id,team);
   await login(1);assert.equal(await codeAction("get","coach"),null);
+  await pg.exec("reset role");await pg.exec(await readFile(new URL("../supabase/migrations/20261107211954_published_schedule_sync.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");await login(1);
+  await assert.rejects(pg.query("select beta_save_published_schedule($1,$2,null,'[]',null)",[rid,uuid(1)]));
+  await pg.exec("reset role;set role service_role");
+  await assert.rejects(pg.query("select beta_save_published_schedule($1,$2,null,'[]',null)",[rid,uuid(6)]));
+  const jobId=uuid(333);await pg.exec("reset role");await pg.query("insert into nhf_private.nhf_sync_jobs(token,reg) values($1,$2)",[jobId,rid]);await pg.exec("set role service_role");
+  assert.equal((await pg.query("select beta_claim_schedule_job($1,$2) v",[rid,jobId])).rows[0].v.id,rid);
+  await assert.rejects(pg.query("select beta_claim_schedule_job($1,$2)",[rid,jobId]));
+  const publicRow={id:12345,season:99,org:20,league:22,day:"2025-01-01",home:"Home",away:"Away",opponent:"Away",status:"Ferdig",score:"12-11",completed:true};
+  await pg.query("select beta_save_published_schedule($1,null,null,$2,$3)",[rid,JSON.stringify([publicRow]),jobId]);
+  await assert.rejects(pg.query("select beta_save_published_schedule($1,null,null,'[]',$2)",[rid,jobId]));
+  await pg.exec("reset role;set role authenticated");await login(1);
   const measurement={day:"2025-01-01",key:"beep",quantity:7};
   const bb=await badge("event",7,measurement);assert.equal(bb.counts.beep,7);assert.equal(bb.earned.filter(b=>b.key==="beep").length,3);
   assert.deepEqual((await badge("event",7,measurement)).earned,bb.earned);

@@ -20,7 +20,16 @@ export async function POST(req:Request){
   const cron=!!process.env.MATCH_CRON_SECRET&&token===process.env.MATCH_CRON_SECRET;
   const opts={auth:{persistSession:false,autoRefreshToken:false}};
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!serviceKey||!env.supabaseUrl)return reply(503,"Direkte NIF-synk er ikke tilkoblet. Lagrede kamper beholdes. Åpne «Terminliste hos NHF» for siste terminliste.");
+  if(!env.supabaseUrl)return reply(503,"Innlogging er ikke konfigurert.");
+  if(!cron&&(!serviceKey||!process.env.NIF_CLIENT_ID||!process.env.NIF_CLIENT_SECRET)){
+    let id;try{id=(await req.json()).id;}catch{return reply(400,"Velg et spillelag.");}
+    if(typeof id!=="string"||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return reply(400,"Velg et spillelag.");
+    try{const result=await fetch(env.supabaseUrl+"/functions/v1/nhf-public-schedule",{method:"POST",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(40000),
+      headers:{Authorization:"Bearer "+token,apikey:env.supabaseAnonKey,"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const body=await result.json();return reply(result.status,body.message||"Kunne ikke hente NHFs offentlige terminliste.");
+    }catch{return reply(502,"Terminlistetjenesten svarer ikke. Lagrede kamper er beholdt.");}
+  }
+  if(!serviceKey)return reply(503,"Planlagt NIF-synk er ikke konfigurert.");
   const service=createClient(env.supabaseUrl,serviceKey,opts);
   const userDb=cron?service:createClient(env.supabaseUrl,env.supabaseAnonKey,{...opts,global:{headers:{Authorization:"Bearer "+token}}});
   if(!cron&&(await userDb.auth.getUser(token)).error)return reply(401,"Logg inn på nytt.");
