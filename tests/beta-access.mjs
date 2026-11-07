@@ -19,6 +19,9 @@ try {
   for(const script of ["003_weekly_planner","004_teams","005_coach_usage","006_team_admissions","007_athlete_dashboard","008_team_setup","009_match_pad"]){
     await pg.exec(await readFile(new URL("../supabase/beta/"+script+".sql",import.meta.url),"utf8"));
   }
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107082057_coach_focus_groups.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107082627_workout_reviews.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107083323_team_read_notices.sql",import.meta.url),"utf8"));
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
   await pg.exec("set role authenticated");
@@ -26,6 +29,25 @@ try {
   const assign=(id,squad,athlete)=>pg.query("insert into beta_assignments(id,squad,athlete,title,day,exercises) values($1,$2,$3,'Strength',current_date,array['Squat','Plank'])",[uuid(id),uuid(squad),uuid(athlete)]);
   const check=(id,step)=>pg.query("insert into beta_checks values ($1,$2)",[uuid(id),step]);
   const size=async table=>(await pg.query("select * from "+table)).rows.length;
+  const tag=(squad,athlete)=>pg.query("insert into beta_focus_members(squad,athlete,focus) values ($1,$2,'feet')",[uuid(squad),uuid(athlete)]);
+  await login(1);await tag(10,2);assert.equal(await size("beta_focus_members"),1);
+  await assert.rejects(tag(10,5));await assert.rejects(tag(20,5));
+  for(const id of [2,4]){
+    await login(id);assert.equal(await size("beta_focus_members"),0);await assert.rejects(tag(10,3));
+    await pg.query("delete from beta_focus_members where athlete=$1",[uuid(2)]);
+  }
+  await login(1);assert.equal(await size("beta_focus_members"),1);
+  await pg.query("delete from beta_focus_members where athlete=$1",[uuid(2)]);assert.equal(await size("beta_focus_members"),0);
+  const notice=(id,squad,athlete,offset=0)=>pg.query("insert into beta_notices(id,batch,squad,coach,athlete,cadence,starts_on,body) values($1,$2,$3,$4,$5,'Daily',current_date+$6::int,'Bring a ball')",[uuid(id),uuid(id+100),uuid(squad),uuid(1),uuid(athlete),offset]);
+  const ack=id=>pg.query("insert into beta_notice_reads(notice) values($1)",[uuid(id)]);
+  await notice(301,10,2);await notice(302,10,3);await notice(303,10,2,2);
+  await assert.rejects(notice(304,10,5));await assert.rejects(notice(305,20,5));await assert.rejects(ack(301));
+  await login(2);assert.equal(await size("beta_notices"),1);assert.equal(await size("beta_notice_reads"),0);
+  await assert.rejects(ack(302));await assert.rejects(ack(303));await ack(301);await assert.rejects(ack(301));
+  await assert.rejects(pg.query("update beta_notice_reads set read_at=now()"));
+  await login(3);assert.equal(await size("beta_notice_reads"),0);
+  await login(4);assert.equal(await size("beta_notices"),0);assert.equal(await size("beta_notice_reads"),0);
+  await login(1);assert.equal(await size("beta_notice_reads"),1);
   await login(1);
   await pg.query("insert into beta_programs values ($1,$2,'Strength week',$3)",[uuid(21),uuid(10),JSON.stringify([{title:"Squat",offset:0,exercises:["Squat 3 x 8"]}])]);
   await assign(11,10,2); await assign(12,10,3);
@@ -42,7 +64,13 @@ try {
   await assert.rejects(assign(13,10,2));
   await assert.rejects(check(12,0));
   await assert.rejects(check(11,2));
-  await check(11,0); await assert.rejects(check(11,0)); await check(11,1);
+  const review=(id,stars,steps)=>pg.query("insert into beta_workout_reviews(assignment,stars,exercise_stars,comment) values($1,$2,$3,'Useful session')",[uuid(id),stars,steps]);
+  await check(11,0); await assert.rejects(check(11,0));await assert.rejects(review(11,4,[0,3]));await check(11,1);
+  await assert.rejects(review(11,6,[3,3]));await assert.rejects(review(11,4,[3]));await assert.rejects(review(11,4,[2,7]));
+  await review(11,4,[0,3]);await assert.rejects(review(12,4,[4,4]));
+  for(const id of [3,4]){await login(id);assert.equal(await size("beta_workout_reviews"),0);}
+  await login(1);assert.equal(await size("beta_workout_reviews"),1);
+  assert.equal((await pg.query("update beta_workout_reviews set stars=1 returning assignment")).rows.length,0);
   await login(3); assert.equal(await size("beta_checks"),0); assert.equal(await size("beta_feedback"),0);
   await login(1); assert.equal(await size("beta_checks"),2); assert.equal((await pg.query("select effort from beta_feedback")).rows[0].effort,"Easy");
   await login(4); assert.equal(await size("beta_assignments"),0); assert.equal(await size("beta_programs"),0);
@@ -87,5 +115,7 @@ try {
   await assert.rejects(shot(91,6,6));await assert.rejects(shot(91,2,7));await shot(91,6,7);
   await login(6);assert.equal(await size("beta_shots"),0);await assert.rejects(shot(92,6,7));
   await pg.exec("reset role; set role anon"); await assert.rejects(size("beta_assignments"));
+  await assert.rejects(size("beta_focus_members"));
+  await assert.rejects(size("beta_workout_reviews"));
   console.log("PASS: publish, complete, duplicate handling, roster, athlete, squad and anonymous isolation");
 } finally {await pg.close();}

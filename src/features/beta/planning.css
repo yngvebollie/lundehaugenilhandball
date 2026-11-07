@@ -1,0 +1,14 @@
+.calendar-range{font-size:18px;font-weight:650}
+.week-board:not(.agenda-board) .week-day{border-radius:4px;padding:10px 7px}
+.week-board .week-item{margin-top:10px;gap:4px}
+.week-board.agenda-board{grid-template-columns:1fr;gap:6px}
+.agenda-board .week-day{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px 16px;min-height:50px;align-items:start;padding:9px 12px;border-top:0;border-left:3px solid var(--border-strong)}
+.agenda-board .week-day.chosen{border-left-color:var(--yellow)}
+.agenda-board .week-item{grid-column:2;margin:0}.agenda-board .week-day>small{align-self:center}
+.focus-groups summary{cursor:pointer}.focus-groups fieldset{border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px 18px}
+.focus-groups fieldset label{display:inline-flex;align-items:center;gap:7px;min-height:36px}.focus-groups input[type=checkbox]{width:18px;height:18px;min-height:0}
+.calendar-compare .monitor-table{min-width:0}.calendar-compare .table{min-width:420px}
+.week-review .btn{margin-top:8px}
+.notice-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0;line-height:1.55}.notice-entry{border-top:1px solid var(--border);padding-top:14px}.notice-people{display:flex;gap:14px;flex-wrap:wrap}.notice-people label{display:flex;align-items:center;gap:6px}.notice-people input{min-height:18px;width:18px}
+#notices summary{cursor:pointer}#notices>div{margin-top:16px}
+@media(max-width:600px){.agenda-board .week-day{grid-template-columns:90px minmax(0,1fr)}.calendar-range{font-size:16px}}

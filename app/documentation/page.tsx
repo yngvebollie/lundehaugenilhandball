@@ -5,9 +5,11 @@ export const metadata={title:"Platform documentation | NHF Performance Platform"
 const features=[
   [Users,"Bring a team together","Coaches can manage multiple teams, invite players and staff, and share team codes. An athlete joins one team, keeps a personal plan and can message the coaching staff."],
   [Library,"Build reusable sessions","Search 50 strength exercises by muscle or body area, add your own exercises, and save sessions for later. Coach AI can draft a program for a coach to review and edit."],
-  [CalendarDays,"Plan the week","Build sessions from the exercise library, save programs, and schedule strength work alongside team practices, games and personal training."],
-  [ClipboardCheck,"Follow up with each athlete","Athletes check off exercises and rate a session as easy, just right or hard. Coaches can see what was completed and draft an individual follow-up."],
+  [CalendarDays,"Plan the week","Switch between a week board, daily agenda and two-week comparison. Preview a suggested week, edit it in the builder, then save it or publish it to the calendar."],
+  [ClipboardCheck,"Follow up with each athlete","Athletes start a workout, check off exercises and mark effort as easy, just right or hard. After completion, they can rate the workout and its exercises from one to five stars and leave their coach a comment."],
   [Gauge,"Review training load","Compare planned and completed work by body area, court minutes and athlete feedback. Review suggested weeks before publishing, and make room for recovery around matches."],
+  [Users,"Plan focused training","Coaches can select athletes for footwork, jump development or throwing strength, then edit the exercises before publishing. Athletes see their training, not the coach's group labels."],
+  [ClipboardCheck,"Acknowledge team notices","A coach can post a daily or weekly message to one athlete, selected athletes, a training group or the whole roster. Each athlete accepts it individually. Opening a message does not mark it as read."],
   [Goal,"Record match day","On a tablet, select the lineup, mark shot locations, record goals and assists, and review each player's totals."],
 ] as const;
 export default function Documentation(){

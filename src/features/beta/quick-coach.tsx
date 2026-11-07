@@ -5,7 +5,7 @@ import { parseDraft } from "@/lib/coach-ai";
 import { briefDraft } from "@/lib/suggest-week";
 import { Help } from "./week-suggestion";
 
-export type QuickProgram=ReturnType<typeof briefDraft>;
+export type QuickProgram=ReturnType<typeof briefDraft>&{start?:string;target?:string};
 export function QuickCoach({onApply}:{onApply:(program:QuickProgram)=>void}){
   const [brief,setBrief]=useState(""),[draft,setDraft]=useState<QuickProgram|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
   async function suggest(){

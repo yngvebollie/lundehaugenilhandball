@@ -10,6 +10,7 @@ import { About } from "./about";
 import { Conversation } from "./athlete-team";
 
 import { MatchPad } from "./match-pad";
+import {CoachNotices} from "./team-notices";
 import { TeamTools } from "./team-tools";
 import { WeeklyPlanner } from "./weekly-planner";
 import { QuickCoach,type QuickProgram } from "./quick-coach";
@@ -68,6 +69,13 @@ function Brand(){return <div className="brand"><div className="brand-mark">NHF</
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
 function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [quick,setQuick]=useState<{id:string;draft:QuickProgram}>();
+  const dirty=useRef(false);
+  const flagDraft=useCallback((value:boolean)=>{dirty.current=value;},[]);
+  function openDraft(draft:QuickProgram){
+    if(dirty.current&&!window.confirm("Replace the current program draft? Saved programs will not change."))return;
+    setQuick({id:crypto.randomUUID(),draft});
+    requestAnimationFrame(()=>document.getElementById("builder")?.scrollIntoView());
+  }
   const players=data.roster.filter(p=>p.role==="athlete");
   const [filter,setFilter]=useState("");
   const schedule=data.plans.filter(p=>!filter || p.day===filter).sort((a,b)=>b.day.localeCompare(a.day)||a.title.localeCompare(b.title));
@@ -77,10 +85,13 @@ function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     const url=URL.createObjectURL(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download="NHF-training.csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   return <><section className="grid metric-grid">{[["Squad athletes",players.length],["Assigned sessions",data.plans.length],["Completed",data.plans.filter(p=>count(data,p.id)===p.exercises.length).length],["Exercises logged",data.checks.length]].map(([label,value])=><div className="panel panel-pad metric" key={label}><span className="muted">{label}</span><strong className="metric-value">{value}</strong></div>)}</section>
-    <QuickCoach onApply={draft=>{setQuick({id:crypto.randomUUID(),draft});requestAnimationFrame(()=>document.getElementById("builder")?.scrollIntoView());}}/>
-    <WeeklyPlanner data={data} busy={busy} run={run}/>
+    <CoachNotices data={data} run={run} busy={busy}/>
+    <WeeklyPlanner data={data} busy={busy} run={run} onDraft={openDraft} renderBuilder={show=><>
+      <QuickCoach onApply={openDraft}/>
+      <ProgramBuilder key={quick?.id} initial={quick?.draft} data={data} busy={busy} run={run} onDirty={flagDraft} onCalendar={show}/>
+    </>}/>
     <details className="library-tools"><summary>Athlete messages</summary><Conversation data={data}/></details>
-    <section className="grid beta-columns"><ProgramBuilder key={quick?.id} initial={quick?.draft} data={data} busy={busy} run={run}/>
+    <section className="grid">
     <div className="grid roster"><section className="panel panel-pad grid roster"><h2><Users/> Squad activity</h2>{players.map(p=>{const plans=data.plans.filter(w=>w.athlete===p.id);return <div className="result" key={p.id}><div>{p.photo&&<img src={p.photo} width={40} height={40} alt=""/>}<strong>{p.name}</strong><p className="muted">{p.position}</p>{p.bio&&<small>{p.bio}</small>}</div><span className="muted">{plans.filter(w=>count(data,w.id)===w.exercises.length).length} / {plans.length} sessions complete</span></div>;})}{!players.length && <p className="muted">Add athlete memberships to publish the first workout.</p>}</section></div></section>
     <section className="panel panel-pad grid" id="schedule"><header className="page-head"><h2><CalendarDays/> Training schedule</h2><button onClick={report} className="btn"><Download size={16}/>CSV</button></header><label>Filter by day<input type="date" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{schedule.map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{p.day} · {players.find(a=>a.id===p.athlete)?.name}</p></div><span className="badge blue">{count(data,p.id)} / {p.exercises.length} done</span></div>)}{!schedule.length && <p>No workouts scheduled for this selection.</p>}</section></>;
 }

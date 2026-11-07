@@ -16,7 +16,7 @@ On this computer open http://127.0.0.1:3217/login for the running preview. To re
 
 ## Set up a shared pilot
 
-1. Run `supabase/beta/install.sql` followed by every numbered script in that folder, from `002_programs.sql` through `009_match_pad.sql`, in ascending order. Existing installations run only the scripts they have not applied. Enable the Data API for the public schema. Keep `nhf_private` outside the exposed schemas.
+1. Run `supabase/beta/install.sql` followed by every numbered script in that folder, from `002_programs.sql` through `009_match_pad.sql`, in ascending order. Next apply the timestamped SQL files in `supabase/migrations` in order. Existing installations run only the scripts they have not applied. Enable the Data API for the public schema. Keep `nhf_private` outside the exposed schemas.
 2. Enable email/password signups with email confirmation. Configure the application origin and its login callback in Auth URL settings. Create the first confirmed coach account in Supabase and substitute its actual UUID below. Existing teams are migrated automatically. After bootstrap, coaches create/rename teams and generate seven-day, single-use invitations bound to email and role. Share the link privately. An invited user opens it, creates an account or signs in, confirms their email and accepts. Accounts without membership cannot access team data.
 
     ```sql

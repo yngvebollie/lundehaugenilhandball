@@ -12,6 +12,13 @@ export function weekPlans(plans:Assignment[],week:string,athlete:string){
   const end=trainingDay(week,7);
   return plans.filter(p=>p.day>=week && p.day<end && (!athlete || p.athlete===athlete));
 }
+export function weekLabel(day:string){
+  const start=monday(day),end=trainingDay(start,6),thursday=trainingDay(start,3);
+  const year=Number(thursday.slice(0,4)),first=monday(year+"-01-04");
+  const number=1+Math.round((Date.parse(start)-Date.parse(first))/604800000);
+  const format=(d:string)=>new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}).format(new Date(d+"T12:00Z"));
+  return "Week "+number+" · "+format(start)+" to "+format(end);
+}
 export function exerciseLine(exercise:Exercise){
   return "["+exercise.region+"] "+exercise.name+" · "+exercise.dose;
 }

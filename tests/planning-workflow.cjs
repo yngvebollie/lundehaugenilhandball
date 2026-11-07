@@ -1,0 +1,47 @@
+const assert=require("node:assert/strict");
+const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
+(async()=>{
+  const base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217";
+  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});
+  try{
+    const page=await browser.newPage();page.setDefaultTimeout(8000);
+    await page.goto(base+"/login?role=coach");await page.getByRole("button",{name:"Sign in",exact:true}).click();
+    const weekly=page.locator("#weekly"),builder=page.locator("#builder");
+    await weekly.getByLabel("Week containing").fill("2025-12-31");
+    await weekly.getByRole("heading",{name:"Week 1 · 29 Dec 2025 to 4 Jan 2026"}).waitFor();
+    await weekly.getByRole("button",{name:"Compare",exact:true}).click();
+    await weekly.getByLabel("Comparison week").fill("2025-12-12");
+    await weekly.getByRole("columnheader",{name:/Week 50/}).waitFor();
+    await weekly.getByRole("button",{name:"This week",exact:true}).click();
+    await weekly.getByRole("button",{name:"Next week",exact:true}).click();
+    const start=await weekly.getByLabel("Week containing").inputValue();
+    await weekly.getByLabel("Planner athlete").selectOption("liv");
+    await weekly.getByRole("button",{name:"Suggest week",exact:true}).click();
+    await weekly.getByRole("button",{name:"Edit in program builder"}).click();
+    assert.equal(await builder.getByLabel("Assign to").inputValue(),"liv");
+    assert.equal(await builder.getByLabel("Start date").inputValue(),start);
+    await weekly.getByText("Development groups · coaches only",{exact:true}).click();
+    const groups=weekly.locator(".focus-groups");
+    await groups.getByLabel("Liv Berg").check();await groups.getByText("1 selected",{exact:false}).waitFor();
+    page.once("dialog",dialog=>dialog.accept());
+    await groups.getByRole("button",{name:"Draft exercises for this group"}).click();
+    assert.equal(await builder.getByLabel("Assign to").inputValue(),"focus:feet");
+    await builder.getByRole("button",{name:"Publish workout",exact:true}).click();
+    await builder.getByRole("button",{name:"View published week"}).click();
+    await weekly.getByRole("button",{name:"Agenda",exact:true}).click();
+    await weekly.locator(".week-item").getByText("Footwork session").waitFor();
+    await page.reload();await weekly.getByText("Development groups · coaches only",{exact:true}).click();
+    assert.equal(await groups.getByLabel("Liv Berg").isChecked(),true);
+    await page.goto(base+"/team");await page.getByText("Add another team",{exact:true}).click();
+    await page.getByLabel("New team name").fill("Empty test team");await page.getByRole("button",{name:"Create team",exact:true}).click();
+    await page.getByLabel("Current team").selectOption({label:"Empty test team"});
+    await page.goto(base+"/#weekly");await weekly.getByRole("button",{name:"Next week",exact:true}).click();
+    await weekly.getByRole("button",{name:"Suggest week",exact:true}).click();
+    await weekly.getByText("Unassigned draft",{exact:true}).waitFor();
+    assert.equal(await weekly.getByRole("button",{name:/Add .* suggested sessions to planner/}).count(),0);
+    await weekly.getByRole("button",{name:"Edit in program builder"}).click();
+    await builder.getByRole("button",{name:"Save program",exact:true}).click();
+    await builder.getByText("Program saved to your library.").waitFor();
+    console.log("PASS: ISO week boundaries, comparison, personalized draft handoff, focus assignment, agenda, no-roster template.");
+  }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

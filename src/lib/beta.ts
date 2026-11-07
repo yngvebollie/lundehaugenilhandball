@@ -2,13 +2,16 @@ import { createSupabaseBrowserClient } from "./supabase/client";
 import { env, hasSupabaseEnv } from "./env";
 import type { Program, Feedback } from "./programs";
 import type { Exercise, EventKind } from "./workload";
+import type { FocusMember } from "./focus";
 
 export type Team = {id:string;name:string;discoverable?:boolean;logo?:string};
 export type Member = { id: string; squad: string; name: string; role: "coach" | "athlete";position?:string;bio?:string;photo?:string;email?:string };
 export type Assignment = { id: string; athlete: string; squad: string; title: string; day: string; exercises: string[]; program_name?:string|null; kind?:EventKind; minutes?:number|null; start_time?:string|null;personal?:boolean };
 export type Check = { assignment: string; step: number };
+export type WorkoutReview={assignment:string;stars:number;exercise_stars:number[];comment:string};
+export type Notice={id:string;batch:string;squad:string;coach:string;athlete:string;cadence:"Daily"|"Weekly";starts_on:string;body:string;posted_at:string;read_at:string|null};
 export type Usage = {exercise_key:string;uses:number;last_used:string};
-export type Snapshot = { me: Member; teams:Team[]; roster: Member[]; plans: Assignment[]; checks: Check[]; programs:Program[]; feedback:Feedback[]; library:Exercise[]; usage:Usage[] };
+export type Snapshot = { me: Member; teams:Team[]; roster: Member[]; plans: Assignment[]; checks: Check[]; programs:Program[]; feedback:Feedback[]; library:Exercise[]; usage:Usage[];focusMembers:FocusMember[];reviews:WorkoutReview[];notices:Notice[] };
 const hasAnyConfig = Boolean(env.supabaseUrl || env.supabaseAnonKey);
 export const demo = !hasAnyConfig;
 export const db = hasSupabaseEnv() ? createSupabaseBrowserClient() : null;
@@ -56,7 +59,8 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
       localStorage.setItem(prefix+"seed","1");
     }
     const plans = localRows<Assignment>("plan:").filter(p => p.squad===me.squad&&(me.role==="coach" || p.athlete===me.id));
-    return { me, teams,plans,usage:localRows<Usage>("uses:"+me.id+":"), roster:me.role==="coach"?members.filter(m=>m.squad===me.squad||memberships.some(x=>x.id===m.id&&x.team===me.squad)):[me], checks:localRows<Check>("check:").filter(c=>plans.some(p=>p.id===c.assignment)),
+    const notices=localRows<Notice>("notice:"+me.squad+":").filter(n=>me.role==="coach"||(n.athlete===me.id&&n.starts_on<=today())).map(n=>({...n,read_at:localStorage.getItem(prefix+"accepted:"+n.id)}));
+    return { me, teams,plans,notices,reviews:localRows<WorkoutReview>("review:").filter(r=>plans.some(p=>p.id===r.assignment)),focusMembers:me.role==="coach"?localRows<FocusMember>("focus:"+me.squad+":"):[],usage:localRows<Usage>("uses:"+me.id+":"), roster:me.role==="coach"?members.filter(m=>m.squad===me.squad||memberships.some(x=>x.id===m.id&&x.team===me.squad)):[me], checks:localRows<Check>("check:").filter(c=>plans.some(p=>p.id===c.assignment)),
       library:me.role==="coach"?localRows<Exercise>("exercise:").filter(e=>e.squad===me.squad):[],programs:me.role==="coach"?localRows<Program>("program:").filter(p=>p.squad===me.squad):[], feedback:localRows<Feedback>("feedback:").filter(f=>plans.some(p=>p.id===f.assignment)) };
   }
   if (!db) throw Error("Set both public Supabase variables and rebuild.");
@@ -68,7 +72,10 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
   if(!identity) throw Error("Finish joining your team using the team directory.");
   const teams=await pages<Team>((s,e)=>client.from("beta_teams").select("id,name,discoverable,logo").order("id").range(s,e).throwOnError());
   const me={...identity,squad:activeTeam(identity,teams)};
-  const [usage,members,library,programs,feedback,plans,checks] = await Promise.all([
+  const [messages,reviews,focusMembers,usage,members,library,programs,feedback,plans,checks] = await Promise.all([
+    pages<Omit<Notice,"read_at">&{beta_notice_reads:{read_at:string}|null}>((s,e)=>client.from("beta_notices").select("*,beta_notice_reads(read_at)").eq("squad",me.squad).order("posted_at",{ascending:false}).order("id").range(s,e).throwOnError()),
+    pages<WorkoutReview>((s,e)=>client.from("beta_workout_reviews").select("*").order("assignment").range(s,e).throwOnError()),
+    me.role==="coach"?pages<FocusMember>((s,e)=>client.from("beta_focus_members").select("squad,athlete,focus").eq("squad",me.squad).order("focus").order("athlete").range(s,e).throwOnError()):[],
     me.role==="coach"?pages<Usage>((s,e)=>client.from("beta_exercise_usage").select("exercise_key,uses,last_used").eq("coach",me.id).order("exercise_key").range(s,e).throwOnError()):[],
     me.role==="coach"?pages<Member>((s,e)=>client.rpc("beta_team_roster",{team_id:me.squad}).order("id").range(s,e).throwOnError()):[me],
     me.role==="coach"?pages<Exercise>((s,e)=>client.from("beta_exercises").select("*").eq("squad",me.squad).order("id").range(s,e).throwOnError()):[],
@@ -78,7 +85,30 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
     pages<Check>((start,end)=>client.from("beta_checks").select("assignment,step").order("assignment").order("step").range(start,end).throwOnError())
   ]);
   const ids=new Set(plans.map(p=>p.id));
-  return {me,teams,usage,roster:members,plans,checks:checks.filter(c=>ids.has(c.assignment)),programs,feedback:feedback.filter(f=>ids.has(f.assignment)),library};
+  return {me,teams,notices:messages.map(({beta_notice_reads,...n})=>({...n,read_at:beta_notice_reads?.read_at||null})),reviews:reviews.filter(r=>ids.has(r.assignment)),focusMembers,usage,roster:members,plans,checks:checks.filter(c=>ids.has(c.assignment)),programs,feedback:feedback.filter(f=>ids.has(f.assignment)),library};
+}
+export async function postNotices(data:Snapshot,recipients:string[],cadence:Notice["cadence"],starts_on:string,body:string){
+  const batch=crypto.randomUUID();
+  const rows=[...new Set(recipients)].map(athlete=>({id:crypto.randomUUID(),batch,squad:data.me.squad,coach:data.me.id,athlete,cadence,starts_on,body:body.trim()}));
+  if(!rows.length||!body.trim()||body.trim().length>2000)throw Error("Choose recipients and enter a message of up to 2,000 characters.");
+  if(demo)localStorage.setItem(prefix+"notice:"+data.me.squad+":"+batch,JSON.stringify(rows.map(r=>({...r,posted_at:new Date().toISOString()}))));
+  else await db!.from("beta_notices").insert(rows).throwOnError();
+}
+export async function acceptNotice(notice:string){
+  if(demo){const key=prefix+"accepted:"+notice;if(!localStorage.getItem(key))localStorage.setItem(key,new Date().toISOString());}
+  else {const {error}=await db!.from("beta_notice_reads").insert({notice});if(error&&error.code!=="23505")throw error;}
+}
+export async function saveReview(review:WorkoutReview,existing:boolean){
+  if(demo)localStorage.setItem(prefix+"review:"+review.assignment,JSON.stringify([review]));
+  else if(existing){const {assignment,...fields}=review;await db!.from("beta_workout_reviews").update(fields).eq("assignment",assignment).select("assignment").single().throwOnError();}
+  else await db!.from("beta_workout_reviews").insert(review).throwOnError();
+}
+export async function toggleFocus(row:FocusMember,add:boolean){
+  if(demo){
+    const key=prefix+"focus:"+row.squad+":"+row.athlete+":"+row.focus;
+    if(add)localStorage.setItem(key,JSON.stringify([row]));else localStorage.removeItem(key);
+  }else if(add)await db!.from("beta_focus_members").insert(row).throwOnError();
+  else await db!.from("beta_focus_members").delete().match(row).throwOnError();
 }
 export async function recordExerciseUse(coach:string,key:string){
   if(demo){
