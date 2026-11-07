@@ -99,9 +99,22 @@ export async function saveTeamDetails(id:string,name:string,logo:string){
   if(demo)localStorage.setItem(prefix+"team:"+id,JSON.stringify({...([seedTeam,...localRows<Team>("team:")].reverse().find(t=>t.id===id)),id,name,logo}));
   else await db!.from("beta_teams").update({name,logo}).eq("id",id).select("id").single().throwOnError();
 }
-export async function inviteBatch(team:string,input:string,role:Member["role"]){
+function inviteAddresses(input:string){
   const addresses=Array.from(new Set(input.toLowerCase().split(/[\s,;]+/).filter(Boolean)));
   if(!addresses.length||addresses.length>100||addresses.some(e=>e.length>254||!/^\S+@[^@\s]+\.[^@\s]+$/.test(e)))throw Error("Enter up to 100 valid email addresses, separated by spaces, commas or new lines.");
+  return addresses;
+}
+export async function emailInvites(team:string,input:string,role:Member["role"]){
+  const addresses=inviteAddresses(input);
+  const token=(await db!.auth.getSession()).data.session?.access_token;
+  if(!token)throw Error("Sign in again to send invitations.");
+  const res=await fetch("/api/invitations",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({team,addresses,role})});
+  const payload=await res.json();
+  if(!res.ok)throw Error(payload.error||"Could not send invitations.");
+  return payload as {links:{email:string;url:string}[];accepted:boolean};
+}
+export async function inviteBatch(team:string,input:string,role:Member["role"]){
+  const addresses=inviteAddresses(input);
   if(demo)return Promise.all(addresses.map(async email=>({email,url:await inviteMember(team,email,role)})));
   const records=(await db!.rpc("beta_bulk_invite",{team_id:team,addresses,member_role:role}).throwOnError()).data as {email:string;token:string}[];
   return records.map(r=>({email:r.email,url:location.origin+"/login?invite="+r.token}));
