@@ -1,1 +1,1 @@
-{"framework":"nextjs"}
+{"framework":"nextjs","installCommand":"pnpm install --frozen-lockfile --config.node-linker=hoisted"}
