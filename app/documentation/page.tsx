@@ -1,9 +1,10 @@
 import { ArrowLeft, CalendarDays, ClipboardCheck, Gauge, Goal, Users, Library } from "lucide-react";
 import { PublicShell } from "@/features/beta/public-shell";
 
-export const metadata={title:"Platform documentation | NHF Performance Platform"};
+export const metadata={title:"Platform documentation | Lundehaugen IL"};
 const features=[
   [Users,"Bring a team together","Coaches can manage multiple teams, invite players and staff, and share team codes. An athlete joins one team, keeps a personal plan and can message the coaching staff."],
+  [Users,"Apply to a specific team","Open a team application link, register with your name, phone number and email, then submit the application after verifying your email. Any team coach can approve an athlete. Only an admin coach can approve, invite or remove coaches, or appoint another admin. Every team must keep at least one admin coach."],
   [Library,"Build reusable sessions","Search 50 strength exercises by muscle or body area, add your own exercises, and save sessions for later. Coach AI can draft a program for a coach to review and edit."],
   [CalendarDays,"Plan the week","Switch between a week board, daily agenda and two-week comparison. Preview a suggested week, edit it in the builder, then save it or publish it to the calendar."],
   [ClipboardCheck,"Follow up with each athlete","Athletes start a workout, check off exercises and mark effort as easy, just right or hard. After completion, they can rate the workout and its exercises from one to five stars and leave their coach a comment."],

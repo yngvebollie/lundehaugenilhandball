@@ -9,6 +9,7 @@ export default function Login(){
   const [invite,setInvite]=useState("");
   const [email,setEmail]=useState("");
   const [name,setName]=useState("");
+  const [phone,setPhone]=useState("");
   const [password,setPassword]=useState("");
   const [signup,setSignup]=useState(false);
   const [join,setJoin]=useState(false),[link,setLink]=useState("");
@@ -40,7 +41,7 @@ export default function Login(){
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:invite?location.href:location.origin+"/join",data:{full_name:name.trim()}}});
+            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:invite?location.href:location.origin+"/join",data:{full_name:name.trim(),contact_phone:phone.trim()}}});
             if(error)throw error;
             if(!data.session){setMessage(invite?"Confirm your email, then reopen your invitation.":"Confirm your email, then sign in as an athlete to choose a team.");return;}
           }else{
@@ -70,10 +71,11 @@ export default function Login(){
       <a className="entry-role athlete" href="/login?role=athlete" aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
       <a className="entry-role coach" href="/login?role=coach" aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
     </nav></>:<>
-    {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{const url=new URL(link.trim(),location.origin);const code=url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign("/login?new=1&invite="+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require a coach invitation.</p><button className="btn primary">Continue with invitation</button></form>:<>
+    {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{const url=new URL(link.trim(),location.origin);const shared=url.searchParams.get("link");const code=shared||url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign((shared?"/apply?link=":"/login?new=1&invite=")+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require an invitation from a team admin.</p><button className="btn primary">Continue with invitation</button></form>:<>
     <form className="grid" onSubmit={enter}>
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
       {(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
+      {!signed&&(signup||join)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
       {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&<label>Password<input required type="password" minLength={signup?8:1} autoComplete={signup?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
     <button className="btn primary" disabled={busy}>{invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>

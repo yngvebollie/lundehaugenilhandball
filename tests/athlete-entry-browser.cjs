@@ -19,6 +19,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
       const page=await ctx.newPage();await page.goto(base+"/login?role=athlete");
       await page.getByRole("button",{name:"Create account",exact:true}).click();
       await page.getByLabel("Your name").fill(name);await page.getByLabel("Email",{exact:true}).fill(name+"@example.test");
+      await page.getByLabel("Phone number").fill("+47 5555 0123");
       await page.getByRole("button",{name:"Continue to team selection"}).click();
       await page.getByRole("heading",{name:"Join a team"}).waitFor();return page;
     }

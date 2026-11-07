@@ -3,7 +3,6 @@
 .public-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:24px;border-bottom:1px solid #354149}
 .public-brand{display:flex;align-items:center;gap:13px;font-weight:750;line-height:1.25}
 .public-brand small{display:block;color:#b4bfc4;font-size:13px;font-weight:450;margin-top:3px}
-.public-brand .brand-mark{flex:none;width:42px;height:42px;background:#cc343a;box-shadow:none}
 .court-mark{width:108px;flex:none;color:#54666c}
 .entry-content{padding-top:42px}.entry-content h1{font-size:36px;line-height:1.15}
 .entry-lead{margin-top:10px;color:#b9c5ca;line-height:1.5}

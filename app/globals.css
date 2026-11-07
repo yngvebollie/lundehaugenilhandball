@@ -162,6 +162,7 @@ a {
   font-weight: 800;
   line-height: 1.15;
 }
+.club-crest{display:block;flex:none;object-fit:contain;background:white;border-radius:3px}
 
 .brand-mark {
   width: 46px;

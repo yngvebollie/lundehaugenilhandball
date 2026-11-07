@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NHF Performance Platform",
+  title: "Lundehaugen IL | Performance Platform",
   description: "Training, athlete management, and performance operations for elite handball teams."
 };
 

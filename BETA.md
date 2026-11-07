@@ -31,6 +31,10 @@ On this computer open http://127.0.0.1:3217/login for the running preview. To re
 
 ## Verification
 
+Team management can issue a seven-day reusable application link for the selected team. An athlete link can be issued by any coach; a coach link requires a team admin. Replacing or revoking a link prevents new submissions but preserves pending applications. Applicants provide name, phone and email on /apply, confirm their account and submit; no membership is granted until approval. Keep the production /apply invitation return URL allowed in Supabase Auth settings. Addressed invitations and six-character athlete join codes are separate, direct-admission options.
+
+Under Staff & roster permissions, admin coaches can promote or demote additional staff and remove coaches. The last admin cannot be removed or demoted. All coaches can remove athletes. Removing a member preserves their login and team history. Removing an athlete expires the team's six-character join code; generate a fresh one as needed.
+
 ### Teams and match day
 
 Use the role selector on /login. An athlete can register, verify their email, and visit /join to apply to a discoverable team or enter its six-character code. Email-addressed invitations still work for either role. Coaches enable discoverability and approve or decline applications on /team. Generating a team code replaces the previous one; codes last seven days. Hosted code entry is limited to five attempts per verified user per hour.

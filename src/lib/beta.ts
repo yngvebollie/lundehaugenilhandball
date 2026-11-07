@@ -11,7 +11,7 @@ export type Check = { assignment: string; step: number };
 export type WorkoutReview={assignment:string;stars:number;exercise_stars:number[];comment:string};
 export type Notice={id:string;batch:string;squad:string;coach:string;athlete:string;cadence:"Daily"|"Weekly";starts_on:string;body:string;posted_at:string;read_at:string|null};
 export type Usage = {exercise_key:string;uses:number;last_used:string};
-export type Snapshot = { me: Member; teams:Team[]; roster: Member[]; plans: Assignment[]; checks: Check[]; programs:Program[]; feedback:Feedback[]; library:Exercise[]; usage:Usage[];focusMembers:FocusMember[];reviews:WorkoutReview[];notices:Notice[] };
+export type Snapshot = { me: Member; teams:Team[]; roster: Member[]; plans: Assignment[]; checks: Check[]; programs:Program[]; feedback:Feedback[]; library:Exercise[]; usage:Usage[];focusMembers:FocusMember[];reviews:WorkoutReview[];notices:Notice[];admins:string[] };
 const hasAnyConfig = Boolean(env.supabaseUrl || env.supabaseAnonKey);
 export const demo = !hasAnyConfig;
 export const db = hasSupabaseEnv() ? createSupabaseBrowserClient() : null;
@@ -34,6 +34,12 @@ function localRows<T>(kind: string): T[] {
   return Object.keys(localStorage).filter(k => k.startsWith(prefix + kind)).flatMap(k => JSON.parse(localStorage.getItem(k) || "[]"));
 }
 const seedTeam:Team={id:"demo",name:"NHF Women · Senior squad",discoverable:true};
+function demoAdmins(team:string):string[]{
+  const saved=localStorage.getItem(prefix+"admins:"+team);
+  if(saved)return JSON.parse(saved);
+  const first=demoMembers().find(m=>m.role==="coach"&&m.squad===team)?.id||localRows<{id:string;team:string}>("membership:").find(m=>m.team===team)?.id;
+  return first?[first]:[];
+}
 function demoMembers(){
   const members=new Map(roster.map(m=>[m.id,{...m,email:m.id+"@demo.test"} as Member]));
   localRows<Member>("member:").forEach(m=>members.set(m.id,m));
@@ -60,7 +66,7 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
     }
     const plans = localRows<Assignment>("plan:").filter(p => p.squad===me.squad&&(me.role==="coach" || p.athlete===me.id));
     const notices=localRows<Notice>("notice:"+me.squad+":").filter(n=>me.role==="coach"||(n.athlete===me.id&&n.starts_on<=today())).map(n=>({...n,read_at:localStorage.getItem(prefix+"accepted:"+n.id)}));
-    return { me, teams,plans,notices,reviews:localRows<WorkoutReview>("review:").filter(r=>plans.some(p=>p.id===r.assignment)),focusMembers:me.role==="coach"?localRows<FocusMember>("focus:"+me.squad+":"):[],usage:localRows<Usage>("uses:"+me.id+":"), roster:me.role==="coach"?members.filter(m=>m.squad===me.squad||memberships.some(x=>x.id===m.id&&x.team===me.squad)):[me], checks:localRows<Check>("check:").filter(c=>plans.some(p=>p.id===c.assignment)),
+    return { me, teams,plans,notices,admins:me.role==="coach"?demoAdmins(me.squad):[],reviews:localRows<WorkoutReview>("review:").filter(r=>plans.some(p=>p.id===r.assignment)),focusMembers:me.role==="coach"?localRows<FocusMember>("focus:"+me.squad+":"):[],usage:localRows<Usage>("uses:"+me.id+":"), roster:me.role==="coach"?members.filter(m=>m.squad===me.squad||memberships.some(x=>x.id===m.id&&x.team===me.squad)):[me], checks:localRows<Check>("check:").filter(c=>plans.some(p=>p.id===c.assignment)),
       library:me.role==="coach"?localRows<Exercise>("exercise:").filter(e=>e.squad===me.squad):[],programs:me.role==="coach"?localRows<Program>("program:").filter(p=>p.squad===me.squad):[], feedback:localRows<Feedback>("feedback:").filter(f=>plans.some(p=>p.id===f.assignment)) };
   }
   if (!db) throw Error("Set both public Supabase variables and rebuild.");
@@ -72,7 +78,8 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
   if(!identity) throw Error("Finish joining your team using the team directory.");
   const teams=await pages<Team>((s,e)=>client.from("beta_teams").select("id,name,discoverable,logo").order("id").range(s,e).throwOnError());
   const me={...identity,squad:activeTeam(identity,teams)};
-  const [messages,reviews,focusMembers,usage,members,library,programs,feedback,plans,checks] = await Promise.all([
+  const [admins,messages,reviews,focusMembers,usage,members,library,programs,feedback,plans,checks] = await Promise.all([
+    me.role==="coach"?client.rpc("beta_staff",{action:"list",t:me.squad}).throwOnError().then(r=>r.data as string[]):[],
     pages<Omit<Notice,"read_at">&{beta_notice_reads:{read_at:string}|null}>((s,e)=>client.from("beta_notices").select("*,beta_notice_reads(read_at)").eq("squad",me.squad).order("posted_at",{ascending:false}).order("id").range(s,e).throwOnError()),
     pages<WorkoutReview>((s,e)=>client.from("beta_workout_reviews").select("*").order("assignment").range(s,e).throwOnError()),
     me.role==="coach"?pages<FocusMember>((s,e)=>client.from("beta_focus_members").select("squad,athlete,focus").eq("squad",me.squad).order("focus").order("athlete").range(s,e).throwOnError()):[],
@@ -85,7 +92,7 @@ export async function readBeta(persona: string): Promise<Snapshot | null> {
     pages<Check>((start,end)=>client.from("beta_checks").select("assignment,step").order("assignment").order("step").range(start,end).throwOnError())
   ]);
   const ids=new Set(plans.map(p=>p.id));
-  return {me,teams,notices:messages.map(({beta_notice_reads,...n})=>({...n,read_at:beta_notice_reads?.read_at||null})),reviews:reviews.filter(r=>ids.has(r.assignment)),focusMembers,usage,roster:members,plans,checks:checks.filter(c=>ids.has(c.assignment)),programs,feedback:feedback.filter(f=>ids.has(f.assignment)),library};
+  return {me,teams,admins,notices:messages.map(({beta_notice_reads,...n})=>({...n,read_at:beta_notice_reads?.read_at||null})),reviews:reviews.filter(r=>ids.has(r.assignment)),focusMembers,usage,roster:members,plans,checks:checks.filter(c=>ids.has(c.assignment)),programs,feedback:feedback.filter(f=>ids.has(f.assignment)),library};
 }
 export async function postNotices(data:Snapshot,recipients:string[],cadence:Notice["cadence"],starts_on:string,body:string){
   const batch=crypto.randomUUID();
@@ -121,6 +128,7 @@ export async function createTeam(me:Member,name:string){
   let id:string=crypto.randomUUID();
   if(demo){
     localStorage.setItem(prefix+"team:"+id,JSON.stringify({id,name}));
+    localStorage.setItem(prefix+"admins:"+id,JSON.stringify([me.id]));
     localStorage.setItem(prefix+"membership:"+me.id+id,JSON.stringify({id:me.id,team:id}));
   }else id=(await db!.rpc("beta_new_team",{label:name}).throwOnError()).data as string;
   // Creating a team only extends the coach's switcher; publishing stays in the active team.
@@ -151,6 +159,7 @@ export async function inviteBatch(team:string,input:string,role:Member["role"]){
 }
 export async function inviteMember(team:string,email:string,role:Member["role"]){
   let token:string=crypto.randomUUID();
+  if(demo&&role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
   if(demo)localStorage.setItem(prefix+"invite:"+token,JSON.stringify({team,email,role,expires:Date.now()+7*86400000}));
   else token=(await db!.rpc("beta_invite",{team_id:team,address:email,member_role:role}).throwOnError()).data as string;
   return location.origin+"/login?invite="+token;
@@ -181,7 +190,7 @@ export async function sendTeamMessage(me:Member,athlete:string,body:string){
   if(demo){const id=crypto.randomUUID();localStorage.setItem(prefix+"msg:"+id,JSON.stringify({id,team:me.squad,athlete,sender:me.id,body,created_at:new Date().toISOString()}));}
   else await db!.from("beta_team_messages").insert({team:me.squad,athlete,body}).throwOnError();
 }
-export type Application={team:string;person:string;name:string;status:"Pending"|"Approved"|"Declined"};
+export type Application={team:string;person:string;name:string;status:"Pending"|"Approved"|"Declined";role?:Member["role"];phone?:string;email?:string};
 export function registerDemoAthlete(email:string,name:string){
   if(demoMembers().some(m=>m.email===email))throw Error("That demo account already exists. Sign in to continue.");
   const id=crypto.randomUUID();localStorage.setItem(prefix+"member:"+id,JSON.stringify({id,email,name,squad:"",role:"athlete"}));sessionStorage.setItem("nhf-persona",id);
@@ -197,10 +206,12 @@ export async function admissions(action:string,args:{target?:string;applicant?:s
     const key=prefix+"application:"+args.target+":"+args.applicant;
     const app:Application=JSON.parse(localStorage.getItem(key)||"null");
     if(!app||app.status!=="Pending")throw Error("Application already reviewed.");
+    if(app.role==="coach"&&!demoAdmins(String(args.target)).includes(me.id))throw Error("Admin coach required.");
     if(args.value==="Approved"){
       const athlete=demoMembers().find(m=>m.id===app.person);
-      if(!athlete||athlete.squad)throw Error("Athlete already belongs to a team.");
-      localStorage.setItem(prefix+"member:"+athlete.id,JSON.stringify({...athlete,squad:app.team}));
+      if(!athlete||(athlete.squad&&(athlete.role!=="coach"||app.role!=="coach")))throw Error("Already belongs to another team or role.");
+      localStorage.setItem(prefix+"member:"+athlete.id,JSON.stringify({...athlete,name:app.name,role:app.role||"athlete",squad:athlete.squad||app.team}));
+      if(app.role==="coach")localStorage.setItem(prefix+"membership:"+athlete.id+app.team,JSON.stringify({id:athlete.id,team:app.team}));
     }
     localStorage.setItem(key,JSON.stringify({...app,status:args.value}));return true;
   }
@@ -216,7 +227,53 @@ export async function admissions(action:string,args:{target?:string;applicant?:s
 export async function applications(team?:string):Promise<Application[]>{
   if(demo)return localRows<Application>("application:").filter(a=>team?a.team===team:a.person===sessionStorage.getItem("nhf-persona"));
   const q=db!.from("beta_applications").select("*");
-  return (await (team?q.eq("team",team):q).throwOnError()).data as Application[];
+  if(team)return (await q.eq("team",team).throwOnError()).data as Application[];
+  const {data:{user}}=await db!.auth.getUser();
+  return user?(await q.eq("person",user.id).throwOnError()).data as Application[]:[];
+}
+export async function changeStaff(data:Snapshot,member:Member,action:"remove"|"promote"|"demote"){
+  const team=data.me.squad;
+  if(!demo){await db!.rpc("beta_staff",{action,t:team,person:member.id}).throwOnError();return;}
+  let admins=demoAdmins(team);
+  if(member.role==="coach"&&!admins.includes(data.me.id))throw Error("Admin coach required.");
+  if(action==="promote")admins=[...new Set([...admins,member.id])];
+  else if(admins.includes(member.id)){if(admins.length===1)throw Error("Promote another admin coach first.");admins=admins.filter(id=>id!==member.id);}
+  localStorage.setItem(prefix+"admins:"+team,JSON.stringify(admins));
+  if(action!=="remove")return;
+  localStorage.removeItem(prefix+"membership:"+member.id+team);
+  if(member.squad===team){
+    const other=localRows<{id:string;team:string}>("membership:").find(x=>x.id===member.id&&x.team!==team);
+    localStorage.setItem(prefix+"member:"+member.id,JSON.stringify({...member,squad:other?.team||""}));
+  }
+  if(member.role==="athlete"){localStorage.removeItem(prefix+"code:"+team);for(const r of data.focusMembers.filter(r=>r.athlete===member.id))await toggleFocus(r,false);}
+  localStorage.removeItem(prefix+"application:"+team+":"+member.id);
+  for(const k of Object.keys(localStorage).filter(k=>k.startsWith(prefix+"invite:"))){const v=JSON.parse(localStorage.getItem(k)!);if(v.team===team&&v.email===member.email)localStorage.removeItem(k);}
+}
+type LinkRecord={token:string;expires:string};
+export async function applicationLink(team:string,role:Member["role"],action:"get"|"issue"|"revoke"){
+  if(!demo)return (await db!.rpc("beta_application_link",{action,t:team,member_role:role}).throwOnError()).data as LinkRecord|null;
+  if(role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
+  const key=prefix+"public-link:"+team+":"+role;
+  if(action==="revoke")localStorage.removeItem(key);
+  if(action==="issue")localStorage.setItem(key,JSON.stringify({token:crypto.randomUUID(),expires:new Date(Date.now()+7*86400000).toISOString(),team,role}));
+  const row=JSON.parse(localStorage.getItem(key)||"null");return row&&Date.parse(row.expires)>Date.now()?row as LinkRecord:null;
+}
+export type LinkInfo={id:string;name:string;role:Member["role"]};
+export async function linkInfo(code:string):Promise<LinkInfo|null>{
+  if(!/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(code))return null;
+  if(!demo)return (await db!.rpc("beta_link_info",{code}).throwOnError()).data;
+  const l=localRows<LinkRecord&{team:string;role:Member["role"]}>("public-link:").find(v=>v.token===code&&Date.parse(v.expires)>Date.now());
+  const team=l&&[seedTeam,...localRows<Team>("team:")].reverse().find(t=>t.id===l.team);
+  return team&&l?{id:team.id,name:team.name,role:l.role}:null;
+}
+export async function applyWithLink(code:string,name:string,phone:string,email:string){
+  if(!demo){await db!.rpc("beta_application_link",{action:"submit",code,label:name,phone_number:phone}).throwOnError();return;}
+  const info=await linkInfo(code);if(!info)throw Error("Invalid or expired link.");
+  let me=demoMembers().find(m=>m.email===email);
+  if(!me){registerDemoAthlete(email,name);me=demoMembers().find(m=>m.email===email)!;}
+  if(me.squad&&(me.role!==info.role||me.role==="athlete"||me.squad===info.id||localRows<{id:string;team:string}>("membership:").some(x=>x.id===me!.id&&x.team===info.id)))throw Error("Already belongs to this team or another role.");
+  sessionStorage.setItem("nhf-persona",me.id);
+  localStorage.setItem(prefix+"application:"+info.id+":"+me.id,JSON.stringify({team:info.id,person:me.id,role:info.role,status:"Pending",name,phone,email}));
 }
 export async function teamVisibility(team:Team,discoverable:boolean){
   if(demo)localStorage.setItem(prefix+"team:"+team.id,JSON.stringify({...team,discoverable}));

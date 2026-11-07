@@ -11,6 +11,7 @@ import { Conversation } from "./athlete-team";
 
 import { MatchPad } from "./match-pad";
 import {CoachNotices} from "./team-notices";
+import {ClubCrest} from "./club-crest";
 import { TeamTools } from "./team-tools";
 import { WeeklyPlanner } from "./weekly-planner";
 import { QuickCoach,type QuickProgram } from "./quick-coach";
@@ -62,10 +63,10 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<AthleteTraining key={data.me.id} data={data} busy={busy} run={run}/></div></main>;
   const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Activity/>Match pad</a></>;
   return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
-    <main className="main grid" id="overview"><header className="page-head"><div><span className="eyeline">NHF / Coach workspace</span><h1>{view==="team"?"Team settings":view==="match"?"Match day":"Squad overview"}</h1></div>{account}</header><nav className="mobile-coach-nav" aria-label="Coach sections">{navigation}</nav>{notice}
-    {view==="team"?<TeamTools key={data.me.squad} data={data} busy={busy} run={run}/>:view==="match"?<MatchPad key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
+    <main className="main grid" id="overview"><header className="page-head"><div><span className="eyeline">Lundehaugen IL / Coach workspace</span><h1>{view==="team"?"Team settings":view==="match"?"Match day":"Squad overview"}</h1></div>{account}</header><nav className="mobile-coach-nav" aria-label="Coach sections">{navigation}</nav>{notice}
+    {view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<MatchPad key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
-function Brand(){return <div className="brand"><div className="brand-mark">NHF</div><div>Norges Håndballforbund<br/><small>Kvinner</small></div></div>;}
+function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
 function Coach({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [quick,setQuick]=useState<{id:string;draft:QuickProgram}>();

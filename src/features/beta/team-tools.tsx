@@ -3,6 +3,7 @@ import { Users, UserRound } from "lucide-react";
 import { createTeam, demo, emailInvites, inviteBatch, saveTeamDetails, saveProfile, type Member, type Snapshot } from "@/lib/beta";
 import type { Run } from "./program-builder";
 import {TeamEntry} from "./team-entry";
+import {ShareLink,TeamStaff} from "./team-staff";
 
 export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name||"";
@@ -30,7 +31,8 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     {logo&&<button className="btn" type="button" onClick={()=>setLogo("")}>Remove logo</button>}<button className="btn primary" disabled={busy||!name.trim()||(name.trim()===teamName&&logo===savedLogo)}>Save</button></form>
     <details className="library-tools"><summary>Add another team</summary><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
     {status&&<p role="status">{status}</p>}
-    <form className="grid" onSubmit={invite}><label>Invite emails<textarea rows={3} required value={email} maxLength={26000} placeholder="Paste up to 100 email addresses" onChange={e=>setEmail(e.target.value)}/></label><label>Invite role<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option><option value="coach">Coach</option></select></label>{!demo&&<button className="btn primary" disabled={busy}>Send invitations</button>}<button className="btn" value="manual" disabled={busy}>{demo?"Create invitation links":"Create links only"}</button></form>
+    <TeamStaff data={data} busy={busy} run={run}/><ShareLink data={data} busy={busy} run={run}/>
+    <form className="grid" onSubmit={invite}><label>Invite emails<textarea rows={3} required value={email} maxLength={26000} placeholder="Paste up to 100 email addresses" onChange={e=>setEmail(e.target.value)}/></label><label>Invite role<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option>{data.admins.includes(data.me.id)&&<option value="coach">Coach</option>}</select></label>{!demo&&<button className="btn primary" disabled={busy}>Send invitations</button>}<button className="btn" value="manual" disabled={busy}>{demo?"Create invitation links":"Create links only"}</button></form>
     {links.length>0&&<><div className="invite-results grid">{links.map(item=><label key={item.email}>Invitation link · {item.email}<input value={item.url} readOnly onFocus={e=>e.target.select()}/></label>)}</div><small>Links expire in seven days. Share each link with its matching recipient.</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(links.map(l=>l.email+" "+l.url).join("\n"));setCopied(true);}catch{setCopied(false);}}}>{copied?"Copied":"Copy recipient links"}</button></>}
     <TeamEntry data={data} run={run} busy={busy}/></section>;
 }
