@@ -8,7 +8,7 @@ export const metrics={shots_hit:"Mål",shots_missed:"Bomskudd",technical_errors:
 export type Stats=Record<keyof typeof metrics,number>&{rating:number|null;notes:string;is_best_player:boolean};
 export const blank:Stats={shots_hit:0,shots_missed:0,technical_errors:0,goalkeeper_saves:0,rating:null,notes:"",is_best_player:false};
 export type Player={player_id:string;name:string;shirt_number?:string;position?:string;local_played:boolean|null;nif_played:boolean|null;report_listed?:boolean;report_played?:boolean|null;report_goals?:number|null;report_warnings?:number|null;nif_best_player?:boolean;discrepancy?:boolean;stats:Stats|null};
-export type PlayerForm={games:number;goals:number;prior_games:number;prior_goals:number|null};
+export type PlayerForm={games:number;scored_games:number;goals:number|null;prior_games:number;prior_goals:number|null};
 export type Details={rows:Player[];catalog:{id:string;name:string}[]};
 const key="nhf-kamper:";
 function read<T>(k:string,initial:T):T{return JSON.parse(localStorage.getItem(key+k)||"null")??initial;}
@@ -37,11 +37,34 @@ function demoPlayers(m:Fixture){
 export async function playerForm(g:Fixture):Promise<Record<string,PlayerForm>>{
   if(!demo)return (await db!.rpc("beta_player_form",{t:g.team,m:g.id}).throwOnError()).data;
   const totals:Record<string,PlayerForm>={};
-  for(const m of await matches(g.team) as Fixture[]){
+  const season=(await matches(g.team) as Fixture[]).filter(m=>m.registration===g.registration);
+  const norm=(p:Player)=>p.name.trim().toLowerCase().replace(/\s+/g," ");
+  const ambiguous=new Set<string>();
+  for(const m of season){const seen=new Set<string>();for(const p of demoPlayers(m)){const name=norm(p);if(seen.has(name)||!p.player_id.startsWith("report:"))ambiguous.add(name);seen.add(name);}}
+  const key=(p:Player)=>p.player_id.startsWith("report:")&&!ambiguous.has(norm(p))?"name:"+norm(p):p.player_id;
+  for(const m of season){
     if(!m.completed||m.day>g.day||m.registration!==g.registration||m.day===g.day&&m.id!==g.id&&(!m.start_time||!g.start_time||m.start_time>=g.start_time))continue;
-    for(const p of demoPlayers(m)){const goals=p.report_goals??p.stats?.shots_hit;if(!confirmed(p)||goals==null)continue;
-      const a=totals[p.player_id]??={games:0,goals:0,prior_games:0,prior_goals:0};a.games++;a.goals+=goals;if(m.id!==g.id){a.prior_games++;a.prior_goals=(a.prior_goals||0)+goals;}}
-  }return totals;
+    for(const p of demoPlayers(m)){const goals=p.report_goals??p.stats?.shots_hit;if(!confirmed(p))continue;
+      const a=totals[key(p)]??={games:0,scored_games:0,goals:null,prior_games:0,prior_goals:null};a.games++;if(goals!=null){a.scored_games++;a.goals=(a.goals??0)+goals;if(m.id!==g.id){a.prior_games++;a.prior_goals=(a.prior_goals??0)+goals;}}}
+  }return Object.fromEntries(demoPlayers(g).filter(p=>totals[key(p)]).map(p=>[p.player_id,totals[key(p)]]));
+}
+export type StatLine={match_id:string;day:string;home:boolean|null;player:string;name:string;shirt:string|null;played:boolean;
+  goals:number|null;field_goals:number|null;penalty:number|null;warnings:number|null;suspensions:number|null;disqualifications:number|null;missed:number|null;errors:number|null;saves:number|null;rating:number|null;awards:number|null};
+export async function squadStatLines(reg:string,fixtures:Fixture[]):Promise<StatLine[]>{
+  if(!demo)return (await db!.rpc("beta_squad_stat_lines",{reg}).throwOnError()).data;
+  const season=fixtures.filter(g=>g.registration===reg&&g.completed);
+  const ambiguous=new Set<string>(),norm=(p:Player)=>p.name.trim().toLowerCase().replace(/\s+/g," ");
+  for(const g of season){const seen=new Set<string>();for(const p of demoPlayers(g)){if(seen.has(norm(p))||!p.player_id.startsWith("report:"))ambiguous.add(norm(p));seen.add(norm(p));}}
+  return season.flatMap(g=>{
+    const doc:Report|undefined=JSON.parse(sessionStorage.getItem("kamper-private-report:"+g.team+":"+g.id)||"null")?.reviewed;
+    const home=g.opponent===g.away,side=home?"A":"B";
+    return demoPlayers(g).map(p=>{const r=doc?.players.find(x=>x.side===side&&x.shirt===p.shirt_number&&x.name===p.name);
+      return {match_id:g.id,day:g.day,home,player:ambiguous.has(norm(p))?p.player_id:norm(p),name:p.name,shirt:p.shirt_number??null,played:confirmed(p),
+        goals:p.report_goals??p.stats?.shots_hit??null,field_goals:r?.goals??null,penalty:r?.penalty??null,warnings:p.report_warnings??null,suspensions:r?.suspensions??null,
+        disqualifications:r?.disqualification==null?null:Number(r.disqualification),missed:p.stats?.shots_missed??null,errors:p.stats?.technical_errors??null,saves:p.stats?.goalkeeper_saves??null,
+        rating:p.stats?.rating??null,awards:p.stats==null?null:Number(p.stats.is_best_player)};
+    });
+  });
 }
 export function shooting(s:Stats){const total=s.shots_hit+s.shots_missed;return {total,percent:total?Math.round(100*s.shots_hit/total):null};}
 export async function registrations(team:string,settings?:SeasonSettings):Promise<Registration[]>{

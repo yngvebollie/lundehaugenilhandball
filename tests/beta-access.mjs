@@ -32,6 +32,7 @@ try {
   for(const file of ["20261107190313_report_player_form","20261107190601_direct_team_invites"])await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107193802_squad_seasons.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107195210_report_team_labels.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261107195640_player_season_identity.sql",import.meta.url),"utf8"));
   assert.equal((await pg.query("select nhf_private.report_side_matches('KFUM','KFUM 1','KFUM 2') v")).rows[0].v,false);
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
@@ -183,12 +184,17 @@ try {
     await pg.exec("reset role;set role service_role");
     const match=(await pg.query("select beta_import_fixture($1,$2,'[]',false) m",[rid,{...fixture,id:kid,day}])).rows[0].m;
     await pg.exec("reset role;set role authenticated");await login(1);
-    const r=structuredClone(report);r.match.nif_id=kid;r.match.home_score=goals;r.players[0].goals=r.players[0].total=goals;
+    const r=structuredClone(report);r.match.nif_id=kid;r.players[0].shirt="28";r.match.home_score=goals;r.players[0].goals=r.players[0].total=goals;
     await pg.query("select beta_report('save',$1,$2,$3,$4,$4,0)",[team,match,"e".repeat(64),r]);
   }
   const asOf=(await pg.query("select beta_player_form($1,$2) v",[team,m])).rows[0].v[projected[0].player_id];
-  assert.deepEqual(asOf,{games:2,goals:6,prior_games:1,prior_goals:5});
-  await login(6);await assert.rejects(rep("read"));await login(1);
+  assert.deepEqual(asOf,{games:2,scored_games:2,goals:6,prior_games:1,prior_goals:5});
+  const squadLines=async()=>(await pg.query("select beta_squad_stat_lines($1) v",[rid])).rows[0].v;
+  const lines=(await squadLines()).filter(r=>r.name==="Test home");
+  assert.equal(lines.length,3);assert.equal(new Set(lines.map(r=>r.player)).size,1);
+  assert.equal(lines.reduce((a,r)=>a+r.goals,0),16);
+  assert.equal(lines.reduce((a,r)=>a+r.warnings,0),9);
+  await login(6);await assert.rejects(rep("read"));await assert.rejects(squadLines());await login(1);
   const staff=(action,t,id)=>pg.query("select beta_staff($1,$2,$3)",[action,t,id&&uuid(id)]);
   const link=async(action,t,role,token=null)=> (await pg.query("select beta_application_link($1,$2,$3,$4,'Test applicant','+47 5555 0123') as v",[action,t,role,token])).rows[0].v;
   await login(1);assert.deepEqual((await staff("list",team,null)).rows[0].beta_staff,[uuid(1)]);

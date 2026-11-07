@@ -1,0 +1,17 @@
+.stat-switch{display:inline-flex;align-items:stretch;width:fit-content;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.stat-switch button{background:var(--panel);color:inherit;border:0;cursor:pointer;padding:8px 13px;font:inherit;font-size:.88rem;min-height:40px}
+.stat-switch button+button{border-left:1px solid var(--border)}
+.stat-switch button[aria-pressed=true]{background:#263437;color:white}
+.stat-switch b{font-variant-numeric:tabular-nums;margin-left:3px}
+.squad-stats,.squad-stats .player-list-scroll{min-width:0;max-width:100%}
+.stat-table caption{text-align:left;font-size:.83rem;font-weight:600;padding:8px 0}
+.stat-table thead th{background:#253034;color:white;padding:9px 12px;white-space:nowrap;text-align:right}
+.stat-table thead th:first-child{text-align:left}
+.stat-table thead button{display:inline-flex;align-items:center;gap:3px;font:inherit;color:inherit;background:transparent;border:0;cursor:pointer}
+.stat-table tbody td{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat-table tbody th{text-align:left}
+.stat-table tbody tr:nth-child(even):not(.highlight){background:#f3f6f5}
+.stat-table .stat-groups th{background:#e5ecea;color:#223834;text-align:center;border-inline-end:2px solid white}
+.stat-table:has(.stat-groups) tbody td:nth-child(5){border-left:2px solid var(--border)}
+.squad-stats .stat-table{min-width:650px}
+.squad-stats .workspace-tabs{flex-wrap:wrap}
