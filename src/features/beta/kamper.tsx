@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useState} from "react";
 import {ArrowLeft,CalendarDays,ChevronRight,ClipboardList,ExternalLink,Minus,Plus,RefreshCw,Save,Settings,Star,Trophy} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
+import {handballId,leagueIds} from "@/lib/handball-id";
 import {matchResult} from "@/lib/match-result";
 import {playerForm,type PlayerForm} from "@/lib/match-journal";
 import {seasonSettings,saveSeason,seasonMatches,type SeasonSettings} from "@/lib/match-journal";
@@ -21,10 +22,10 @@ export function Kamper({data}:{data:Snapshot}){
   const [profile,setProfile]=useState("");
   const game=all.find(x=>x.id===id),active=regs.find(r=>r.id===(game?.registration||profile))||regs[0];
   const load=useCallback(async()=>{const settings=await seasonSettings(squad),rs=await registrations(squad,settings);setSeasons(settings);setRegs(rs);setAll(await seasonMatches(squad,rs));setCounts(await matchAction(data,"counts"));},[squad]);
-  useEffect(()=>{void load().catch(e=>setNote(e.message));setProfile(sessionStorage.getItem("kamper-profile:"+data.me.id+":"+squad)||"");const url=new URLSearchParams(location.search);setView(url.get("view")||"");setId(url.get("game")||"");},[load]);
+  useEffect(()=>{void load().catch(e=>setNote(e.message));setProfile(sessionStorage.getItem("kamper-profile:"+data.me.id+":"+squad)||"");const url=new URLSearchParams(location.search);setView(url.get("view")||"");setId(url.get("game")||"");if(url.get("view")==="teams"&&url.get("add")==="1"){setAdding(true);setOrg(url.get("lagid")||"");setCup(url.get("turnid")||"");setSquadName((url.get("name")||"").slice(0,100));}},[load]);
   function choose(value:string){setProfile(value);sessionStorage.setItem("kamper-profile:"+data.me.id+":"+squad,value);setLeague("");setWhen("Spilte");setId("");setNote("");setAdding(false);history.replaceState(null,"",view?"/match?view="+view:"/match");}
   async function run(fn:()=>Promise<void>){setNote("");setBusy(true);try{await fn();await load();}catch(e){setNote((e as Error).message);}finally{setBusy(false);}}
-  async function sync(r:Registration){try{setNote(r.org_id+": "+await refreshSeason(r));}catch(e){setNote(r.org_id+": "+(e as Error).message);}}
+  async function sync(r:Registration,prefix=""){try{setNote(prefix+r.org_id+": "+await refreshSeason(r));}catch(e){setNote(prefix+"Kamper ikke hentet: "+(e as Error).message);}}
   const scoped=all.filter(m=>active?m.registration===active.id:!m.registration);
   const label=(r:Registration)=>{const m=all.find(m=>m.registration===r.id&&m.home&&m.away);return (r.display_name|| (m?(m.away===m.opponent?m.home:m.away):null))||"Lag "+r.org_id;};
   const title=active?label(active):"Kampoversikt";
@@ -46,8 +47,8 @@ export function Kamper({data}:{data:Snapshot}){
         <button disabled={busy||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></header>
       <nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"]].map(([v,n])=><a className={view===v?"current":""} href={v?"/match?view="+v:"/match"} key={v}>{n}</a>)}</nav>
       {view==="opponents"?(active?<OpponentRegister key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et spillelag for å se motstandere.</p>):view==="stats"?(active?<SquadStats key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et spillelag for å se statistikk.</p>):view==="teams"||view==="notes"?<>
-        {view==="teams"&&admin&&<details className="library-tools" open={adding}><summary onClick={e=>{e.preventDefault();setAdding(!adding);}}>Legg til lag</summary><form className="km-fields" onSubmit={e=>{e.preventDefault();void run(async()=>{const r=await register(squad,+org,seasons.active||0,cup.trim()?cup.trim().split(/[,;\s]+/).map(Number):[],squadName);choose(r.id);await sync(r);setOrg("");setCup("");});}}>
-        <label>NIF lag-ID<input required type="number" min="1" value={org} onChange={e=>setOrg(e.target.value)}/></label><label>Lagnavn i sesongen<input value={squadName} maxLength={100} placeholder="F.eks. Hundvåg J14" onChange={e=>setSquadName(e.target.value)}/></label><label>Liga-ID-er (valgfritt)<input value={cup} onChange={e=>setCup(e.target.value)}/></label><button disabled={busy||!seasons.active} className="btn primary">Legg til lag og hent kamper</button></form></details>}
+        {view==="teams"&&admin&&<details className="library-tools" open={adding}><summary onClick={e=>{e.preventDefault();setAdding(!adding);}}>Legg til lag</summary><form className="km-fields" onSubmit={e=>{e.preventDefault();void run(async()=>{const r=await register(squad,handballId(org,"lag"),seasons.active||0,leagueIds(cup),squadName);choose(r.id);await sync(r,"Spillelaget "+(r.display_name||r.org_id)+" er lagret. ");setOrg("");setCup("");setSquadName("");});}}>
+        <label>NIF lag-ID<input required type="text" placeholder="Lag-ID eller laglenke fra handball.no" value={org} onChange={e=>setOrg(e.target.value)}/></label><label>Lagnavn i sesongen<input value={squadName} maxLength={100} placeholder="F.eks. Hundvåg J14" onChange={e=>setSquadName(e.target.value)}/></label><label>Liga-ID-er (valgfritt)<input placeholder="Serie-ID eller turneringslenke" value={cup} onChange={e=>setCup(e.target.value)}/></label><button disabled={busy||!seasons.active} className="btn primary">Legg til lag og hent kamper</button></form></details>}
         {active&&<>{view==="teams"&&<div className="km-row"><div><strong>Synkronisering</strong><p>{active.sync_result||"Ikke synkronisert"}{active.synced_at&&" · "+new Date(active.synced_at).toLocaleString("nb-NO")}</p></div>{admin&&<button disabled={busy} className="btn" onClick={()=>run(()=>toggleRegistration(active))}>{active.active?"Sett på pause":"Aktiver"}</button>}</div>}
         <ProfileInfo key={active.id+view} r={active} admin={admin} busy={busy} run={run} notesOnly={view==="notes"}/></>}
       </>:<>
@@ -82,7 +83,7 @@ function PlayerList({rows,form,selected,pick,day}:{rows:Player[];form:Record<str
 }
 function ProfileInfo({r,admin,busy,run,notesOnly}:{notesOnly:boolean;r:Registration;admin:boolean;busy:boolean;run:(fn:()=>Promise<void>)=>Promise<void>}){
   const [note,setNote]=useState(r.profile_note||""),[ids,setIds]=useState((r.leagues?.length?r.leagues:r.tournament?[r.tournament]:[]).join(", ")),[saved,setSaved]=useState("");
-  return <form className="grid" onSubmit={e=>{e.preventDefault();void run(async()=>{await editProfile(r,ids.trim()?ids.trim().split(/[,;\s]+/).map(Number):[],note);setSaved("Lagprofil lagret.");});}}>
+  return <form className="grid" onSubmit={e=>{e.preventDefault();void run(async()=>{await editProfile(r,leagueIds(ids),note);setSaved("Lagprofil lagret.");});}}>
     {!notesOnly&&<label>Profilens liga-ID-er<input readOnly={!admin} value={ids} onChange={e=>setIds(e.target.value)}/></label>}<label>Lagnotat<textarea readOnly={!admin} maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
     {admin&&<button className="btn" disabled={busy}><Save size={16}/>Lagre lagprofil</button>}{saved&&<p role="status">{saved}</p>}</form>;
 }

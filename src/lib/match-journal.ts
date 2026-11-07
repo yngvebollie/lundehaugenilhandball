@@ -89,9 +89,9 @@ export async function register(team:string,org_id:number,season:number,leagues:n
   if(!Number.isSafeInteger(org_id)||org_id<1||leagues.some(x=>!Number.isSafeInteger(x)||x<1))throw Error("Ugyldig NIF-ID.");
   if((await seasonSettings(team)).active!==season||!season)throw Error("Lagre sesong først.");
   const rows=await registrations(team);if(rows.some(x=>x.org_id===org_id))throw Error("Laget er allerede registrert i denne sesongen.");
-  const row={team,org_id,season,display_name:display_name.trim().slice(0,100),tournament:leagues[0]||null,leagues,active:true};
+  const row={team,org_id,season,display_name:display_name.trim().slice(0,100),tournament:leagues[0]||null,leagues};
   if(!demo)return (await db!.from("beta_team_seasons").insert(row).select("*").single().throwOnError()).data as Registration;
-  const next={...row,id:crypto.randomUUID()};put("reg:"+team,[...read<Registration[]>("reg:"+team,[]),next]);return next;
+  const next={...row,active:true,id:crypto.randomUUID()};put("reg:"+team,[...read<Registration[]>("reg:"+team,[]),next]);return next;
 }
 export async function editProfile(r:Registration,leagues:number[],profile_note:string){
   if(leagues.some(x=>!Number.isSafeInteger(x)||x<=0))throw Error("Ugyldig liga-ID.");

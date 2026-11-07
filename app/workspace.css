@@ -1,4 +1,12 @@
 .coach-main{min-width:0;background:var(--panel)}
+.coach-main .account{--account-control:42px;align-items:flex-end}
+.coach-main>.page-head{flex-wrap:wrap}
+.coach-main>.page-head>.account{width:max-content;max-width:100%;margin-inline-start:auto}
+.coach-main .account label{max-width:min(18rem,100%)}
+.coach-main .account select,.coach-main .account>.btn{box-sizing:border-box;height:var(--account-control);min-height:var(--account-control)}
+.coach-main .account>strong{display:inline-flex;align-items:center;min-height:var(--account-control);overflow-wrap:anywhere;max-width:100%}
+.coach-main .account>.badge{margin-bottom:10px}
+.phone-more .account{--account-control:44px}
 .challenge-work{max-width:760px;width:100%;align-content:start}
 .challenge-work h2,.challenge-work header small,.achievement-bar summary,.challenge-head,.challenge-log{display:flex;align-items:center;gap:9px}
 .challenge-head{justify-content:space-between;padding:16px 0;border-block:1px solid var(--border)}
