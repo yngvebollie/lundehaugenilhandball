@@ -20,15 +20,14 @@ export function TeamStaff({data,busy,run}:Props){
     })}{note&&<p role="status">{note}</p>}
   </div></details>;
 }
-export function ShareLink({data,busy,run}:Props){
-  const [role,setRole]=useState<Member["role"]>("athlete"),[record,setRecord]=useState<{token:string;expires:string;direct?:boolean}|null>(null),[note,setNote]=useState("");
-  const team=data.me.squad,admin=data.admins.includes(data.me.id);
+export function ShareLink({data,busy,run,role}:Props&{role:Member["role"]}){
+  const [record,setRecord]=useState<{token:string;expires:string;direct?:boolean}|null>(null),[note,setNote]=useState("");
+  const team=data.me.squad;
   useEffect(()=>{let alive=true;setRecord(null);setNote("");applicationLink(team,role,"get").then(r=>{if(alive)setRecord(r);}).catch(e=>{if(alive)setNote(e.message);});return ()=>{alive=false;};},[team,role]);
   const url=record?clubLink("/apply?link="+encodeURIComponent(record.token),demo?location.origin:undefined):"";
   return <section className="grid"><h3><LinkIcon size={17}/> Inviter med lenke</h3><p className="muted">Nye invitasjoner gir tilgang til dette laget etter e-postbekreftelse, uten manuell godkjenning. Del trenerlenker kun med personer som skal ha tilgang til utøverdata.</p>
-    <label>Rolle i laget<select value={role} onChange={e=>setRole(e.target.value as Member["role"])}><option value="athlete">Athlete</option>{admin&&<option value="coach">Coach</option>}</select></label>
-    <div className="day-strip"><button className="btn" disabled={busy} onClick={()=>run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Invitasjonen er klar.");})}>{url?"Erstatt invitasjonslenke":"Opprett invitasjonslenke"}</button>
-    {url&&<button className="btn" disabled={busy} onClick={()=>run(async()=>{await applicationLink(team,role,"revoke");setRecord(null);setNote("Link revoked.");})}>Revoke link</button>}</div>
+    <div className="day-strip"><button className={url?"btn":"btn primary"} disabled={busy} onClick={()=>{if(url&&!window.confirm("Erstatte lenken? Den gamle slutter å virke."))return;void run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Invitasjonen er klar.");});}}>{url?"Erstatt invitasjonslenke":"Opprett invitasjonslenke"}</button>
+    {url&&<button className="btn" disabled={busy} onClick={()=>run(async()=>{await applicationLink(team,role,"revoke");setRecord(null);setNote("Link revoked.");})}>Deaktiver lenke</button>}</div>
     {record&&!record.direct&&<p className="km-status">Denne gamle lenken krever godkjenning. Erstatt den for å dele en direkte invitasjon.</p>}{record&&<><label>Lagets invitasjonslenke<input readOnly value={url} onFocus={e=>e.target.select()}/></label><small>Expires {new Date(record.expires).toLocaleDateString("en-GB")}</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(url);setNote("Link copied.");}catch{setNote("Select the link above to copy it.");}}}><Copy size={16}/>Kopier invitasjonslenke</button></>}
     {note&&<p role="status">{note}</p>}</section>;
 }

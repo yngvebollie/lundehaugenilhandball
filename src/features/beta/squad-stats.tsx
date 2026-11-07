@@ -2,6 +2,8 @@ import {useEffect,useMemo,useState} from "react";
 import {ArrowDown,ArrowUp} from "lucide-react";
 import {squadStatLines,type StatLine,type Fixture} from "@/lib/match-journal";
 
+import {Volleyball} from "lucide-react";
+import {seasonGoldBalls} from "@/lib/opponent-stats";
 import "./squad-stats.css";
 
 const tabs={
@@ -32,6 +34,7 @@ export function SquadStats({reg,fixtures}:{reg:string;fixtures:Fixture[]}){
   const allGames=fixtures.filter(x=>x.registration===reg&&x.completed),leagues=[...new Set(allGames.flatMap(x=>x.competition?[x.competition]:[]))];
   const games=allGames.filter(x=>(!league||league===x.competition)&&(venue==="Alle"||(venue==="Hjemme"?x.away===x.opponent:x.home===x.opponent)));
   const ids=new Set(games.map(x=>x.id)),filtered=useMemo(()=>lines?.filter(x=>ids.has(x.match_id)),[lines,fixtures,venue,league,reg]);
+  const balls=useMemo(()=>seasonGoldBalls(lines||[]),[lines]);
   const byPlayer=new Map<string,StatLine[]>();for(const x of filtered||[])byPlayer.set(x.player,[...(byPlayer.get(x.player)||[]),x]);
   const players=[...byPlayer.values()].map(group=>{const last=group.reduce((a,b)=>b.day>a.day?b:a);return {...last,stats:metrics(group)};}).sort((a,b)=>{
     const l=a.stats[sort],r=b.stats[sort];return Number(l==null)-Number(r==null)||((l??0)-(r??0))*(desc?-1:1)||a.name.localeCompare(b.name,"nb");
@@ -43,6 +46,6 @@ export function SquadStats({reg,fixtures}:{reg:string;fixtures:Fixture[]}){
     {error?<p role="alert">{error}</p>:!lines?<p role="status">Henter spillerstatistikk …</p>:!players.length?<p>Ingen registrerte spillerdata for disse kampene.</p>:
     <div className="player-list-scroll"><table className="table player-list stat-table"><caption>{tab} · {venue==="Alle"?"Alle baner":venue+"bane"}</caption>
       <thead><tr><th scope="col">Spiller</th>{tabs[tab].map(c=><th scope="col" key={c} aria-sort={sort!==c?"none":desc?"descending":"ascending"}><button onClick={()=>{setDesc(sort===c?!desc:true);setSort(c);}}>{labels[c]}{sort===c&&(desc?<ArrowDown size={12}/>:<ArrowUp size={12}/>)}</button></th>)}</tr></thead>
-      <tbody>{players.map(p=><tr key={p.player}><th scope="row"><small>#{p.shirt||"–"}</small> {p.name}</th>{tabs[tab].map(c=><td key={c}>{p.stats[c]?.toLocaleString("nb-NO",{maximumFractionDigits:1})??"–"}</td>)}</tr>)}</tbody></table></div>}
+      <tbody>{players.map(p=><tr key={p.player}><th scope="row"><small>#{p.shirt||"–"}</small> {p.name} {balls.has(p.player)&&<span className="season-balls" role="img" aria-label={balls.get(p.player)!.length+" gullballer denne sesongen"} title={balls.get(p.player)!.map(id=>{const g=fixtures.find(f=>f.id===id);return g?g.day+" · "+g.opponent:"Kamp";}).join("\n")}>{balls.get(p.player)!.map(id=><Volleyball size={14} key={id} aria-hidden="true"/>)}</span>}</th>{tabs[tab].map(c=><td key={c}>{p.stats[c]?.toLocaleString("nb-NO",{maximumFractionDigits:1})??"–"}</td>)}</tr>)}</tbody></table></div>}
   </section>;
 }

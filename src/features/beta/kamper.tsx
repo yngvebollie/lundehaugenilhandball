@@ -8,6 +8,7 @@ import {Volleyball} from "lucide-react";
 import {blank,confirmed,editProfile,matchAction,metrics,refreshSeason,register,registrations,shooting,toggleRegistration,type Details,type Fixture,type Player,type Stats} from "@/lib/match-journal";
 import type {Registration} from "@/lib/nif";
 import {ReportEditor} from "./report-editor";
+import {OpponentRegister} from "./opponent-register";
 import {SquadStats} from "./squad-stats";
 import "./kamper.css";
 
@@ -43,8 +44,8 @@ export function Kamper({data}:{data:Snapshot}){
     {id?game?<MatchDetail key={game.id} data={data} game={game} reload={load}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:<>
       <header className="squad-title"><div><h1>{title}</h1>{active&&<small className="id-tag">NIF {active.org_id}</small>}</div>
         <button disabled={busy||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></header>
-      <nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["stats","Spillerstatistikk"],["teams","Lagprofil"],["notes","Trenernotater"]].map(([v,n])=><a className={view===v?"current":""} href={v?"/match?view="+v:"/match"} key={v}>{n}</a>)}</nav>
-      {view==="stats"?(active?<SquadStats key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et spillelag for å se statistikk.</p>):view==="teams"||view==="notes"?<>
+      <nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"]].map(([v,n])=><a className={view===v?"current":""} href={v?"/match?view="+v:"/match"} key={v}>{n}</a>)}</nav>
+      {view==="opponents"?(active?<OpponentRegister key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et spillelag for å se motstandere.</p>):view==="stats"?(active?<SquadStats key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et spillelag for å se statistikk.</p>):view==="teams"||view==="notes"?<>
         {view==="teams"&&admin&&<details className="library-tools" open={adding}><summary onClick={e=>{e.preventDefault();setAdding(!adding);}}>Legg til lag</summary><form className="km-fields" onSubmit={e=>{e.preventDefault();void run(async()=>{const r=await register(squad,+org,seasons.active||0,cup.trim()?cup.trim().split(/[,;\s]+/).map(Number):[],squadName);choose(r.id);await sync(r);setOrg("");setCup("");});}}>
         <label>NIF lag-ID<input required type="number" min="1" value={org} onChange={e=>setOrg(e.target.value)}/></label><label>Lagnavn i sesongen<input value={squadName} maxLength={100} placeholder="F.eks. Hundvåg J14" onChange={e=>setSquadName(e.target.value)}/></label><label>Liga-ID-er (valgfritt)<input value={cup} onChange={e=>setCup(e.target.value)}/></label><button disabled={busy||!seasons.active} className="btn primary">Legg til lag og hent kamper</button></form></details>}
         {active&&<>{view==="teams"&&<div className="km-row"><div><strong>Synkronisering</strong><p>{active.sync_result||"Ikke synkronisert"}{active.synced_at&&" · "+new Date(active.synced_at).toLocaleString("nb-NO")}</p></div>{admin&&<button disabled={busy} className="btn" onClick={()=>run(()=>toggleRegistration(active))}>{active.active?"Sett på pause":"Aktiver"}</button>}</div>}

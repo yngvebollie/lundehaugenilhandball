@@ -272,7 +272,7 @@ export async function applicationLink(team:string,role:Member["role"],action:"ge
   if(role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
   const key=prefix+"public-link:"+team+":"+role;
   if(action==="revoke")localStorage.removeItem(key);
-  if(action==="issue")localStorage.setItem(key,JSON.stringify({token:crypto.randomUUID(),expires:new Date(Date.now()+7*86400000).toISOString(),team,role,direct:true}));
+  if(action==="issue")localStorage.setItem(key,JSON.stringify({token:crypto.randomUUID(),expires:new Date(Date.now()+90*86400000).toISOString(),team,role,direct:true}));
   const row=JSON.parse(localStorage.getItem(key)||"null");return row&&Date.parse(row.expires)>Date.now()?row as LinkRecord:null;
 }
 export type LinkInfo={id:string;name:string;role:Member["role"];direct?:boolean};

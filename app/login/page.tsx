@@ -44,7 +44,7 @@ export default function Login(){
       if(teamCode&&!validTeamCode(teamCode))throw Error("Enter the six-character team code.");
       if(!demo&&!signed&&magic){
         const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role;
-        await emailSignIn(email,path,registering,name,phone);setMail("sent");return;
+        await emailSignIn(email,path,registering,name,phone,invite?{kind:"email",token:invite}:undefined);setMail("sent");return;
       }
       if(demo){
         if(invite)joinDemo(invite,email.trim().toLowerCase(),name.trim());
@@ -54,7 +54,7 @@ export default function Login(){
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),contact_phone:phone.trim()}}});
+            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),contact_phone:phone.trim(),...(invite?{club_invite_kind:"email",club_invite_token:invite}:{})}}});
             if(error)throw error;
             if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}
           }else{
@@ -69,7 +69,8 @@ export default function Login(){
         }
         if(invite){
           if(signed){const {error}=await db.auth.updateUser({data:{full_name:name.trim(),contact_phone:phone.trim()}});if(error)throw error;}
-          const team=(await db.rpc("beta_join",{code:invite,display_name:name.trim()}).throwOnError()).data;
+          const previous=(await db.rpc("beta_signup_result",{cred:invite}).throwOnError()).data;
+          const team=previous?.id||(await db.rpc("beta_join",{code:invite,display_name:name.trim()}).throwOnError()).data;
           const {data}=await db.auth.getUser();if(data.user)selectTeam(data.user.id,String(team));
         }
       }
@@ -86,7 +87,7 @@ export default function Login(){
       <a className="entry-role athlete" href="/login?role=athlete" aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
       <a className="entry-role coach" href="/login?role=coach" aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
     </nav></>:<>
-    {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{const url=new URL(link.trim(),location.origin);const shared=url.searchParams.get("link");const code=shared||url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign((shared?"/apply?link=":"/login?new=1&invite=")+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require an invitation from a team admin.</p><button className="btn primary">Continue with invitation</button></form>:<>
+    {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{if(validTeamCode(link.trim().toUpperCase())){location.assign("/apply?coach_code="+encodeURIComponent(link.trim().toUpperCase()));return;}const url=new URL(link.trim(),location.origin);const short=url.searchParams.get("coach_code");if(short&&validTeamCode(short)){location.assign("/apply?coach_code="+encodeURIComponent(short));return;}const shared=url.searchParams.get("link");const code=shared||url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign((shared?"/apply?link=":"/login?new=1&invite=")+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require an invitation from a team admin.</p><button className="btn primary">Continue with invitation</button></form>:<>
     <form className="grid" onSubmit={enter}>
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
       {(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
