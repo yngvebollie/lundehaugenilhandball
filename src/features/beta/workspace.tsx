@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, CalendarDays, Download, Dumbbell, LogOut, Users } from "lucide-react";
-import { db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
+import { clubRole,db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
 
 import { ProgramBuilder, type Run } from "./program-builder";
 import { AthleteTraining } from "./athlete-training";
@@ -11,10 +11,11 @@ import { Conversation } from "./athlete-team";
 
 import { Challenges } from "./challenges";
 import { CoachAgenda } from "./coach-agenda";
-import {Volleyball,Trophy,House,Ellipsis,UserRound} from "lucide-react";
+import {ContactRound,Volleyball,Trophy,House,Ellipsis,UserRound} from "lucide-react";
 import { Kamper } from "./kamper";
 import {CoachNotices} from "./team-notices";
 import {ClubCrest} from "./club-crest";
+import {DirectoryPanel} from "./directory-panel";
 import { TeamTools } from "./team-tools";
 import { WeeklyPlanner } from "./weekly-planner";
 import { QuickCoach,type QuickProgram } from "./quick-coach";
@@ -23,7 +24,7 @@ function message(error: unknown) {
   return error && typeof error==="object" && "message" in error ? String(error.message) : "Could not save. Please retry.";
 }
 function signedOut() { return db?.auth.signOut().then(({error})=>{if(error) throw error;}); }
-export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match"|"challenges" }) {
+export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"dashboard"|"team"|"match"|"challenges"|"directory" }) {
   const [more,setMore]=useState(false),[hash,setHash]=useState("");
   useEffect(()=>{const follow=()=>{setHash(location.hash);setMore(false);};follow();window.addEventListener("hashchange",follow);return()=>window.removeEventListener("hashchange",follow);},[]);
   const [persona,setPersona]=useState(athlete?"liv":"coach");
@@ -63,14 +64,14 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   if(!data) return <main className="login grid"><Brand/><h1>{ready?"Team sign-in":"Opening workspace..."}</h1>{notice}{ready && !demo && <form className="grid" onSubmit={login}><label>Email<input required name="email" type="email" autoComplete="username"/></label><label>Password<input required name="password" type="password" autoComplete="current-password"/></label><button disabled={busy} className="btn primary">Sign in</button></form>}{error && <button className="btn" onClick={()=>void run(async()=>{await signedOut();})}>Return to sign-in</button>}</main>;
   const coach=data.me.role==="coach";
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name;
-  const account=<div className="account"><strong>{data.me.name}</strong>{coach?<label>Current team<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
+  const account=<div className="account"><strong>{data.me.name}</strong>{data.club?.eligible&&<label>Arbeidsrolle<select aria-label="Arbeidsrolle" disabled={busy} value={data.club.active?"club":"coach"} onChange={e=>{const mode=e.target.value as "club"|"coach";void run(async()=>{await clubRole(mode);sessionStorage.removeItem("nhf-team:"+data.me.id);setData(null);setReady(false);});}}><option value="coach">Trener</option><option value="club">Klubbadmin</option></select></label>}{coach?<label>Current team<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
     {demo&&<span className="badge orange">Local demo</span>}<button className="btn" onClick={async()=>{if(db){const {error}=await db.auth.signOut();if(error){setError(error.message);return;}}sessionStorage.removeItem("nhf-persona");location.assign("/login");}}><LogOut size={16}/>{demo?"Switch account":"Sign out"}</button></div>;
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<AthleteTraining key={data.me.id} data={data} busy={busy} run={run}/></div></main>;
-  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><a className={"nav-item "+(view==="challenges"?"active":"")} href="/challenges"><Trophy/>Utfordringer</a></>;
+  const navigation=<><a className={"nav-item "+(view==="dashboard"?"active":"")} href="/#overview"><Activity/>Overview</a><a className="nav-item" href="/#builder"><Dumbbell/>Workout builder</a><a className="nav-item" href="/#weekly"><CalendarDays/>Weekly planner</a><a className="nav-item" href="/#monitor"><Activity/>Health monitor</a><a className={"nav-item "+(view==="team"?"active":"")} href="/team"><Users/>Team management</a><a className={"nav-item "+(view==="match"?"active":"")} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><a className={"nav-item "+(view==="challenges"?"active":"")} href="/challenges"><Trophy/>Utfordringer</a><a className={"nav-item "+(view==="directory"?"active":"")} href="/directory"><ContactRound/>Brukeroversikt</a></>;
   return <div className="app-shell beta"><aside className="sidebar"><Brand/><nav className="nav-section">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
-    <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {view==="match"?"Kamper":view==="team"?"Lagstyring":view==="challenges"?"Utfordringer":"Oversikt"}</span><h1>{view==="team"?"Team settings":view==="match"?"Kamper":view==="challenges"?"Utfordringer":"Squad overview"}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
+    <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="team"?"Lagstyring":view==="challenges"?"Utfordringer":"Oversikt"}</span><h1>{view==="team"?"Team settings":view==="directory"?"Brukeroversikt":view==="match"?"Kamper":view==="challenges"?"Utfordringer":"Squad overview"}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
     <nav className="phone-tabs" aria-label="Trenervalg"><a className={view==="dashboard"&&hash!=="#weekly"?"current":""} href="/#overview"><House/>Oversikt</a><a className={view==="dashboard"&&hash==="#weekly"?"current":""} href="/#weekly"><CalendarDays/>Ukeplan</a><a className={view==="match"?"current":""} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><button aria-expanded={more} onClick={()=>setMore(!more)}><Ellipsis/>Mer</button></nav>{notice}
-    {view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
+    {view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}
