@@ -1,0 +1,28 @@
+name: Weekend match synchronization
+on:
+  schedule:
+    - cron: '0 4 * * 0,5,6'
+      timezone: Europe/Oslo
+  workflow_dispatch:
+permissions: {}
+concurrency: weekend-match-sync
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      SECRET: ${{ secrets.MATCH_CRON_SECRET }}
+      ENDPOINT: https://app.lundehaugenil.no/api/matches/sync
+    steps:
+      - name: Refresh authorized team seasons
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$SECRET" ]]; then
+            echo "::notice::Weekend sync inactive: MATCH_CRON_SECRET has not been configured."
+            exit 0
+          fi
+          call() { curl -fsS --max-time 310 -H "Authorization: Bearer $SECRET" -H 'Content-Type: application/json' -d "$1" "$ENDPOINT"; }
+          ids=$(call '{"list":true}' | jq -r '.ids[]')
+          failed=0
+          for id in $ids; do call "$(jq -nc --arg id "$id" '{id:$id}')" || failed=1; done
+          exit "$failed"
