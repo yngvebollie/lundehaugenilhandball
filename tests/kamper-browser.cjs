@@ -37,9 +37,11 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   await p.getByText(/ikke tilkoblet i lokal demo/).waitFor();await p.goto(base+"/spillerstats");await p.getByRole("columnheader",{name:"Gullballer"}).waitFor();
   const scorer=p.getByRole("row",{name:/Test hjemme/});await scorer.waitFor();assert.equal(await scorer.getByRole("img",{name:"1 gullball",exact:true}).locator("svg").count(),1);assert.equal(await scorer.locator("td").last().innerText(),"1");
   await p.getByRole("button",{name:"Nivåfordeling",exact:true}).click();const menu=p.getByRole("navigation",{name:"Velg spillelag"});
+  assert.equal(await menu.getByRole("button",{name:"Alle",exact:true}).getAttribute("aria-pressed"),"true");assert.equal(await scorer.count(),1);
   await menu.getByRole("button",{name:"J13 Bredde"}).click();await p.getByText("Ingen spillere i dette utvalget.").waitFor();assert.equal(await scorer.count(),0);
   await menu.getByRole("button",{name:"J13 A-serie"}).click();await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
   await menu.getByRole("button",{name:"J14 A-serie"}).click();await p.getByText("Ingen spillere i dette utvalget.").waitFor();assert.equal(await scorer.count(),0);
+  await menu.getByRole("button",{name:"Alle",exact:true}).click();await scorer.waitFor();assert.equal(await scorer.count(),1);
   await p.getByRole("button",{name:"Samlet",exact:true}).click();await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
   console.log("PASS: separate profiles by numeric ID, scoped fixtures and notes, paste confirmation, correction and responsive layouts.");
  }finally{await browser.close();}

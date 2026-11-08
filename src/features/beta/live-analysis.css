@@ -1,0 +1,19 @@
+.live-analysis{display:grid;gap:16px;min-width:0}
+.live-select,.live-clock,.live-confirm,.live-clock-actions{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.live-select label{flex:1 1 220px;min-width:0}.live-select select{max-width:100%}
+.live-clock{align-items:center;justify-content:space-between;padding:15px 0;border-block:1px solid var(--border)}
+.live-clock h2{margin:0;font-size:2.25rem;font-variant-numeric:tabular-nums}
+.live-clock-actions{align-items:center}.live-confirm{align-items:center;padding:12px;border-left:3px solid #c2871a}
+.live-layout{display:grid;grid-template-columns:minmax(170px,260px) minmax(0,1fr);gap:24px;align-items:start}
+.live-controls,.live-board,.live-summary{display:grid;gap:12px;min-width:0}
+.live-controls h3,.live-summary h3{margin:0}.live-summary h3:not(:first-child){margin-top:10px}
+.live-numbers{display:flex;gap:18px;flex-wrap:wrap}.live-numbers b,.live-numbers small{display:block}.live-numbers b{font-size:1.3rem;font-variant-numeric:tabular-nums}
+.live-goal{position:relative;width:100%;max-width:610px;aspect-ratio:3/2}.live-goal svg,.live-zones{position:absolute;width:100%;height:100%;inset:0}
+.live-zones{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+.live-zones button{appearance:none;border-radius:0;border:1px dashed #55756b60;background:transparent;cursor:crosshair;touch-action:manipulation}
+.live-zones button:enabled:hover,.live-zones button:focus-visible{background:#ffcb0029;outline:2px solid #957730;outline-offset:-3px}
+.live-zones button:disabled{cursor:default}
+.live-scroll{overflow-x:auto}.live-scroll table{width:100%;white-space:nowrap}.live-scroll th,.live-scroll td{padding:8px;text-align:right}.live-scroll th:first-child{text-align:left}
+.live-timeline{list-style:none;padding:0;margin:0}.live-timeline li{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.live-timeline time{font-variant-numeric:tabular-nums}.live-undo{justify-self:start}.live-note{margin:0;min-height:1.4em}
+@media(max-width:700px){.live-layout{grid-template-columns:1fr;gap:10px}.live-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.live-controls h3{grid-column:1/-1}.live-controls input,.live-analysis select{min-width:0;width:100%}.live-select{gap:6px}.live-select label{flex-basis:140px}.live-numbers{gap:10px}.live-clock h2{font-size:1.75rem}.live-analysis .workspace-tabs{flex-wrap:wrap}}

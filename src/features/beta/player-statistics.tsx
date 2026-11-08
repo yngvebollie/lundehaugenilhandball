@@ -26,7 +26,7 @@ export function PlayerStatistics({data}:{data:Snapshot}){
     setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size);setError("");}
  };void run().catch(e=>{if(ok)setError(e.message);});return()=>{ok=false;};},[data.me.squad,data]);
  const selected=data.roster.find(p=>p.id===profile&&p.role==="athlete"),groups=useMemo(()=>groupPlayers(lines||[],data.roster,aliases),[lines,data.roster,aliases]);
- const active=levels.find(l=>l.id===level)||(view==="Nivåfordeling"?levels[0]:undefined);
+ const active=levels.find(l=>l.id===level);
  const visible=groups.map(p=>({...p,filtered:p.rows.filter(r=>!active||r.reg===active.id)}));
  const awards=seasonGoldBalls(visible.flatMap(p=>uniqueGames(p.filtered).rows.map(r=>({...r,match_id:r.fixtureKey,player:p.key}))));
  if(profile)return <><a href="/spillerstats">Til alle spillerstats</a>{selected?<AthleteProfileView key={selected.id} data={data} player={selected}/>:<p>Utøveren er ikke i det valgte laget.</p>}</>;
@@ -37,11 +37,11 @@ export function PlayerStatistics({data}:{data:Snapshot}){
  return <section className="grid squad-stats"><header className="competition-heading"><div><h2>Spillerstats · {season}</h2><small>{active?.games??games} unike spilte kamper · {new Set(visible.flatMap(p=>p.filtered.map(r=>r.fixtureKey))).size} med spillerdata</small></div>
  {view!=="Nivåfordeling"&&<label>Spillelag og nivå<select value={level} onChange={e=>setLevel(e.target.value)}><option value="">Alle nivåer</option>{levels.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>}</header>
  <nav className="workspace-tabs" aria-label="Samlet spillerstatistikk">{(Object.keys(views) as (keyof typeof views)[]).map(v=><button key={v} aria-pressed={view===v} className={view===v?"current":""} onClick={()=>{if(view==="Nivåfordeling"&&v!==view)setLevel("");setExpand("");setView(v);}}>{v}</button>)}</nav>
- {view==="Nivåfordeling"&&<nav className="workspace-tabs" aria-label="Velg spillelag">{levels.map(n=><button key={n.id} aria-pressed={active?.id===n.id} className={active?.id===n.id?"current":""} onClick={()=>{setLevel(n.id);setExpand("");}}>{n.label}</button>)}</nav>}
+ {view==="Nivåfordeling"&&<nav className="workspace-tabs" aria-label="Velg spillelag"><button aria-pressed={!active} className={!active?"current":""} onClick={()=>{setLevel("");setExpand("");}}>Alle</button>{levels.map(n=><button key={n.id} aria-pressed={active?.id===n.id} className={active?.id===n.id?"current":""} onClick={()=>{setLevel(n.id);setExpand("");}}>{n.label}</button>)}</nav>}
  <label>Søk etter spiller<input type="search" placeholder="Spillernavn" value={search} onChange={e=>setSearch(e.target.value)}/></label>
  {error?<p role="alert">{error}</p>:!lines?<p>Laster sesongstatistikk …</p>:<div className="player-list-scroll"><table className="table stat-table"><thead><tr><th>Spiller</th>{view==="Nivåfordeling"&&<th>Nivå / serie</th>}{cols.map(c=><th key={c}>{labels[c]}</th>)}<th title="Flest registrerte mål på laget i en kamp. Ved likt antall får begge gullball.">Gullballer</th></tr></thead>
  <tbody>{players.map(p=>{const used=[...new Set(p.filtered.map(r=>r.level))].sort(),byLevel=used.map(l=>({l,m:metrics(uniqueGames(p.filtered.filter(r=>r.level===l)).rows)}));
- const rows=view==="Nivåfordeling"?(byLevel.length?byLevel:[{l:"Ingen registrerte kamper",m:p.m}]):[{l:"",m:p.m}];
+ const rows=view==="Nivåfordeling"?(active&&byLevel.length?byLevel:[{l:active?.label||"Alle",m:p.m}]):[{l:"",m:p.m}];
  return rows.map(({l,m},i)=><PlayerStatRow key={p.key+":"+l} p={p} l={l} m={m} cols={cols} split={view==="Nivåfordeling"} expanded={expand===p.key&&i===0} toggle={()=>setExpand(expand===p.key?"":p.key)} levels={byLevel}/>);})}</tbody></table></div>}
  {!error&&lines&&!players.length&&<p>Ingen spillere i dette utvalget.</p>}</section>;
 }

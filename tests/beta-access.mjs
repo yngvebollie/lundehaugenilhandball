@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import {checkLive} from "./live-analysis-access.mjs";
 import {checkPeers} from "./peer-badges.mjs";
 import {checkClubRole} from "./club-role-cases.mjs";
 import {PGlite} from "@electric-sql/pglite";
@@ -39,6 +40,7 @@ try {
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107204036_challenge_exercises.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107222143_match_discipline_to_date.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107222806_seasonal_goal_badge.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261108090923_keeper_match_sessions.sql",import.meta.url),"utf8"));
   assert.equal((await pg.query("select count(*)::int n from nhf_private.badge_defs")).rows[0].n,45);
   assert.equal((await pg.query("select nhf_private.report_side_matches('KFUM','KFUM 1','KFUM 2') v")).rows[0].v,false);
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
@@ -164,6 +166,7 @@ try {
   const imp=(p)=>pg.query("select beta_import_fixture($1,$2,$3,true) m",[rid,fixture,JSON.stringify(p)]);
   await assert.rejects(imp(imported));await pg.exec("reset role;set role service_role");
   const m=(await imp(imported)).rows[0].m;await pg.exec("reset role;set role authenticated");await login(1);
+  await checkLive(pg,login,team,rid,m);
   let player=(await ma("details",team,m)).rows[0];const a=player.player_id;
   await ma("participant",team,m,null,{name:"Manual",played:true});
   const b=(await ma("details",team,m)).rows.find(p=>p.name==="Manual").player_id;
