@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {groupPlayers,uniqueGames} from "../src/lib/club-player-stats.ts";
+import {seasonGoldBalls} from "../src/lib/opponent-stats.ts";
 import {metrics} from "../src/lib/stat-metrics.ts";
 const sample=(reg,fixtureKey,player,name,goals)=>({reg,fixtureKey,level:reg,match_id:reg+fixtureKey,player,name,goals,day:"2026-11-01",shirt:"28",home:true,played:true,
 field_goals:goals,penalty:null,warnings:null,suspensions:null,disqualifications:null,errors:null,saves:null,missed:null,awards:null,rating:null});
@@ -11,4 +12,7 @@ assert.equal(metrics(grouped.find(x=>x.key==="B").rows).goals,null);
 const diff=uniqueGames([...rows,sample("J14A","1","p2","Example Player",9)]);assert.equal(diff.conflicts,1);assert.equal(metrics(diff.rows).goals,6);
 assert.equal(groupPlayers([sample("J13A","1","p1","Same Name",1),sample("J13A","1","p2","Same Name",2),sample("J14A","2","p3","Same Name",3)],[],[]).length,3);
 assert.equal(groupPlayers([sample("J13A","1","a","Other Lastname",2)],roster,[{reg:"J13A",player:"a",athlete:"A"}]).find(x=>x.key==="A").rows.length,1);
+const rivals=[...rows,sample("J13A","1","r","Other Player",4),sample("J14A","2","s","Another Player",7),sample("J13B","3","p3","Example Player",0)];
+const winners=(reg="")=>seasonGoldBalls(groupPlayers(rivals,roster,[]).flatMap(p=>uniqueGames(p.rows.filter(r=>!reg||r.reg===reg)).rows.map(r=>({...r,player:p.key,match_id:r.fixtureKey}))));
+assert.deepEqual(winners().get("A"),["1"]);assert.deepEqual(winners("J14A").get("A"),undefined);assert.deepEqual(winners("J13A").get("name:other player"),["1"]);assert.deepEqual(winners("J13B").get("A"),["1"]);
 console.log("PASS: registered players, separate levels, cross-level deduplication, missing/conflicting goals, aliases and namesakes.");

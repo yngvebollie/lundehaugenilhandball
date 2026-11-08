@@ -6,7 +6,7 @@ import type { Exercise, EventKind } from "./workload";
 import type { FocusMember } from "./focus";
 
 export type Team = {id:string;name:string;discoverable?:boolean;logo?:string};
-export type Member = { id: string; squad: string; name: string; role: "coach" | "athlete";position?:string;bio?:string;photo?:string;email?:string;shirt_number?:string|null };
+export type Member = { id: string; squad: string; name: string; role: "coach" | "athlete";position?:string;bio?:string;photo?:string;email?:string;given_name?:string|null;family_name?:string|null;shirt_number?:string|null };
 export type Assignment = { id: string; athlete: string; squad: string; title: string; day: string; exercises: string[]; program_name?:string|null; kind?:EventKind; minutes?:number|null; start_time?:string|null;personal?:boolean };
 export type Check = { assignment: string; step: number };
 export type WorkoutReview={assignment:string;stars:number;exercise_stars:number[];comment:string};
@@ -297,7 +297,7 @@ export async function teamVisibility(team:Team,discoverable:boolean){
   if(demo)localStorage.setItem(prefix+"team:"+team.id,JSON.stringify({...team,discoverable}));
   else await db!.from("beta_teams").update({discoverable}).eq("id",team.id).select("id").single().throwOnError();
 }
-export async function saveProfile(me:Member,fields:Pick<Member,"name"|"bio"|"photo"|"position"|"shirt_number">){
+export async function saveProfile(me:Member,fields:Pick<Member,"name"|"bio"|"photo"|"position"|"shirt_number"|"given_name"|"family_name">){
   if(demo)localStorage.setItem(prefix+"member:"+me.id,JSON.stringify({...demoMembers().find(m=>m.id===me.id),...fields}));
   else await db!.from("beta_members").update(fields).eq("id",me.id).select("id").single().throwOnError();
 }

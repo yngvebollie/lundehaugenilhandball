@@ -219,6 +219,7 @@ try {
   await pg.exec("reset role;alter table auth.users add raw_user_meta_data jsonb default '{}',add last_sign_in_at timestamptz");
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107203214_verified_team_admission.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107220743_athlete_profiles_activity.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261108085158_member_name_fields.sql",import.meta.url),"utf8"));
   const registerIntent=async(id,kind,token)=>pg.query("insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)",[uuid(id),"coach"+id+"@test.local",{full_name:"Invited Test",contact_phone:"+47 5555 0123",club_invite_kind:kind,club_invite_token:token}]);
   await pg.exec("set role authenticated");await login(1);
   const capturedInvite=(await pg.query("select beta_application_link('issue_direct',$1,'coach') v",[team])).rows[0].v;
@@ -251,9 +252,9 @@ try {
   const summary=await some();assert.equal(summary[m].revision,2);assert.ok(summary[m].rows>=1);assert.equal(summary[m].reviewed,undefined);
   await login(7);await assert.rejects(some());await login(1);
   await pg.exec("reset role");const codeRow=(await pg.query("select code from nhf_private.join_codes where team=$1",[team])).rows[0];
-  await pg.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'shirt@test.local',$2)",[uuid(251),{full_name:"Test Account",shirt_number:"28",contact_phone:"12345678",club_invite_kind:"athlete_code",club_invite_token:codeRow.code}]);
+  await pg.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'shirt@test.local',$2)",[uuid(251),{full_name:"Test Account",given_name:"Test",family_name:"Account",shirt_number:"28",contact_phone:"12345678",club_invite_kind:"athlete_code",club_invite_token:codeRow.code}]);
   await pg.query("update auth.users set email_confirmed_at=now() where id=$1",[uuid(251)]);
-  const signup=(await pg.query("select role,squad,shirt_number from beta_members where id=$1",[uuid(251)])).rows[0];assert.deepEqual(signup,{role:"athlete",squad:team,shirt_number:"28"});
+  const signup=(await pg.query("select role,squad,shirt_number,given_name,family_name from beta_members where id=$1",[uuid(251)])).rows[0];assert.deepEqual(signup,{role:"athlete",squad:team,shirt_number:"28",given_name:"Test",family_name:"Account"});
   await pg.exec("set role authenticated");await login(1);
   const prof=(action,id=251)=>pg.query("select beta_athlete_profile($1,$2,$3) v",[team,uuid(id),action]).then(r=>r.rows[0].v);
   const suggest=await prof("read");assert.equal(suggest.candidates.length,1);assert.equal(suggest.candidates[0].safe,true);assert.deepEqual(suggest.games,[]);

@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from "react";
+import {AthleteName,joinName,legacyNames} from "@/features/beta/athlete-name";
 import {PublicShell} from "@/features/beta/public-shell";
 import {SignupSuccess} from "@/features/beta/signup-success";
 import {applications,applyWithLink,db,demo,linkInfo,selectTeam,type LinkInfo,type Application} from "@/lib/beta";
@@ -10,13 +11,14 @@ import {emailSignIn,validPhone} from "@/lib/invite-auth";
 export default function Apply(){
   const [short,setShort]=useState(""),[shortRole,setShortRole]=useState<"athlete"|"coach">("coach"),[shirt,setShirt]=useState("");
   const [code,setCode]=useState(""),[info,setInfo]=useState<LinkInfo|null>(null),[ready,setReady]=useState(false);
-  const [existing,setExisting]=useState(false),[signed,setSigned]=useState(""),[name,setName]=useState(""),[email,setEmail]=useState(""),[phone,setPhone]=useState(""),[password,setPassword]=useState("");
+  const [existing,setExisting]=useState(false),[signed,setSigned]=useState(""),[full,setName]=useState(""),[given,setGiven]=useState(""),[family,setFamily]=useState(""),[email,setEmail]=useState(""),[phone,setPhone]=useState(""),[password,setPassword]=useState("");
+  const athlete=(short?shortRole:info?.role)==="athlete",name=athlete?joinName(given,family):full;
   const [request,setRequest]=useState<Application>(),[note,setNote]=useState(""),[busy,setBusy]=useState(false),[mail,setMail]=useState<"created"|"sent"|"">("");
   const [magic,setMagic]=useState(false),[returning,setReturning]=useState(false),auto=useRef("");
   useEffect(()=>{
     const query=new URLSearchParams(location.search),token=query.get("link")||"";setCode(token);setReturning(query.get("finish")==="1");
     const athleteCode=query.get("athlete_code");setShortRole(athleteCode?"athlete":"coach");const personal=(athleteCode||query.get("coach_code"))?.trim().toUpperCase();if(personal&&/^[A-Z0-9]{6}$/.test(personal)){setShort(personal);setReady(true);}else linkInfo(token).then(setInfo).catch(e=>setNote(e.message)).finally(()=>setReady(true));
-    const listener=db?.auth.onAuthStateChange((_,session)=>{setSigned(session?.user.email||"");if(session){setName(n=>n||session.user.user_metadata?.full_name||"");setPhone(n=>n||session.user.user_metadata?.contact_phone||"");setShirt(n=>n||String(session.user.user_metadata?.shirt_number||""));}});
+    const listener=db?.auth.onAuthStateChange((_,session)=>{setSigned(session?.user.email||"");if(session){setName(n=>n||session.user.user_metadata?.full_name||"");const meta=session.user.user_metadata,parts=legacyNames(meta?.full_name||"");setGiven(n=>n||meta?.given_name||parts.given);setFamily(n=>n||meta?.family_name||parts.family);setPhone(n=>n||meta?.contact_phone||"");setShirt(n=>n||String(session.user.user_metadata?.shirt_number||""));}});
     return ()=>listener?.data.subscription.unsubscribe();
   },[]);
   useEffect(()=>{
@@ -37,12 +39,13 @@ export default function Apply(){
   async function submit(e:FormEvent){
     e.preventDefault();if(!info&&!short)return;
     setBusy(true);setNote("");try{
+      if(athlete&&(!given.trim()||!family.trim()||name.length>100))throw Error("Oppgi fornavn og etternavn, maksimalt 100 tegn til sammen.");
       if(!name.trim()||!validPhone(phone))throw Error("Oppgi navn og gyldig telefonnummer.");
       if(!demo&&!signed){
         const path="/apply?"+(short?shortRole+"_code="+encodeURIComponent(short):"link="+encodeURIComponent(code))+"&finish=1";
-        if(magic){await emailSignIn(email,path,!existing,name,phone,{kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",token:short||code,shirt});setMail("sent");return;}
+        if(magic){await emailSignIn(email,path,!existing,name,phone,{kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",token:short||code,shirt,given,family});setMail("sent");return;}
         if(existing){auto.current=email.trim()+code;const {error}=await db!.auth.signInWithPassword({email,password});if(error)throw error;}
-        else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,club_invite_kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",club_invite_token:short||code},emailRedirectTo:clubLink(path)}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
+        else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,club_invite_kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",club_invite_token:short||code},emailRedirectTo:clubLink(path)}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
       }
       await join(signed||email);
     }catch(err){setNote((err as Error).message||"Registrering mislyktes.");}finally{setBusy(false);}
@@ -55,7 +58,7 @@ export default function Apply(){
     {!ready?<p>Kontrollerer invitasjonen …</p>:!info&&!short?<p>Lenken har utløpt eller er erstattet. Be om en ny invitasjon.</p>:<>
     <strong>{(short?shortRole:info?.role)==="coach"?"Invitasjon som trener":"Invitasjon som utøver"}</strong>
     {request&&!short&&!info?.direct?<p role="status">{request.status==="Declined"?"Søknaden ble avslått.":"Søknaden er registrert med en eldre søknadslenke. Be om en ny direkte invitasjon for å komme inn uten godkjenning."}</p>:<form className="grid" onSubmit={submit}>
-      <label>Fullt navn<input required maxLength={100} autoComplete="name" value={name} onChange={e=>setName(e.target.value)}/></label>
+      {athlete?<AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/>:<label>Fullt navn<input required maxLength={100} autoComplete="name" value={name} onChange={e=>setName(e.target.value)}/></label>}
       <label>Telefonnummer<input type="tel" required maxLength={30} autoComplete="tel" placeholder="+47" value={phone} onChange={e=>setPhone(e.target.value)}/></label>
       {(short?shortRole:info?.role)==="athlete"&&<label>Draktnummer (valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())} placeholder="F.eks. 28"/></label>}
       <label>E-post<input type="email" required readOnly={!!signed} autoComplete="email" value={signed||email} onChange={e=>setEmail(e.target.value)}/></label>

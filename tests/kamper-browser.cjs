@@ -31,6 +31,16 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   await p.getByRole("button",{name:"Disiplin",exact:true}).click();await p.getByRole("columnheader",{name:"Gule kort"}).waitFor();
   await p.getByRole("button",{name:"Borte",exact:true}).click();await p.getByText("Ingen registrerte spillerdata for disse kampene.").waitFor();
   for(const width of [390,768,1280]){await p.setViewportSize({width,height:844});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+  await p.getByRole("link",{name:"Lagprofil",exact:true}).click();
+  await p.getByText("Legg til lag",{exact:true}).last().click();await p.getByLabel("NIF lag-ID",{exact:true}).fill("857280");
+  await p.getByLabel("Lagnavn i sesongen").fill("J14 A-serie");await p.getByRole("button",{name:"Legg til lag og hent kamper"}).click();
+  await p.getByText(/ikke tilkoblet i lokal demo/).waitFor();await p.goto(base+"/spillerstats");await p.getByRole("columnheader",{name:"Gullballer"}).waitFor();
+  const scorer=p.getByRole("row",{name:/Test hjemme/});await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
+  await p.getByRole("button",{name:"Nivåfordeling",exact:true}).click();const menu=p.getByRole("navigation",{name:"Velg spillelag"});
+  await menu.getByRole("button",{name:"J13 Bredde"}).click();await p.getByText("Ingen spillere i dette utvalget.").waitFor();assert.equal(await scorer.count(),0);
+  await menu.getByRole("button",{name:"J13 A-serie"}).click();await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
+  await menu.getByRole("button",{name:"J14 A-serie"}).click();await p.getByText("Ingen spillere i dette utvalget.").waitFor();assert.equal(await scorer.count(),0);
+  await p.getByRole("button",{name:"Samlet",exact:true}).click();await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
   console.log("PASS: separate profiles by numeric ID, scoped fixtures and notes, paste confirmation, correction and responsive layouts.");
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

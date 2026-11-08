@@ -21,7 +21,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
     async function apply(url,name){
       const p=await ctx.newPage();await p.goto(url);
       await p.getByRole("heading",{name:"Bli med i Link test juniors"}).waitFor();
-      await p.getByLabel("Fullt navn").fill(name);await p.getByLabel("Telefonnummer").fill("+47 5555 0123");
+      if(await p.getByLabel("Fornavn",{exact:true}).count()){await p.getByLabel("Fornavn",{exact:true}).fill(name);await p.getByLabel("Etternavn",{exact:true}).fill("Test");}else await p.getByLabel("Fullt navn").fill(name);await p.getByLabel("Telefonnummer").fill("+47 5555 0123");
       await p.getByLabel("E-post",{exact:true}).fill(name.toLowerCase()+"@example.test");
       await p.getByRole("button",{name:"Bli med på laget"}).click();
       await p.getByRole("heading",{name:"Du er med på laget!"}).waitFor();

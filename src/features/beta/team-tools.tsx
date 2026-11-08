@@ -1,3 +1,4 @@
+import {AthleteName,joinName,legacyNames} from "./athlete-name";
 import { useState, type FormEvent } from "react";
 import { Users, UserRound,KeyRound,Link as LinkIcon,Mail,Copy,RefreshCw } from "lucide-react";
 import { createTeam, demo, emailInvites, inviteBatch, saveTeamDetails, saveProfile, type Member, type Snapshot } from "@/lib/beta";
@@ -73,9 +74,10 @@ async function thumbnail(file:File,fit=false){
   }finally{img.close();}
 }
 export function Profile({me,busy,run}:{me:Member;busy:boolean;run:Run}){
-  const [name,setName]=useState(me.name),[shirt,setShirt]=useState(me.shirt_number||""),[position,setPosition]=useState(me.position||""),[bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
-  return <section className="panel panel-pad grid"><h2><UserRound/> Athlete profile</h2>{photo&&<img src={photo} width={80} height={80} alt="Profile portrait"/>}
-    <label>Profile photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e=>{const f=e.target.files?.[0];if(f)try{setPhoto(await thumbnail(f));setNote("");}catch(err){setNote((err as Error).message);}}}/></label>{photo&&<button className="btn" onClick={()=>setPhoto("")}>Remove photo</button>}
-    <label>Display name<input value={name} maxLength={100} onChange={e=>setName(e.target.value)}/></label><label>Draktnummer<input type="text" inputMode="numeric" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label><label>Playing position<input value={position} maxLength={80} onChange={e=>setPosition(e.target.value)}/></label><label>About me<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
-    <button className="btn primary" disabled={busy||!name.trim()||!!shirt&&!/^[1-9][0-9]{0,2}$/.test(shirt)} onClick={async()=>{if(await run(()=>saveProfile(me,{name:name.trim(),position,bio,photo,shirt_number:shirt||null})))setNote("Profile saved.");}}>Save profile</button>{note&&<p role="status">{note}</p>}</section>;
+  const old=legacyNames(me.name);
+  const [given,setGiven]=useState(me.given_name||old.given),[family,setFamily]=useState(me.family_name||old.family),[shirt,setShirt]=useState(me.shirt_number||""),[position,setPosition]=useState(me.position||""),[bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
+  return <section className="panel panel-pad grid"><h2><UserRound/> Utøverprofil</h2>{photo&&<img src={photo} width={80} height={80} alt="Profilbilde av utøveren"/>}
+    <label>Profilbilde<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e=>{const f=e.target.files?.[0];if(f)try{setPhoto(await thumbnail(f));setNote("");}catch(err){setNote((err as Error).message);}}}/></label>{photo&&<button className="btn" onClick={()=>setPhoto("")}>Fjern profilbilde</button>}
+    <AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/><label>Draktnummer<input type="text" inputMode="numeric" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label><label>Playing position<input value={position} maxLength={80} onChange={e=>setPosition(e.target.value)}/></label><label>About me<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
+    <button className="btn primary" disabled={busy||!given.trim()||!family.trim()||joinName(given,family).length>100||!!shirt&&!/^[1-9][0-9]{0,2}$/.test(shirt)} onClick={async()=>{if(await run(()=>saveProfile(me,{name:joinName(given,family),given_name:given.trim(),family_name:family.trim(),position,bio,photo,shirt_number:shirt||null})))setNote("Profilen er lagret.");}}>Lagre profil</button>{note&&<p role="status">{note}</p>}</section>;
 }
