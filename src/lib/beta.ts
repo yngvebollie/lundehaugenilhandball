@@ -48,6 +48,9 @@ async function pages<T>(fetchPage:(start:number,end:number)=>PromiseLike<{data:T
 function localRows<T>(kind: string): T[] {
   return Object.keys(localStorage).filter(k => k.startsWith(prefix + kind)).flatMap(k => JSON.parse(localStorage.getItem(k) || "[]"));
 }
+export function demoDevelopmentExercises(team:string,allowed:Set<string>){
+ return demo?localRows<Exercise>("exercise:").filter(e=>e.squad===team&&allowed.has(e.id)):[];
+}
 const seedTeam:Team={id:"demo",name:"NHF Women · Senior squad",discoverable:true};
 function demoAdmins(team:string):string[]{
   const saved=localStorage.getItem(prefix+"admins:"+team);

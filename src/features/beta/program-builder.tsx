@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import {plannerBridge} from "@/lib/development/flags";
+import {catalog as developmentCatalog} from "@/lib/development/catalog";
 import { SessionLibrary } from "./session-library";
 import {PublishingTeam} from "./publishing-team";
 import { CoachAI } from "./coach-ai";
@@ -25,6 +27,9 @@ export function ProgramBuilder({data,busy,run,initial,onDirty,onCalendar}:{data:
   const [published,setPublished]=useState<{day:string;recipient:string}>();
   const [generated,setGenerated]=useState<{id:string;value:ExerciseDraft}|null>(null);
   const current=sessions[active];
+  const [offered,setOffered]=useState("");
+  useEffect(()=>{setOffered(new URLSearchParams(location.search).get("devExercise")||"");},[data.me.squad]);
+  const offeredExercise=plannerBridge&&offered&&developmentCatalog(data.library.map(e=>({id:e.id,title:e.name,instructions:e.dose}))).find(e=>e.id===offered);
   const players=data.roster.filter(m=>m.role==="athlete");
   const recipients=players.filter(p=>target==="team"||p.id===target||data.focusMembers.some(f=>target==="focus:"+f.focus&&f.athlete===p.id));
   useEffect(()=>{onDirty?.(Boolean(name.trim()||sessions.some(s=>s.title||s.text)));},[onDirty,name,sessions]);
@@ -55,6 +60,7 @@ export function ProgramBuilder({data,busy,run,initial,onDirty,onCalendar}:{data:
   }
   return <div className="grid" id="builder"><section className="panel panel-pad grid">
     <PublishingTeam data={data}/>
+    {offeredExercise&&<button className="btn" onClick={()=>{edit({text:[current.text,offeredExercise.title].filter(Boolean).join("\n"),manual:true});setOffered("");history.replaceState(null,"","/#builder");}}><Plus size={16}/> Legg «{offeredExercise.title}» i utkastet</button>}
     <div className="feature-heading"><h2><ClipboardList/> Program builder</h2><div className="day-strip"><a className="btn" href="#plan-drafts">Weekly suggestions</a><a className="btn" href="#ai-coach">Ask Coach AI</a></div></div>
     <CoachAI key={active+"-"+loaded} source={current.text} apply={d=>{
       if(d.mode==="rewrite")edit({text:d.text,manual:true});

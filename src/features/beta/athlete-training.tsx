@@ -11,6 +11,7 @@ import {challenges,phase,type Challenge} from "@/lib/challenges";
 import {AchievementBar,Challenges} from "./challenges";
 import {BadgePanel} from "./badge-panel";
 import {Medal,Trophy} from "lucide-react";
+import {developmentVisible} from "@/lib/development/flags";
 import { AthleteNotices } from "./team-notices";
 
 const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Progress",icon:Activity},{name:"Team",icon:Users},{name:"Messages",icon:Mail},{name:"Profile",icon:UserRound},{name:"Utfordringer",icon:Trophy},{name:"Merker",icon:Medal}] as const;
@@ -35,6 +36,7 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
   return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":tab==="Merker"?"Merker":"My progress"}</h1></header>
     <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name}</button>)}</nav>
+    {developmentVisible&&(tab==="Today"||tab==="Profile")&&<a className="challenge-shortcut" href="/utvikling"><Activity size={17}/> Min utvikling</a>}
     {tab!=="Merker"&&<AchievementBar data={data}/>}
     {tab!=="Messages"&&data.notices.some(n=>!n.read_at)&&<button className="btn" onClick={()=>setTab("Messages")}><Mail size={18}/>{data.notices.filter(n=>!n.read_at).length} team notice(s) to acknowledge</button>}
     {tab==="Messages"&&<AthleteNotices data={data} busy={busy} run={run}/>}

@@ -1,0 +1,218 @@
+{
+  "synthetic": true,
+  "production_seed": false,
+  "rubric_status": "Proposed local coaching criteria; not validated norms",
+  "athlete": {
+    "id": "demo-player-a",
+    "display_name": "Spiller A",
+    "team": "Demo J2013"
+  },
+  "levels": [
+    {
+      "level": 1,
+      "label": "Utforsker"
+    },
+    {
+      "level": 2,
+      "label": "Grunnlag"
+    },
+    {
+      "level": 3,
+      "label": "Trygg"
+    },
+    {
+      "level": 4,
+      "label": "Anvender"
+    },
+    {
+      "level": 5,
+      "label": "Tilpasser"
+    }
+  ],
+  "profile": {
+    "key": "field_player_v1",
+    "axes": [
+      "kast",
+      "mottak",
+      "skudd",
+      "finter",
+      "fotarbeid",
+      "forsvar",
+      "samspill",
+      "spilleforstaelse"
+    ]
+  },
+  "category_assessments": [
+    {
+      "id": "demo-category-kast",
+      "skill_key": "kast",
+      "level": 3,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    },
+    {
+      "id": "demo-category-mottak",
+      "skill_key": "mottak",
+      "level": 2,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    },
+    {
+      "id": "demo-category-skudd",
+      "skill_key": "skudd",
+      "level": 3,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    },
+    {
+      "id": "demo-category-finter",
+      "skill_key": "finter",
+      "level": 2,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    },
+    {
+      "id": "demo-category-fotarbeid",
+      "skill_key": "fotarbeid",
+      "level": 3,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    },
+    {
+      "id": "demo-category-forsvar",
+      "skill_key": "forsvar",
+      "level": 3,
+      "observed_at": "2026-11-08T10:00:00Z",
+      "status": "published",
+      "rubric_version": "demo-v1",
+      "confirmed_by": "demo-coach",
+      "feedback": "Eksempelvurdering"
+    }
+  ],
+  "unassessed_axes": [
+    "samspill",
+    "spilleforstaelse"
+  ],
+  "exercises": [
+    {
+      "id": "demo-passing-movement",
+      "origin": "club_original",
+      "title": "Pasning i bevegelse",
+      "skills": [
+        "mottak_i_fart",
+        "pasning_i_fart"
+      ],
+      "format": "pair",
+      "equipment": [
+        "ball",
+        "kjegler"
+      ],
+      "instructions": "To spillere beveger seg parallelt og passer til hverandre. Tilpass avstand og fart med treneren. Se mot ballen, møt pasningen og fortsett bevegelsen.",
+      "video": null
+    },
+    {
+      "id": "demo-reception-turn",
+      "origin": "club_original",
+      "title": "Mottak med retningsskifte",
+      "skills": [
+        "mottak_i_fart",
+        "retningsskifte"
+      ],
+      "format": "pair",
+      "equipment": [
+        "ball",
+        "kjegler"
+      ],
+      "instructions": "Spilleren møter en pasning, tar kontroll og skifter retning gjennom en avtalt kjegleport. Tilpass tempo og retning sammen med treneren.",
+      "video": null
+    }
+  ],
+  "goal": {
+    "id": "demo-goal-reception",
+    "athlete_id": "demo-player-a",
+    "title": "Mottak i fart",
+    "intention": "Jeg vil slippe å stoppe når jeg får ballen.",
+    "skill_key": "mottak_i_fart",
+    "baseline_level": 2,
+    "target_level": 3,
+    "rubric_version": "demo-v1",
+    "status": "active",
+    "journey_stage": "practising",
+    "practice_target": 4,
+    "review_at": "2026-12-06",
+    "criteria": [
+      {
+        "key": "drill",
+        "text": "8 av 10 kontrollerte mottak og viderepasninger i bevegelse ved hver av to observasjoner i avtalt øvelse.",
+        "required": true
+      },
+      {
+        "key": "transfer",
+        "text": "Trener observerer forsøk på ferdigheten i småspill.",
+        "required": true
+      }
+    ],
+    "assigned_exercise_ids": [
+      "demo-passing-movement",
+      "demo-reception-turn"
+    ],
+    "visible_feedback": "Du finner ballen tidligere! Neste steg er å holde bevegelsen etter mottaket."
+  },
+  "practice_logs": [
+    {
+      "id": "demo-practice-1",
+      "athlete_id": "demo-player-a",
+      "exercise_id": "demo-passing-movement",
+      "goal_ids": [
+        "demo-goal-reception"
+      ],
+      "occurred_at": "2026-11-03T16:00:00Z",
+      "verification_status": "self_reported",
+      "idempotency_key": "demo-practice-1"
+    },
+    {
+      "id": "demo-practice-2",
+      "athlete_id": "demo-player-a",
+      "exercise_id": "demo-passing-movement",
+      "goal_ids": [
+        "demo-goal-reception"
+      ],
+      "occurred_at": "2026-11-05T16:00:00Z",
+      "verification_status": "self_reported",
+      "idempotency_key": "demo-practice-2"
+    },
+    {
+      "id": "demo-practice-3",
+      "athlete_id": "demo-player-a",
+      "exercise_id": "demo-passing-movement",
+      "goal_ids": [
+        "demo-goal-reception"
+      ],
+      "occurred_at": "2026-11-07T16:00:00Z",
+      "verification_status": "self_reported",
+      "idempotency_key": "demo-practice-3"
+    }
+  ],
+  "expected": {
+    "practice_count": 3,
+    "goal_completed": false,
+    "automatic_skill_upgrade": false,
+    "automatic_badges": [],
+    "mastery_message_visible": false
+  }
+}
