@@ -13,12 +13,12 @@
 .challenge-head h3{font-size:22px}.challenge-head small{color:var(--muted)}
 .challenge-log{align-items:flex-end;flex-wrap:wrap}.challenge-log label{flex:1;min-width:100px}
 .score-table td:last-child,.score-table th:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.my-score{background:var(--teal-soft)}.achievement-bar{border-block:1px solid var(--border);padding:10px 0}
+.my-score{background:var(--accent-soft)}.achievement-bar{border-block:1px solid var(--border);padding:10px 0}
 .achievement-bar summary{cursor:pointer}.achievement-bar summary svg{color:var(--orange)}.achievement-bar summary span{margin-left:auto;background:var(--teal-soft);border-radius:4px;padding:3px 8px}
 .achievement-bar>div{display:flex;gap:10px;padding:10px 0}.achievement-bar small{display:block;color:var(--muted)}.achievement-bar>p{font-size:14px;margin-top:8px;color:var(--muted)}
 .phone-brand,.phone-tabs,.phone-more,.coach-agenda{display:none}
 .sidebar .brand{color:white}.sidebar .brand small{font-size:12px;font-weight:500;color:#cbd2ce}
-.sidebar .nav-item:hover:not(.active){background:#363b3d}
+.sidebar .nav-item:hover:not(.active){background:#263450}
 .match-main .page-head{align-items:center;margin:0;padding-bottom:14px;border-bottom:1px solid var(--border)}
 .match-main .page-head h1{display:none}.match-main .eyeline{color:var(--text);font-weight:650}
 .squad-space{display:grid;grid-template-columns:minmax(160px,205px) minmax(0,1fr);gap:24px;min-width:0}
@@ -27,8 +27,8 @@
 .squad-rail h3{margin:26px 0 10px}.squad-rail>small,.squad-rail button small,.competition-heading small,.match-summary small{color:var(--muted)}
 .squad-rail button{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 5px;padding:12px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:5px;overflow-wrap:anywhere}
 .squad-rail button small{display:block;margin-top:4px}
-.squad-rail button.current,.workspace-tabs .current{background:var(--yellow);color:var(--text);border-color:var(--yellow)}
-.squad-rail button.current small{color:var(--text)}.squad-rail .rail-add{margin-top:22px;justify-content:center}
+.squad-rail button.current,.workspace-tabs .current{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.squad-rail button.current small{color:var(--on-accent)}.squad-rail .rail-add{margin-top:22px;justify-content:center}
 .squad-compact{display:none}.kamper{align-content:start;padding-block:8px}
 .squad-title,.squad-title>div,.competition-heading,.match-summary,.workspace-tabs,.source-tabs,.review-check,.report-totals,.fixture-line,.private-mark{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .squad-title,.competition-heading,.review-check{justify-content:space-between}
@@ -73,8 +73,8 @@
  .phone-brand{justify-content:space-between;margin:0 -18px;padding:12px 18px}.phone-brand .club-crest{width:36px;height:36px}.phone-brand .brand small{display:none}
  .phone-brand button,.phone-tabs button{display:grid;place-items:center;color:inherit;background:transparent;border:0}
  .phone-tabs{position:fixed;bottom:0;left:0;right:0;padding:5px 6px max(5px,env(safe-area-inset-bottom));z-index:12;display:grid;grid-template-columns:repeat(4,1fr)}
- .phone-tabs>a,.phone-tabs button{display:grid;place-items:center;gap:3px;min-height:52px;color:#e7eeeb;font-size:12px}.phone-tabs .current{color:var(--yellow)}
- .phone-more{position:fixed;z-index:13;bottom:calc(63px + env(safe-area-inset-bottom));left:8px;right:8px;max-height:70svh;overflow:auto;display:grid;border:1px solid var(--border-strong);background:var(--panel);padding:12px;border-radius:6px;box-shadow:0 4px 18px #0002}.phone-more .nav-item{color:var(--text)}.phone-more .account{margin-top:10px}
+ .phone-tabs>a,.phone-tabs button{display:grid;place-items:center;gap:3px;min-height:52px;color:#e7eeeb;font-size:12px}.phone-tabs .current{color:var(--accent-light)}
+ .phone-more{position:fixed;z-index:13;bottom:calc(63px + env(safe-area-inset-bottom));left:8px;right:8px;max-height:70svh;overflow:auto;display:grid;border:1px solid var(--border-strong);background:var(--panel);padding:12px;border-radius:6px;box-shadow:0 4px 18px #0002}.phone-more .nav-item{color:var(--text)}.phone-more .nav-item.active{color:var(--on-accent)}.phone-more .account{margin-top:10px}
  .coach-main>.page-head{margin:0}.coach-main>.page-head .account{display:none}.coach-main:has(.coach-agenda)>.page-head{display:none}
  .coach-agenda{display:grid;gap:16px;border-bottom:1px solid var(--border);padding-bottom:20px}
  .agenda-context small,.coach-agenda>p,.agenda-day>small,.agenda-day a small{color:var(--muted)}

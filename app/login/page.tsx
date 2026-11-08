@@ -10,7 +10,9 @@ import {clubLink} from "@/lib/club-url";
 import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
 
 export default function Login(){
-  const [returnToDevelopment,setReturnToDevelopment]=useState(false);
+  const [next,setNext]=useState("");
+  const destination=next==="development"?"/utvikling":next==="bank"?"/okter?vis=bank":next==="court"?"/okter":"";
+  const onward=next?"&next="+next:"";
   const [invite,setInvite]=useState("");
   const [email,setEmail]=useState("");
   const [full,setName]=useState(""),[given,setGiven]=useState(""),[family,setFamily]=useState("");
@@ -31,7 +33,7 @@ export default function Login(){
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
-    const qp=new URLSearchParams(location.search);setReturnToDevelopment(qp.get("next")==="development");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
+    const qp=new URLSearchParams(location.search);setNext(["development","court","bank"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
@@ -47,7 +49,7 @@ export default function Login(){
       if((registering&&!signed||!demo&&signed&&invite)&&!validPhone(phone))throw Error("Enter a valid phone number.");
       if(teamCode&&!validTeamCode(teamCode))throw Error("Enter the six-character team code.");
       if(!demo&&!signed&&magic){
-        const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role+(returnToDevelopment?"&next=development":"");
+        const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role+onward;
         await emailSignIn(email,path,registering,name,phone,invite?{kind:"email",token:invite,shirt,given,family}:teamCode?{kind:"athlete_code",token:teamCode,shirt,given,family}:undefined);setMail("sent");return;
       }
       if(demo){
@@ -79,17 +81,17 @@ export default function Login(){
         }
       }
       if(demo&&!invite&&role==="athlete"&&!demoAccounts().find(m=>m.id===account)?.squad){location.assign("/join");return;}
-      location.assign(invite?"/":returnToDevelopment?"/utvikling":role==="athlete"?"/athlete":"/");
+      location.assign(invite?"/":destination||(role==="athlete"?"/athlete":"/"));
     }catch(error){setMessage((error as Error).message||"Could not sign in.");}finally{setBusy(false);}
   }
   if(mail&&!signed)return <PublicShell><div className="entry-content"><SignupSuccess name={name} email={email} known={mail==="created"}/><button className="btn" onClick={()=>{setMail("");setJoin(false);setSignup(false);}}>Til innlogging</button></div></PublicShell>;
   const choice=!selected&&!invite;
   return <PublicShell><div className="entry-content">
-    {!choice&&!invite&&<a className="entry-back" href={returnToDevelopment?"/login?next=development":"/login"}><ArrowLeft size={16}/>Choose another role</a>}
+    {!choice&&!invite&&<a className="entry-back" href={next?"/login?next="+next:"/login"}><ArrowLeft size={16}/>Choose another role</a>}
     <h1>{choice?"Team sign-in":invite?"Join your team":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1>
     {choice?<><p className="entry-lead">Choose your role to continue.</p><nav className="entry-roles" aria-label="Account role">
-      <a className="entry-role athlete" href={"/login?role=athlete"+(returnToDevelopment?"&next=development":"")} aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
-      <a className="entry-role coach" href={"/login?role=coach"+(returnToDevelopment?"&next=development":"")} aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
+      <a className="entry-role athlete" href={"/login?role=athlete"+onward} aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
+      <a className="entry-role coach" href={"/login?role=coach"+onward} aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
     </nav></>:<>
     {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{if(validTeamCode(link.trim().toUpperCase())){location.assign("/apply?coach_code="+encodeURIComponent(link.trim().toUpperCase()));return;}const url=new URL(link.trim(),location.origin);const short=url.searchParams.get("coach_code");if(short&&validTeamCode(short)){location.assign("/apply?coach_code="+encodeURIComponent(short));return;}const shared=url.searchParams.get("link");const code=shared||url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign((shared?"/apply?link=":"/login?new=1&invite=")+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require an invitation from a team admin.</p><button className="btn primary">Continue with invitation</button></form>:<>
     <form className="grid" onSubmit={enter}>

@@ -1,0 +1,13 @@
+const assert=require("node:assert/strict");
+const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
+(async()=>{const b=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});try{
+ const base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217",p=await b.newPage();await p.goto(base+"/login");
+ await p.evaluate(()=>{
+  sessionStorage.setItem("nhf-persona","liv");const k="nhf-court-demo-v1:demo",start=new Date().toISOString();
+  const drill={id:"local:testvideo",title:"Testklipp",instructions:"Test",source:"Klubb",theme:"Forsvar",age:"Alle",equipment:[],vimeo:"12345",original:""};
+  localStorage.setItem(k+":bank",JSON.stringify([drill]));const item={id:crypto.randomUUID(),ex:drill.id,manual:"",block:"Teknikk",work:300,setup:0,points:"",instructions:"",group:""};
+  const rows=["Godkjent","Kladd","En annen spiller","Egentrening","En annen dag"].map((title,n)=>{const id=crypto.randomUUID(),plan={id,title,start:n===4?new Date(Date.now()+86400000).toISOString():start,items:[{...item,prepareVideo:true},{...item,id:crypto.randomUUID(),prepareVideo:false}],purpose:n===3?"individual":"team",kit:"",target:600,origin:"manual",goal:"",venue:"Hall A"};return {id,plan,shared:n===1?null:plan,published:n!==1,audience:n===2?["ida"]:["liv"],archived:false,rev:1,edited:start};});
+  localStorage.setItem(k,JSON.stringify(rows));});
+ await p.goto(base+"/athlete");const notices=p.getByRole("region",{name:"Dagens treningsmeldinger"});await notices.waitFor();assert.equal(await notices.getByRole("article").count(),1);assert.equal(await notices.locator("a").count(),2);await notices.getByRole("link",{name:"Se før trening: Testklipp"}).click();await p.getByRole("button",{name:"Åpne video"}).waitFor();assert.equal(await p.locator("iframe").count(),0);
+ console.log("PASS: same-day targeted notification, excluded drafts/other athletes/individual/future, only requested clip, direct link opens without autoplay.");
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -3,7 +3,7 @@
 .week-board .week-item{margin-top:10px;gap:4px}
 .week-board.agenda-board{grid-template-columns:1fr;gap:6px}
 .agenda-board .week-day{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px 16px;min-height:50px;align-items:start;padding:9px 12px;border-top:0;border-left:3px solid var(--border-strong)}
-.agenda-board .week-day.chosen{border-left-color:var(--yellow)}
+.agenda-board .week-day.chosen{border-left-color:var(--accent)}
 .agenda-board .week-item{grid-column:2;margin:0}.agenda-board .week-day>small{align-self:center}
 .focus-groups summary{cursor:pointer}.focus-groups fieldset{border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px 18px}
 .focus-groups fieldset label{display:inline-flex;align-items:center;gap:7px;min-height:36px}.focus-groups input[type=checkbox]{width:18px;height:18px;min-height:0}

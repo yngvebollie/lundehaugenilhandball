@@ -1,1 +1,1 @@
-{"framework":"nextjs","installCommand":"pnpm install --frozen-lockfile --config.node-linker=hoisted"}
+{"framework":"nextjs","installCommand":"pnpm install --frozen-lockfile --config.node-linker=hoisted","build":{"env":{"NEXT_PUBLIC_COURT_SESSIONS":"true"}}}

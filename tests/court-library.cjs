@@ -1,0 +1,16 @@
+const assert=require("node:assert/strict");
+const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
+(async()=>{const b=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});try{
+ const p=await b.newPage({viewport:{width:390,height:844}}),base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217";
+ await p.goto(base+"/okter/demo?vis=bank");await p.getByRole("searchbox").waitFor();
+ p.setDefaultTimeout(8000);
+ const seed={source:"NHF",sourceMeta:{category:"Småspill"},theme:"Forsvar",technique:"Testteknikk",age:"10-12",original:"https://www.ovelsesbanken.no/ovelser/10-12",tip:"",instructions:"Fiktiv detaljtekst",vimeo:"",equipment:[],training:null};
+ await p.evaluate(s=>localStorage.setItem("nhf-court-demo-v1:demo:bank",JSON.stringify([{...s,id:"nhf:fixtureA",title:"A testøvelse"},{...s,id:"nhf:fixtureB",title:"B testøvelse"}])),seed);
+ await p.goto(base+"/okter?vis=bank");await p.getByRole("combobox",{name:"Kilde",exact:true}).selectOption("NHF");await p.getByLabel("Grupper etter").selectOption("category");await p.getByRole("heading",{name:"Småspill"}).waitFor();
+ await p.getByLabel("Sorter etter").selectOption("za");assert.match(await p.locator(".court-drill-link").first().innerText(),/B testøvelse/);
+ await p.locator(".court-drill-link").first().click();await p.getByText(seed.instructions,{exact:true}).waitFor();assert.equal(await p.getByRole("link",{name:"Les originalen hos NHF"}).getAttribute("href"),seed.original);
+ await p.getByRole("button",{name:"Øvelsesbanken",exact:true}).click();await p.getByRole("checkbox",{name:"Velg B testøvelse",exact:true}).check();await p.getByRole("checkbox",{name:"Velg A testøvelse",exact:true}).check();
+ await p.getByRole("button",{name:"Legg 2 i økt"}).click();await p.getByRole("button",{name:"Bekreft og åpne økten"}).click();await p.getByLabel("Øktnavn").waitFor();assert.match(await p.locator(".court-timeline li").first().innerText(),/B testøvelse/);assert.equal(await p.locator(".court-timeline li").count(),2);
+ await p.goto(base+"/okter?vis=bank");await p.getByRole("button",{name:"Ny klubbøvelse"}).click();await p.getByLabel("Navn",{exact:true}).fill("Min referanse");await p.getByLabel("Instruksjoner",{exact:true}).fill("Trenerens egne instruksjoner.");const link=p.getByLabel("Lenke til øvelsen hos NHF");await link.fill("https://example.com/ovelser/13-15");await p.getByRole("button",{name:"Lagre klubbøvelse"}).click();await p.getByText(/Bruk en HTTPS-lenke/).waitFor();await link.fill(seed.original);await p.getByRole("button",{name:"Lagre klubbøvelse"}).click();await p.getByText("Klubbøvelse lagret.").waitFor();await p.getByRole("searchbox").fill("Min referanse");await p.locator(".court-drill-link").click();assert.equal(await p.getByRole("link",{name:"Les originalen hos NHF"}).getAttribute("href"),seed.original);
+ assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));console.log("PASS: synthetic NHF info, grouping, sorting, multi-select in order, validated club reference and mobile layout.");
+ }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -49,6 +49,7 @@
 .dev-bulk{padding:0 14px 12px}.dev-bulk>label,.dev-bulk>button,.dev-bulk>a,.dev-bulk>p{margin-block:6px}
 .dev-detail>.dev-practice-count{margin-inline:16px}.dev-shell .dev-personbar h2{font-size:1.65rem}
 .dev-rehearsal{max-width:1120px;margin:auto;padding:16px;color:#111d3a;--dev-pink:#cc0051}.dev-rehearsal>header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-block:12px;border-bottom:2px solid #cc0051}.dev-rehearsal>aside{margin-block:10px;font-size:.85rem;color:#47516a}.dev-rehearsal>.dev-tabs{margin-bottom:14px}.dev-rehearsal>.dev-tabs button{min-height:44px;cursor:pointer}
+.dev-setup-links,.dev-setup-body{padding:12px 16px}.dev-setup-body details p{margin:5px 0;color:var(--muted)}.dev-setup-body h4{margin:6px 0}.dev-setup-links button{display:inline-flex;align-items:center;gap:6px}.dev-setup-body .court-drill-detail iframe{width:min(100%,640px);aspect-ratio:16/9;border:0}
 
 
 

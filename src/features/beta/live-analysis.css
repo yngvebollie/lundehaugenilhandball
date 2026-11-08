@@ -11,7 +11,7 @@
 .live-goal{position:relative;width:100%;max-width:610px;aspect-ratio:3/2}.live-goal svg,.live-zones{position:absolute;width:100%;height:100%;inset:0}
 .live-zones{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
 .live-zones button{appearance:none;border-radius:0;border:1px dashed #55756b60;background:transparent;cursor:crosshair;touch-action:manipulation}
-.live-zones button:enabled:hover,.live-zones button:focus-visible{background:#ffcb0029;outline:2px solid #957730;outline-offset:-3px}
+.live-zones button:enabled:hover,.live-zones button:focus-visible{background:#cc00511c;outline:2px solid var(--accent);outline-offset:-3px}
 .live-zones button:disabled{cursor:default}
 .live-scroll{overflow-x:auto}.live-scroll table{width:100%;white-space:nowrap}.live-scroll th,.live-scroll td{padding:8px;text-align:right}.live-scroll th:first-child{text-align:left}
 .live-timeline{list-style:none;padding:0;margin:0}.live-timeline li{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}

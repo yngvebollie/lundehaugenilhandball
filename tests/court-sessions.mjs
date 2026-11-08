@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import {registerHooks} from "node:module";
+import {readFile} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+registerHooks({resolve(s,c,next){if(s==="../development/model"&&c.parentURL?.includes("/court/"))return next("../development/model.ts",c);return next(s,c);}});
+const {baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
+const {sourceRecords,fetchNHF}=await import("../src/lib/court/source.ts");
+const plan=generate(baseDrills,initialRules);assert.equal(total(plan),5400);assert.equal(plan.items.length,7);plan.items[1].locked=true;plan.items[1].points="Behold";
+const regen=generate(baseDrills,initialRules,plan,2);assert.deepEqual(regen.items[1],plan.items[1]);assert.equal(total(regen),5400);
+assert.throws(()=>generate(baseDrills,{...initialRules,minutes:10},plan));assert.throws(()=>generate([],initialRules));assert.notEqual(copyPlan(plan,true).items[0].id,plan.items[0].id);
+assert.equal(wallTime(osloInstant("2026-06-02T16:00")),"2026-06-02T16:00");assert.throws(()=>osloInstant("2026-03-29T02:30"));assert.throws(()=>osloInstant("2026-10-25T02:30"));
+const raw=Array.from({length:6},(_,i)=>({id:i+1,title:"Fiktiv "+i,subject:"Angrep",level:"13-15",vimeo_video_id:"1234",published:null})),rows=sourceRecords(raw);
+assert.throws(()=>sourceRecords([...raw,raw[0]]));assert.throws(()=>sourceRecords([]));await assert.rejects(fetchNHF(async()=>new Response("<html>")));
+const pg=new PGlite(),[t,c,p,other,second,outsider,dest]=Array.from({length:7},()=>crypto.randomUUID()),id=plan.id;
+try{
+ await pg.exec(`create role authenticated;create role anon;create schema auth;create schema nhf_private;grant usage on schema nhf_private,auth to authenticated;
+ create table auth.users(id uuid primary key);create table beta_teams(id uuid primary key);create table beta_members(id uuid primary key,squad uuid,role text);create table beta_exercises(id uuid primary key,squad uuid,name text,dose text);
+ create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
+ create function nhf_private.coaches(t uuid) returns boolean language sql security definer as $$select exists(select from public.beta_members where squad=t and id=auth.uid() and role='coach')$$;
+ create function nhf_private.club_active() returns boolean language sql as $$select coalesce(current_setting('test.admin',true),'false')='true' and auth.uid()='${c}'$$;`);
+ await pg.query("insert into beta_teams values($1),($2)",[t,dest]);for(const [a,team,role] of [[c,t,"coach"],[second,t,"coach"],[p,t,"athlete"],[other,t,"athlete"],[outsider,dest,"coach"]]){await pg.query("insert into auth.users values($1)",[a]);await pg.query("insert into beta_members values($1,$2,$3)",[a,team,role]);}
+ await pg.exec(await readFile(new URL("../supabase/migrations/20261108190430_court_sessions.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");
+ const login=who=>pg.query("select set_config('test.uid',$1,false)",[who]);
+ const rpc=(action,sid=null,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court($1,$2,$3,$4,$5,$6) v",[t,action,sid,rev,v,key]).then(r=>r.rows[0].v);
+ const run=(cmd,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court_run($1,$2,$3,$4,$5,$6) v",[t,id,cmd,rev,key,v]).then(r=>r.rows[0].v);
+ const imp=(a,rs=[])=>pg.query("select beta_court_source($1,$2,$3) v",[t,a,JSON.stringify(rs)]).then(r=>r.rows[0].v);
+ const rights=(a)=>pg.query("select beta_court_rights($1,$2,'TEST FIXTURE APPROVAL',true)",[t,a]);
+ await login(c);const key=crypto.randomUUID(),save={plan,notes:{private:"PRIVATE_SENTINEL"}};
+ assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);await assert.rejects(rpc("save",id,0,save));
+ await login(p);await assert.rejects(rpc("read",id));await assert.rejects(rpc("save",id,1,save));await login(c);await assert.rejects(rpc("publish",id,1,{scope:"players",players:[outsider]}));
+ await rpc("publish",id,1,{scope:"players",players:[p]});await login(other);await assert.rejects(rpc("read",id));assert.equal((await rpc("read")).sessions.length,0);await login(outsider);await assert.rejects(rpc("read"));
+ await login(p);const detail=(await rpc("read",id)).sessions[0];assert.equal(detail.notes,undefined);assert.ok(!JSON.stringify(detail).includes("PRIVATE_SENTINEL"));assert.equal(detail.audience,undefined);await rpc("seen",id,0,{item:plan.items[0].id});assert.equal((await rpc("read",id)).sessions[0].seen,plan.items[0].id);
+ await rpc("favorite",null,0,{exercise:"club:passing",on:true});assert.deepEqual((await rpc("read")).favorites,["club:passing"]);await assert.rejects(run("start"));await login(c);assert.equal((await run("start")).rev,1);
+ await rpc("save",id,2,{plan:{...plan,title:"Endret plan"},notes:{}});assert.equal((await run("read")).snap.title,plan.title);await login(second);await assert.rejects(run("pause",1));await login(c);
+ const paused=await run("pause",1);assert.equal(paused.since,null);assert.equal((await run("read")).steps[0].elapsed,paused.steps[0].elapsed);
+ await run("play",2);await run("next",3);const back=await run("back",4);assert.equal(back.steps[0].status,"done");assert.equal(back.since,null);await assert.rejects(run("play",5));await assert.rejects(run("finish",5));await run("finish",5,{confirmed:true});
+ await rpc("unpublish",id,3);await login(p);await assert.rejects(rpc("read",id));await login(c);await pg.query("select set_config('test.admin','true',false)");
+ await assert.rejects(imp("import",rows));await rights("approve");assert.equal((await imp("preview",rows)).inserted,6);await imp("import",rows);assert.equal((await imp("import",rows)).unchanged,6);
+ await rpc("overlay",null,0,{id:"nhf:1",tip:"Lokalt holdepunkt"});await imp("import",rows.map((v,i)=>i===0?{...v,title:"Korrigert"}:v));assert.equal((await rpc("read")).catalog.find(e=>e.id==="nhf:1").tip,"Lokalt holdepunkt");await assert.rejects(imp("import",rows.slice(0,1)));assert.equal((await rpc("read")).catalog.length,6);
+ plan.items[0].ex="nhf:1";plan.items[0].prepareVideo=true;await rpc("save",id,4,{plan,notes:{}});await rpc("publish",id,5,{scope:"team"});await login(other);assert.equal((await rpc("read",id)).sessions[0].plan.items[0].prepareVideo,true);await login(p);await rpc("favorite",null,0,{exercise:"nhf:1",on:true});await login(c);await rights("revoke");await login(p);const revoked=await rpc("read",id);assert.equal(revoked.catalog.length,0);assert.ok(!revoked.favorites.includes("nhf:1"));assert.ok(!JSON.stringify(revoked.sessions).includes("Korrigert"));await pg.exec("reset role");await pg.query("update beta_members set squad=$1 where id=$2",[dest,p]);await pg.exec("set role authenticated");await assert.rejects(rpc("read",id));
+ console.log("PASS: exact duration, locks, DST, copy, coach/athlete access, notes, assignments, frozen timer, revocation and safe import.");
+}finally{await pg.close();}

@@ -6,6 +6,7 @@ import {development} from "@/lib/development/client";
 import {axisObservation,busyGoal,countPractice,journey,label,levels,localDay,profiles,type Goal,type Profile} from "@/lib/development/model";
 import type {Packet} from "@/lib/development/types";
 import {plannerBridge} from "@/lib/development/flags";
+import {DevelopmentSetup} from "./development-setup";
 import {MeritReview} from "./development-merits";
 import {BulkPractice} from "./development-bulk";
 import {Editor,type Write} from "./development-forms";
@@ -19,7 +20,8 @@ export function Development({data}:{data:Snapshot}){
  const coach=data.me.role==="coach",players=data.roster.filter(p=>p.role==="athlete"&&p.squad===data.me.squad).sort((a,b)=>a.name.localeCompare(b.name,"nb"));
  const [person,P]=useState(coach?(demo&&players.some(p=>p.id==="liv")?"liv":players[0]?.id||""):data.me.id),[queue,Q]=useState(false);
  useEffect(()=>{const wanted=new URLSearchParams(location.search).get("athlete");if(coach&&players.some(p=>p.id===wanted))P(wanted!);},[data.me.squad]);
- return <section className="dev-room"><div className="dev-personbar"><div><span className="dev-overline">{coach?"Trenerrom":"Spillerrom"} · {data.teams.find(t=>t.id===data.me.squad)?.name}</span><h2>{coach?(players.find(p=>p.id===person)?.name||"Spilleroversikt"):"Min utvikling"}</h2></div>{coach&&<div className="dev-picker"><label>Utøver<select value={person} onChange={e=>{P(e.target.value);Q(false);}}>{players.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="dev-secondary" aria-pressed={queue} onClick={()=>Q(!queue)}><UserRound size={16}/> Lagoversikt</button></div>}</div>
+ return <section className="dev-room"><div className="dev-personbar"><div><span className="dev-overline">{coach?"Trenerrom":"Spillerrom"} · {data.teams.find(t=>t.id===data.me.squad)?.name}</span><h2>{coach?(players.find(p=>p.id===person)?.name||"Spilleroversikt"):"Min utvikling"}</h2></div>{coach&&players.length>0&&<div className="dev-picker"><label>Utøver<select value={person} onChange={e=>{P(e.target.value);Q(false);}}>{players.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="dev-secondary" aria-pressed={queue} onClick={()=>Q(!queue)}><UserRound size={16}/> Lagoversikt</button></div>}</div>
+ {coach&&data.me.squad!=="development-preview"&&<DevelopmentSetup key={data.me.squad} data={data} empty={!players.length}/>}
  {demo&&data.me.squad!=="development-preview"&&<small className="dev-demo">Lokal demo · eksempeldata</small>}
  {!person?<p>Ingen utøvere på dette laget ennå. <a href="/team">Inviter en utøver til laget</a>.</p>:queue&&coach?<ReviewQueue data={data} pick={id=>{P(id);Q(false);}}/>:<PlayerPage key={data.me.squad+person+data.me.id} data={data} person={person}/>}</section>;
 }

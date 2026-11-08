@@ -1,4 +1,6 @@
-import { useState, type FormEvent } from "react";
+import {court,courtEnabled,type Doc} from "@/lib/court/client";
+import {wallTime} from "@/lib/court/model";
+import { useEffect,useState, type FormEvent } from "react";
 import { Activity, CalendarDays, ChevronLeft, ChevronRight, Columns3, List, ChartColumn } from "lucide-react";
 import { publish, today, type Assignment, type Snapshot } from "@/lib/beta";
 import { trainingDay } from "@/lib/programs";
@@ -29,6 +31,8 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
   const [note,setNote]=useState("");
   const [view,setView]=useState<"Week"|"Agenda"|"Compare">("Week");
   const players=data.roster.filter(m=>m.role==="athlete");
+  const [courtDocs,CD]=useState<Doc[]>([]);
+  useEffect(()=>{let alive=true;if(courtEnabled)court(data).then(p=>{if(alive)CD(p.sessions.filter(d=>d.published&&!d.archived));}).catch(()=>{if(alive)CD([]);});return()=>{alive=false};},[data]);
   const plans=weekPlans(data.plans,week,target);
   const sessions=data.programs.filter(p=>p.kind==="session");
   function navigate(day:string){setWeek(monday(day));setDate(day);setNote("");}
@@ -57,7 +61,8 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
         const key=JSON.stringify([p.title,p.kind||"Session",p.start_time,p.minutes,p.exercises,p.personal]);
         const group=items.get(key);if(group)group.count++;else items.set(key,{p,count:1});
       }
-      return <div key={day} className={"week-day "+(day===date?"chosen":"")}><button type="button" aria-pressed={date===day} onClick={()=>setDate(day)}>{dayLabel(day)}</button>{!items.size&&<small className="muted">Rest / open</small>}{[...items.entries()].map(([key,{p,count}])=><div className="week-item" data-kind={p.kind||"Session"} key={key}><small>{p.personal?"Personal · ":""}{p.kind||"Session"}</small><strong>{p.title}</strong><small>{p.start_time?.slice(0,5)} {p.minutes? p.minutes+" min":""}{count>1?" · "+count+" athletes":""}</small>{view==="Agenda"&&<details><summary>Session details</summary><ul>{p.exercises.map((x,i)=><li key={i}>{x}</li>)}</ul></details>}</div>)}</div>;
+      const sessionsToday=courtDocs.filter(d=>wallTime((d.sharedPlan||d.plan).start).slice(0,10)===day&&(!coach||!target||!d.audience||d.audience.includes(target)));
+      return <div key={day} className={"week-day "+(day===date?"chosen":"")}><button type="button" aria-pressed={date===day} onClick={()=>setDate(day)}>{dayLabel(day)}</button>{sessionsToday.map(d=><a key={d.id} className="week-item" href={"/okter?session="+encodeURIComponent(d.id)}><small>Håndballøkt · {wallTime((d.sharedPlan||d.plan).start).slice(11)}</small><strong>{(d.sharedPlan||d.plan).title}</strong></a>)}{!items.size&&!sessionsToday.length&&<small className="muted">Rest / open</small>}{[...items.entries()].map(([key,{p,count}])=><div className="week-item" data-kind={p.kind||"Session"} key={key}><small>{p.personal?"Personal · ":""}{p.kind||"Session"}</small><strong>{p.title}</strong><small>{p.start_time?.slice(0,5)} {p.minutes? p.minutes+" min":""}{count>1?" · "+count+" athletes":""}</small>{view==="Agenda"&&<details><summary>Session details</summary><ul>{p.exercises.map((x,i)=><li key={i}>{x}</li>)}</ul></details>}</div>)}</div>;
     })}</div>}
     <details className="library-tools"><summary>{coach?"Schedule training or event":"Add to my schedule"}</summary><form className="grid" onSubmit={add}>
       <div className="field-pair"><label>Activity type<select value={kind} onChange={e=>setKind(e.target.value as EventKind)}>{["Session","Game","Practice"].map(k=><option key={k}>{k}</option>)}</select></label><label>Event date<input type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label></div>

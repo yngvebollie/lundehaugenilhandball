@@ -10,7 +10,7 @@ export function AthleteApp() {
             <div className="brand-mark" style={{ width: 34, height: 34, fontSize: 12 }}>HB</div>
             HANDBALL
           </div>
-          <Bell color="var(--yellow)" />
+          <Bell color="var(--accent)" />
         </div>
         <p className="muted">Hey, Marcus!</p>
         <h1 style={{ fontSize: 44, marginBottom: 6 }}>Today's Training</h1>
