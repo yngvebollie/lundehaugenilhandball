@@ -35,7 +35,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   await p.getByText("Legg til lag",{exact:true}).last().click();await p.getByLabel("NIF lag-ID",{exact:true}).fill("857280");
   await p.getByLabel("Lagnavn i sesongen").fill("J14 A-serie");await p.getByRole("button",{name:"Legg til lag og hent kamper"}).click();
   await p.getByText(/ikke tilkoblet i lokal demo/).waitFor();await p.goto(base+"/spillerstats");await p.getByRole("columnheader",{name:"Gullballer"}).waitFor();
-  const scorer=p.getByRole("row",{name:/Test hjemme/});await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");
+  const scorer=p.getByRole("row",{name:/Test hjemme/});await scorer.waitFor();assert.equal(await scorer.getByRole("img",{name:"1 gullball",exact:true}).locator("svg").count(),1);assert.equal(await scorer.locator("td").last().innerText(),"1");
   await p.getByRole("button",{name:"Nivåfordeling",exact:true}).click();const menu=p.getByRole("navigation",{name:"Velg spillelag"});
   await menu.getByRole("button",{name:"J13 Bredde"}).click();await p.getByText("Ingen spillere i dette utvalget.").waitFor();assert.equal(await scorer.count(),0);
   await menu.getByRole("button",{name:"J13 A-serie"}).click();await scorer.waitFor();assert.equal(await scorer.locator("td").last().innerText(),"1");

@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from "react";
-import {ChevronDown,ChevronRight} from "lucide-react";
+import {ChevronDown,ChevronRight,Volleyball} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
 import {registrations,seasonMatches,squadStatLines,seasonSettings} from "@/lib/match-journal";
 import {groupPlayers,uniqueGames,type ClubLine,type LinkId} from "@/lib/club-player-stats";
@@ -46,7 +46,7 @@ export function PlayerStatistics({data}:{data:Snapshot}){
  {!error&&lines&&!players.length&&<p>Ingen spillere i dette utvalget.</p>}</section>;
 }
 function PlayerStatRow({p,l,m,cols,split,expanded,toggle,levels}:{p:{name:string;balls:number;athlete?:string;shirt?:string|null;conflicts:number;filtered:ClubLine[]};l:string;m:ReturnType<typeof metrics>;cols:readonly Column[];split:boolean;expanded:boolean;toggle:()=>void;levels:{l:string;m:ReturnType<typeof metrics>}[]}){
- return <><tr><th><button className="stat-player-name" onClick={toggle} aria-expanded={expanded}>{expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>} {p.shirt&&"#"+p.shirt+" "}{p.name}</button></th>{split&&<td>{l}</td>}{cols.map(c=><td key={c}>{fmt(m[c])}</td>)}<td>{p.balls}</td></tr>
+ return <><tr><th><button className="stat-player-name" onClick={toggle} aria-expanded={expanded}>{expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>} {p.shirt&&"#"+p.shirt+" "}{p.name}</button>{p.balls>0&&<> <span className="season-balls" role="img" aria-label={`${p.balls} ${p.balls===1?"gullball":"gullballer"}`} title={p.balls+" "+(p.balls===1?"kamp":"kamper")+" som toppscorer i utvalget"}>{Array.from({length:p.balls},(_,i)=><Volleyball size={14} key={i} aria-hidden="true"/>)}</span></>}</th>{split&&<td>{l}</td>}{cols.map(c=><td key={c}>{fmt(m[c])}</td>)}<td>{p.balls}</td></tr>
  {expanded&&<tr><td colSpan={cols.length+(split?3:2)}><div className="stat-player-details"><strong>{p.name}</strong>{p.athlete&&<a href={"/spillerstats?athlete="+encodeURIComponent(p.athlete)}>Åpne utøverprofil</a>}
  {levels.map(v=><p key={v.l}>{v.l} · {v.m.games} kamper · {fmt(v.m.goals)} mål · {fmt(v.m.average)} mål/kamp</p>)}
  {!!p.conflicts&&<small>Ulike registreringer i {p.conflicts} kamp(er). Motstridende verdier er holdt utenfor summen.</small>}
