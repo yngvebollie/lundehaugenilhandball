@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+const pg=new PGlite(), uid=()=>crypto.randomUUID(), [team,away,coach,other,player,token]=Array.from({length:6},uid);
+const one=async(sql,params=[])=>(await pg.query(sql,params)).rows[0]?.v;
+try{
+ await pg.exec(`create role authenticated;create role anon;create role service_role;create schema auth;create schema nhf_private;
+ create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb,raw_app_meta_data jsonb);
+ create table beta_teams(id uuid primary key);
+ create table beta_members(id uuid primary key,squad uuid,name text,role text);
+ create table beta_applications(team uuid,person uuid,role text,email text,name text,phone text,status text,primary key(team,person));
+ create table nhf_private.signup_intents(person uuid,kind text,credential text,state text,team uuid);
+ create table nhf_private.join_codes(team uuid,code text,expires timestamptz);
+ create table nhf_private.coach_codes(team uuid,code text,expires timestamptz);
+ create table nhf_private.club_admins(account uuid);create table nhf_private.team_admins(team uuid);
+ create table nhf_private.invites(token uuid,team uuid,email text,role text,expires timestamptz);
+ create table nhf_private.application_links(team uuid,role text,token uuid,expires timestamptz,direct boolean);
+ create table nhf_private.extra_coaches(coach uuid,team uuid);
+ create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
+ grant usage on schema nhf_private to authenticated;`);
+ await pg.exec(await readFile(new URL("../supabase/migrations/20261109201608_athlete_password_access.sql",import.meta.url),"utf8"));
+ await pg.exec("create trigger finish after insert on auth.users for each row execute function nhf_private.finish_signup_invite()");
+ await pg.query("insert into beta_teams values($1),($2)",[team,away]);
+ for(const [id,t] of [[coach,team],[other,away]]){await pg.query("insert into auth.users values($1,$2,now(),'{}','{}')",[id,id+"@example.test"]);await pg.query("insert into beta_members values($1,$2,'Coach','coach')",[id,t]);}
+ const addr="test@example.test";
+ await pg.query("insert into nhf_private.invites values($1,$2,$3,'athlete',now()+interval '1 hour')",[token,team,addr]);
+ const check=(k,v)=>one("select beta_player_enroll_check($1,$2,$3,'peer') v",[addr,k,v]);
+ await pg.exec("set role service_role");assert.equal(await check("email",token),"athlete");assert.equal(await check("link",uid()),"invalid");assert.equal(await check("none",""),"athlete");
+ await pg.exec("set role anon");await assert.rejects(check("none",""));await pg.exec("reset role");
+ await pg.query("insert into nhf_private.signup_intents values($1,'email',$2,'pending',null)",[player,token]);
+ await pg.query("insert into auth.users values($1,$2,now(),$3,$4)",[player,"p.test@players.lundehaugenil.invalid",{full_name:"Test Player",contact_phone:"12345678"},{club_login:"athlete",contact_email:addr}]);
+ assert.equal(await one("select squad v from beta_members where id=$1",[player]),team);assert.equal(await one("select email v from beta_applications where person=$1",[player]),addr);
+ await assert.rejects(pg.query("update beta_members set role='coach' where id=$1",[player]));
+ const login=id=>pg.query("select set_config('test.uid',$1,false)",[id]);
+ const issue=()=>one("select beta_player_reset($1,$2) v",[team,player]);const consume=v=>one("select beta_use_player_reset($1) v",[v]);
+ await pg.exec("set role authenticated");await login(other);await assert.rejects(issue());await login(player);await assert.rejects(issue());await login(coach);
+ const a=(await issue()).code,b=(await issue()).code;await assert.rejects(consume(b));await pg.exec("set role service_role");
+ assert.equal(await consume(a),null);assert.equal(await consume(b),player);assert.equal(await consume(b),null);
+ await pg.exec("set role authenticated");const c=(await issue()).code;await pg.exec("reset role");await pg.query("update nhf_private.player_resets set expires=now()-interval '1 second' where player=$1",[player]);assert.equal(await consume(c),null);
+ const d=(await issue()).code;await pg.query("update beta_members set squad=$1 where id=$2",[away,coach]);assert.equal(await consume(d),null);
+ console.log("PASS: enrollment, correct team/contact, no athlete elevation, scoped coach reset, replacement, expiry, revocation, one-use.");
+}finally{await pg.close();}

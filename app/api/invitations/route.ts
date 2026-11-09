@@ -12,7 +12,7 @@ export async function POST(req:Request) {
   let origin:URL;
   try {origin=new URL(process.env.APP_ORIGIN||""); if(origin.protocol!=="https:"||origin.origin!==origin.href.replace(/\/$/,""))throw Error();}
   catch {return fail(503,"Public invitation URL is not configured. No emails sent.");}
-  if(!key||!from||!env.supabaseUrl||!env.supabaseAnonKey) return fail(503,"Invitation email is not configured. Use Create links only.");
+  if(!env.supabaseUrl||!env.supabaseAnonKey) return fail(503,"Invitation email is not configured. Use Create links only.");
   const db=createClient(env.supabaseUrl,env.supabaseAnonKey,{global:{headers:{Authorization:"Bearer "+token}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await db.auth.getUser(token);
   if(error||!user)return fail(401,"Your session has expired.");
@@ -30,7 +30,18 @@ export async function POST(req:Request) {
   // This RPC authorizes the caller for the selected team and binds each token to its recipient.
   const batch=await db.rpc("beta_bulk_invite",{team_id:body.team,addresses,member_role:body.role});
   if(batch.error)return fail(403,"Invitations could not be created. Check coach access to the selected team.");
-  const links=(batch.data as {email:string;token:string}[]).map(r=>({email:r.email,url:origin.origin+"/login?new=1&invite="+encodeURIComponent(r.token)}));
+  const links=(batch.data as {email:string;token:string}[]).map(r=>({email:r.email,url:origin.origin+"/login?new=1&role="+body.role+"&invite="+encodeURIComponent(r.token)}));
+  if(!key||!from){
+    if(body.role==="athlete")return Response.json({accepted:false,links,reason:"E-postlevering er ikke konfigurert. Del invitasjonslenken direkte."},{headers:{"Cache-Control":"no-store"}});
+    // The coach only sees team invitations. Private authentication tokens go directly to the recipient.
+    const mail=createClient(env.supabaseUrl,env.supabaseAnonKey,{auth:{persistSession:false,autoRefreshToken:false}});
+    const sent=new Set<string>();
+    for(const link of links){try{
+      const {error}=await mail.auth.signInWithOtp({email:link.email,options:{emailRedirectTo:link.url,shouldCreateUser:true}});
+      if(!error)sent.add(link.email);
+    }catch{/* Keep recipient-specific fallback links when SMTP is restricted or rate limited. */}}
+    return Response.json({accepted:sent.size===links.length,links:links.map(l=>({...l,emailAccepted:sent.has(l.email)}))},{headers:{"Cache-Control":"no-store"}});
+  }
   let accepted=false;
   try {
     const result=await fetch("https://api.resend.com/emails/batch",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},signal:AbortSignal.timeout(15000),

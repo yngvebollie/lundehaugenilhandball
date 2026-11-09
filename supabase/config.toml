@@ -4,3 +4,7 @@ project_id = "lundehaugenilhandball"
 # User requests verify the bearer with Auth; scheduled requests claim a scoped,
 # one-use database job. Neither path grants direct access to privileged RPCs.
 verify_jwt = false
+
+[functions.player-access]
+# Athlete enrollment and one-use, team-authorized password links run before login.
+verify_jwt = false

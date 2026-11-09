@@ -1,5 +1,6 @@
 import {db,demo,saveProfile,today,type Snapshot} from "./beta";
 import {plusDay,type Rule} from "./regular";
+import {contactAddress} from "./player-access";
 export const skills={passing:"Kast og mottak",teamwork:"Lag og samspill",shooting:"Skudd",attack:"Angrep",defence:"Forsvar",keeper:"Keeper",counter:"Kontringer",duel:"Duellspill",feint:"Finter",decisions:"Gode valg / spilleforståelse"};
 export const physical={strength:"Bli sterkere",speed:"Løpe raskere",footwork:"Raskere bein",jump:"Bedre spenst",shotpower:"Hardere skudd"};
 export const positions={lb:"Venstre back",cb:"Midtback",rb:"Høyre back",pivot:"Linjespiller",lw:"Venstre kant",gk:"Keeper",rw:"Høyre kant"};
@@ -7,7 +8,11 @@ export type Wishes={completed:boolean;name:string;given:string;family:string;shi
 export type BoardPlayer={id:string;name:string;shirt:string|null;positions:string[]};
 const key=(t:string,id:string)=>"player-wizard:"+t+":"+id;
 export async function playerWizard(data:Snapshot,v?:Wishes):Promise<Wishes>{
- const m=data.me;if(!demo)return (await db!.rpc("beta_athlete_wizard",{t:m.squad,cmd:v?"save":"read",v:v||null}).throwOnError()).data;
+ const m=data.me;if(!demo){
+  const result=(await db!.rpc("beta_athlete_wizard",{t:m.squad,cmd:v?"save":"read",v:v||null}).throwOnError()).data as Wishes;
+  if(result.email?.endsWith("@players.lundehaugenil.invalid")){const {data,error}=await db!.auth.getUser();if(error)throw error;result.email=data.user?contactAddress(data.user):"";}
+  return result;
+ }
  if(m.role!=="athlete")throw Error("Bare egen utøverprofil");
  const k=key(m.squad,m.id),plansKey="regular-plan-v1:"+m.squad;
  let rules:Rule[]=JSON.parse(localStorage.getItem(plansKey)||"[]");

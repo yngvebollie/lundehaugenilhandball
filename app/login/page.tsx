@@ -7,6 +7,7 @@ import { PublicShell } from "@/features/beta/public-shell";
 import {AthleteName,joinName,legacyNames} from "@/features/beta/athlete-name";
 import {SignupSuccess} from "@/features/beta/signup-success";
 import {clubLink} from "@/lib/club-url";
+import {registerPlayer,passwordLogin,contactAddress} from "@/lib/player-access";
 import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
 
 export default function Login(){
@@ -38,7 +39,7 @@ export default function Login(){
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
-    const sub=db.auth.onAuthStateChange((_,s)=>{setSigned(s?.user.email||"");if(s){setName(n=>n||s.user.user_metadata?.full_name||"");const m=s.user.user_metadata,p=legacyNames(m?.full_name||"");setGiven(n=>n||m?.given_name||p.given);setFamily(n=>n||m?.family_name||p.family);setPhone(n=>n||m?.contact_phone||"");}});
+    const sub=db.auth.onAuthStateChange((_,s)=>{setSigned(s?contactAddress(s.user):"");if(s){setName(n=>n||s.user.user_metadata?.full_name||"");const m=s.user.user_metadata,p=legacyNames(m?.full_name||"");setGiven(n=>n||m?.given_name||p.given);setFamily(n=>n||m?.family_name||p.family);setPhone(n=>n||m?.contact_phone||"");}});
     return ()=>sub.data.subscription.unsubscribe();
   },[]);
   async function enter(e:FormEvent){
@@ -61,11 +62,12 @@ export default function Login(){
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
-            const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,...(invite?{club_invite_kind:"email",club_invite_token:invite}:teamCode?{club_invite_kind:"athlete_code",club_invite_token:teamCode}:{})}}});
+            const immediate=(role==="athlete"||!!invite)&&await registerPlayer({email,password,name,phone,given,family,shirt,kind:invite?"email":teamCode?"athlete_code":"none",token:invite||teamCode});
+            if(!immediate){const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,...(invite?{club_invite_kind:"email",club_invite_token:invite}:teamCode?{club_invite_kind:"athlete_code",club_invite_token:teamCode}:{})}}});
             if(error)throw error;
-            if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}
+            if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
           }else{
-            const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
+            await passwordLogin(email,password,role==="athlete"||!!invite);
           }
         }
         if(!invite){
@@ -104,7 +106,7 @@ export default function Login(){
       {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
     <button className="btn primary" disabled={busy}>{magic&&!signed?"Email me a sign-in link":invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
-    {!demo&&!signed&&<button className="btn" onClick={()=>{setMagic(!magic);setMessage("");}}>{magic?"Use a password":"Sign in with a magic link"}</button>}
+    {role!=="athlete"&&!invite&&!demo&&!signed&&<button className="btn" onClick={()=>{setMagic(!magic);setMessage("");}}>{magic?"Use a password":"Sign in with a magic link"}</button>}
     {!demo&&invite&&!signed&&<button className="btn" onClick={()=>setSignup(!signup)}>{signup?"Use existing account":"Create invited account"}</button>}</>}
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
     {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}

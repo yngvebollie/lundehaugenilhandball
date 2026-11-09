@@ -6,6 +6,7 @@ import {SignupSuccess} from "@/features/beta/signup-success";
 import {applications,applyWithLink,db,demo,linkInfo,selectTeam,type LinkInfo,type Application} from "@/lib/beta";
 import {redeemAthleteCode,redeemCoachCode,saveSignupShirt} from "@/lib/invitation-code";
 import {clubLink} from "@/lib/club-url";
+import {registerPlayer,passwordLogin,contactAddress} from "@/lib/player-access";
 import {emailSignIn,validPhone} from "@/lib/invite-auth";
 
 export default function Apply(){
@@ -18,7 +19,7 @@ export default function Apply(){
   useEffect(()=>{
     const query=new URLSearchParams(location.search),token=query.get("link")||"";setCode(token);setReturning(query.get("finish")==="1");
     const athleteCode=query.get("athlete_code");setShortRole(athleteCode?"athlete":"coach");const personal=(athleteCode||query.get("coach_code"))?.trim().toUpperCase();if(personal&&/^[A-Z0-9]{6}$/.test(personal)){setShort(personal);setReady(true);}else linkInfo(token).then(setInfo).catch(e=>setNote(e.message)).finally(()=>setReady(true));
-    const listener=db?.auth.onAuthStateChange((_,session)=>{setSigned(session?.user.email||"");if(session){setName(n=>n||session.user.user_metadata?.full_name||"");const meta=session.user.user_metadata,parts=legacyNames(meta?.full_name||"");setGiven(n=>n||meta?.given_name||parts.given);setFamily(n=>n||meta?.family_name||parts.family);setPhone(n=>n||meta?.contact_phone||"");setShirt(n=>n||String(session.user.user_metadata?.shirt_number||""));}});
+    const listener=db?.auth.onAuthStateChange((_,session)=>{setSigned(session?contactAddress(session.user):"");if(session){setName(n=>n||session.user.user_metadata?.full_name||"");const meta=session.user.user_metadata,parts=legacyNames(meta?.full_name||"");setGiven(n=>n||meta?.given_name||parts.given);setFamily(n=>n||meta?.family_name||parts.family);setPhone(n=>n||meta?.contact_phone||"");setShirt(n=>n||String(session.user.user_metadata?.shirt_number||""));}});
     return ()=>listener?.data.subscription.unsubscribe();
   },[]);
   useEffect(()=>{
@@ -44,7 +45,8 @@ export default function Apply(){
       if(!demo&&!signed){
         const path="/apply?"+(short?shortRole+"_code="+encodeURIComponent(short):"link="+encodeURIComponent(code))+"&finish=1";
         if(magic){await emailSignIn(email,path,!existing,name,phone,{kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",token:short||code,shirt,given,family});setMail("sent");return;}
-        if(existing){auto.current=email.trim()+code;const {error}=await db!.auth.signInWithPassword({email,password});if(error)throw error;}
+        if(existing){auto.current=email.trim()+code;await passwordLogin(email,password,athlete);}
+        else if(athlete){await registerPlayer({email,password,name,phone,given,family,shirt,kind:short?"athlete_code":"link",token:short||code});}
         else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,club_invite_kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",club_invite_token:short||code},emailRedirectTo:clubLink(path)}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
       }
       await join(signed||email);
@@ -63,9 +65,9 @@ export default function Apply(){
       {(short?shortRole:info?.role)==="athlete"&&<label>Draktnummer (valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())} placeholder="F.eks. 28"/></label>}
       <label>E-post<input type="email" required readOnly={!!signed} autoComplete="email" value={signed||email} onChange={e=>setEmail(e.target.value)}/></label>
       {!demo&&!signed&&!magic&&<label>Passord<input required type="password" minLength={existing?1:8} autoComplete={existing?"current-password":"new-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}
-      <small>{short||info?.direct?"Bekreft e-postadressen din én gang. Invitasjonen gir deg deretter tilgang til laget.":"Dette er en eldre søknadslenke. Be treneren om en direkte invitasjon for å slippe godkjenning."}</small>
+      <small>{athlete&&(short||info?.direct)?"Velg passord og gå rett til laget. Ingen e-postbekreftelse.":short||info?.direct?"Bekreft e-postadressen din én gang. Invitasjonen gir deg deretter tilgang til laget.":"Dette er en eldre søknadslenke. Be treneren om en direkte invitasjon for å slippe godkjenning."}</small>
       <button className="btn primary" disabled={busy}>{busy?"Et øyeblikk …":signed||demo?"Bli med på laget":magic?"Send innloggingslenke":existing?"Logg inn og fortsett":"Opprett konto"}</button>
-      {!signed&&!demo&&<button className="btn" type="button" onClick={()=>setMagic(!magic)}>{magic?"Bruk passord":"Bruk innloggingslenke"}</button>}
+      {!athlete&&!signed&&!demo&&<button className="btn" type="button" onClick={()=>setMagic(!magic)}>{magic?"Bruk passord":"Bruk innloggingslenke"}</button>}
       {!signed&&!demo&&<button className="btn" type="button" onClick={()=>{setExisting(!existing);setNote("");}}>{existing?"Opprett ny konto":"Jeg har allerede en konto"}</button>}
     </form>}</>}</>}
     {note&&<p role="alert">{note}</p>}<a className="entry-back" href="/login">Til innlogging</a>
