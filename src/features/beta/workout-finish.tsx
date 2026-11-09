@@ -4,15 +4,15 @@ import { saveReview, type Assignment, type WorkoutReview } from "@/lib/beta";
 import type { Run } from "./program-builder";
 import "./workout-finish.css";
 
-const quotes=["One focused session is a step you can build on.","Progress starts with showing up for today's work.","Small, deliberate efforts add up over a season."];
+const quotes=["Du trenger ikke mestre alt i dag for å bli litt bedre.","Små steg på trening blir til gode vaner på banen.","Det du øvde på i dag, tar du med deg til neste økt."];
 export function Celebration({title,onClose}:{title:string;onClose:()=>void}){
   const ref=useRef<HTMLDialogElement>(null);
   const [quote]=useState(()=>quotes[Math.floor(Math.random()*quotes.length)]);
   useEffect(()=>{const dialog=ref.current;dialog?.showModal();return ()=>dialog?.close();},[]);
   return <dialog className="finish-dialog" ref={ref} onCancel={onClose} aria-labelledby="finish-title">
-    <div aria-hidden="true" className="confetti">{Array.from({length:32},(_,i)=><i key={i} style={{left:((i*37)%100)+"%",backgroundColor:["#ffda55","#84cdba","#ef767a","#b3d9ff"][i%4],animationDelay:((i%7)*.07)+"s"}}/>)}</div>
-    <CheckCheck size={32}/><h2 id="finish-title">Congratulations!</h2><p>You completed {title}.</p><blockquote>{quote}</blockquote>
-    <button className="btn primary" autoFocus onClick={onClose}>Continue to workout review</button>
+    <div aria-hidden="true" className="confetti">{Array.from({length:32},(_,i)=><i key={i} style={{left:((i*37)%100)+"%",backgroundColor:["#cc0051","#111c38","#ff98c1","#84cdba"][i%4],animationDelay:((i%7)*.07)+"s"}}/>)}</div>
+    <CheckCheck size={32}/><h2 id="finish-title">Godt jobbet!</h2><p>Du har fullført «{title}». Takk for innsatsen i dag!</p><blockquote>{quote}</blockquote>
+    <button className="btn primary" autoFocus onClick={onClose}>Videre til øktvurderingen</button>
   </dialog>;
 }
 function Stars({label,value,onChange,optional=false}:{label:string;value:number;onChange:(n:number)=>void;optional?:boolean}){

@@ -1,3 +1,4 @@
+import {onDate,regularLoad,type Rule} from "./regular";
 import { strength } from "./strength";
 import { trainingDay } from "./programs";
 import { volume, weekPlans, type Region } from "./workload";
@@ -23,7 +24,7 @@ export function briefDraft(brief:string){
     return {title:weekly?focus+" strength "+(i+1):name,offset:i*2,exercises:prescription(focus,settings[style].sets)};
   })};
 }
-export function suggestWeek(data:Snapshot,week:string,id:string,style:Style,now:string){
+export function suggestWeek(data:Snapshot,week:string,id:string,style:Style,now:string,regularRules:Rule[]=[]){
   const current=weekPlans(data.plans,week,id);
   const last=weekPlans(data.plans,trainingDay(week,-7),id);
   const curr=volume(data,current),prior=volume(data,last);
@@ -32,7 +33,8 @@ export function suggestWeek(data:Snapshot,week:string,id:string,style:Style,now:
   const feedbackIds=new Set([...current,...last].map(p=>p.id));
   const hard=data.feedback.some(f=>feedbackIds.has(f.assignment)&&f.effort==="Hard");
   const {sessions,sets}=settings[style];
-  const busyCourt=curr.court>=120||current.some(p=>p.kind==="Game");
+  const fixed=regularLoad(regularRules,week,trainingDay(week,7),id);
+  const busyCourt=curr.court+fixed.minutes>=120||current.some(p=>p.kind==="Game");
   // Draft set budgets are planning defaults. Use completed history only when present.
   const dose=hard?Math.max(1,sets-1):sets;
   const baseBudget=3*sets*sessions;
@@ -43,7 +45,7 @@ export function suggestWeek(data:Snapshot,week:string,id:string,style:Style,now:
   const drafts:{day:string;title:string;exercises:string[];sets:number}[]=[];
   for(let i=0;i<7&&drafts.length<sessions;i++){
     const day=trainingDay(week,i);
-    if(day<now||current.some(p=>p.day===day))continue;
+    if(day<now||onDate(regularRules,day,id).some(r=>r.weight>=3)||current.some(p=>p.day===day))continue;
     const adjacent=[trainingDay(day,-1),trainingDay(day,1)];
     if(history.some(p=>adjacent.includes(p.day)&&p.kind!=="Practice")||drafts.some(p=>adjacent.includes(p.day)))continue;
     const perMove=Math.min(dose,Math.floor(remaining/3));
@@ -53,5 +55,5 @@ export function suggestWeek(data:Snapshot,week:string,id:string,style:Style,now:
     const added=exercises.reduce((s,l)=>s+Number(l.match(/· (\d+)/)?.[1]||0),0);
     drafts.push({day,title:focus+" strength",exercises,sets:added});remaining-=added;
   }
-  return {existing,logged,court:curr.court,hard,busyCourt,drafts};
+  return {existing,logged,court:curr.court,fixed:fixed.minutes,hard,busyCourt,drafts};
 }

@@ -12,3 +12,5 @@
 .notice-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0;line-height:1.55}.notice-entry{border-top:1px solid var(--border);padding-top:14px}.notice-people{display:flex;gap:14px;flex-wrap:wrap}.notice-people label{display:flex;align-items:center;gap:6px}.notice-people input{min-height:18px;width:18px}
 #notices summary{cursor:pointer}#notices>div{margin-top:16px}
 @media(max-width:600px){.agenda-board .week-day{grid-template-columns:90px minmax(0,1fr)}.calendar-range{font-size:16px}}
+.regular-editor form{margin-block:12px}.monitor-table th small,.monitor-table td small{display:block;font-size:.75rem;font-weight:normal}.monitor-table td{font-variant-numeric:tabular-nums}.regular-editor .day-strip{flex-wrap:wrap}
+

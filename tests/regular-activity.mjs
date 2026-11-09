@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import {regularLoad,monthBounds,onDate} from "../src/lib/regular.ts";
+const gym={athlete:"a",days:[2,4],minutes:45,weight:3,starts:"2026-11-01",ends:"2026-11-30"},dance={...gym,days:[3],minutes:60,weight:4};
+const rules=[gym,dance,{...gym,athlete:"b"}];
+assert.deepEqual(regularLoad(rules,"2026-11-02","2026-11-09","a"),{sessions:3,minutes:150,points:510});
+assert.deepEqual(regularLoad(rules,...monthBounds("2026-11-30"),"a"),{sessions:12,minutes:600,points:2040});
+assert.deepEqual(regularLoad(rules,"2026-11-30","2026-12-07","a"),{sessions:0,minutes:0,points:0});
+assert.equal(onDate(rules,"2026-11-03").length,2);assert.equal(onDate(rules,"2026-11-03","a").length,1);
+assert.deepEqual(monthBounds("2026-12-31"),["2026-12-01","2027-01-01"]);
+console.log("PASS: ISO weekdays, multiple activities, inclusive end, month/year boundaries and athlete scoping.");

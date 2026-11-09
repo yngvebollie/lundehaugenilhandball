@@ -34,7 +34,7 @@ const assert = require("node:assert/strict");
     await session.getByLabel("Squat 3 x 8").uncheck();
     await session.getByLabel("Squat 3 x 8").check();
     await session.getByLabel("Plank 30 sec").check();
-    await player.getByRole("dialog").getByRole("button",{name:"Continue to workout review"}).click();
+    await player.getByRole("dialog").getByRole("button",{name:"Videre til øktvurderingen"}).click();
     await session.getByRole("group",{name:"Overall workout"}).getByRole("button",{name:"4 out of 5"}).click();
     await session.getByText("Vurder Squat 3 x 8",{exact:true}).click();
     await session.getByRole("group",{name:"Vurder Squat 3 x 8",exact:true}).getByRole("button",{name:"5 av 5 stjerner"}).click();

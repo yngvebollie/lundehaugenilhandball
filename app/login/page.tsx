@@ -11,7 +11,7 @@ import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
 
 export default function Login(){
   const [next,setNext]=useState("");
-  const destination=next==="development"?"/utvikling":next==="bank"?"/okter?vis=bank":next==="court"?"/okter":"";
+  const destination=next==="ratings"?"/#ratings":next==="development"?"/utvikling":next==="bank"?"/okter?vis=bank":next==="court"?"/okter":"";
   const onward=next?"&next="+next:"";
   const [invite,setInvite]=useState("");
   const [email,setEmail]=useState("");
@@ -33,7 +33,7 @@ export default function Login(){
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
-    const qp=new URLSearchParams(location.search);setNext(["development","court","bank"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
+    const qp=new URLSearchParams(location.search);setNext(["development","court","bank","ratings"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;
