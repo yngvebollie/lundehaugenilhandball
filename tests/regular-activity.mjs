@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {regularLoad,monthBounds,onDate} from "../src/lib/regular.ts";
+import {regularComparison,regularLoad,monthBounds,onDate} from "../src/lib/regular.ts";
 const gym={athlete:"a",days:[2,4],minutes:45,weight:3,starts:"2026-11-01",ends:"2026-11-30"},dance={...gym,days:[3],minutes:60,weight:4};
 const rules=[gym,dance,{...gym,athlete:"b"}];
 assert.deepEqual(regularLoad(rules,"2026-11-02","2026-11-09","a"),{sessions:3,minutes:150,points:510});
@@ -7,4 +7,9 @@ assert.deepEqual(regularLoad(rules,...monthBounds("2026-11-30"),"a"),{sessions:1
 assert.deepEqual(regularLoad(rules,"2026-11-30","2026-12-07","a"),{sessions:0,minutes:0,points:0});
 assert.equal(onDate(rules,"2026-11-03").length,2);assert.equal(onDate(rules,"2026-11-03","a").length,1);
 assert.deepEqual(monthBounds("2026-12-31"),["2026-12-01","2027-01-01"]);
+const marked={...gym,checks:{"2026-11-03":{done:true,minutes:30,weight:2},"2026-11-05":{done:false,minutes:0,weight:0}}};
+const compare=(start,end)=>regularComparison([marked,rules[2]],start,end,"2026-11-09","a");
+assert.deepEqual(compare("2026-11-02","2026-11-09"),{planned:270,plannedMinutes:90,actual:60,actualMinutes:30,done:1,skipped:1,unknown:0,future:0});
+assert.equal(compare(...monthBounds("2026-11-09")).future,6);
+assert.equal(regularComparison(rules,"2026-11-02","2026-11-09","2026-11-09","b").unknown,2);
 console.log("PASS: ISO weekdays, multiple activities, inclusive end, month/year boundaries and athlete scoping.");

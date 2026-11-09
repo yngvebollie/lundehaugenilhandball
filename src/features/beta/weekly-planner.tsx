@@ -1,7 +1,7 @@
 import {court,courtEnabled,type Doc} from "@/lib/court/client";
 import {regular} from "@/lib/coach-feedback";
 import {onDate,type Rule} from "@/lib/regular";
-import {RegularEditor,LoadTotals} from "./regular-plan";
+import {DailyChecks,RegularEditor,LoadTotals} from "./regular-plan";
 import {wallTime} from "@/lib/court/model";
 import { useEffect,useState, type FormEvent } from "react";
 import { Activity, CalendarDays, ChevronLeft, ChevronRight, Columns3, List, ChartColumn } from "lucide-react";
@@ -70,7 +70,7 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
       const fixed=onDate(rules,day,target);
       return <div key={day} className={"week-day "+(day===date?"chosen":"")}><button type="button" aria-pressed={date===day} onClick={()=>setDate(day)}>{dayLabel(day)}</button>{fixed.map(r=><div className="week-item" key={r.id}><small>{r.clock.slice(0,5)} · {r.minutes} min</small><strong>{r.title}</strong>{coach&&<small>{players.find(p=>p.id===r.athlete)?.name}</small>}</div>)}{sessionsToday.map(d=><a key={d.id} className="week-item" href={"/okter?session="+encodeURIComponent(d.id)}><small>Håndballøkt · {wallTime((d.sharedPlan||d.plan).start).slice(11)}</small><strong>{(d.sharedPlan||d.plan).title}</strong></a>)}{!items.size&&!sessionsToday.length&&!fixed.length&&<small className="muted">Rest / open</small>}{[...items.entries()].map(([key,{p,count}])=><div className="week-item" data-kind={p.kind||"Session"} key={key}><small>{p.personal?"Personal · ":""}{p.kind||"Session"}</small><strong>{p.title}</strong><small>{p.start_time?.slice(0,5)} {p.minutes? p.minutes+" min":""}{count>1?" · "+count+" athletes":""}</small>{view==="Agenda"&&<details><summary>Session details</summary><ul>{p.exercises.map((x,i)=><li key={i}>{x}</li>)}</ul></details>}</div>)}</div>;
     })}</div>}
-    {regularError&&<p role="alert">{regularError} <button className="btn" onClick={()=>R(refresh+1)}>Prøv igjen</button></p>}{!coach&&!regularError&&<><RegularEditor data={data} rules={rules} changed={Rules}/>{courtError?<p role="alert">{courtError}</p>:<LoadTotals data={data} week={week} date={date} target={target} rules={rules} docs={courtDocs}/>}</>}
+    {regularError&&<p role="alert">{regularError} <button className="btn" onClick={()=>R(refresh+1)}>Prøv igjen</button></p>}{!coach&&!regularError&&<><DailyChecks data={data} rules={rules} day={date} changed={Rules}/><RegularEditor data={data} rules={rules} changed={Rules}/>{courtError?<p role="alert">{courtError}</p>:<LoadTotals data={data} week={week} date={date} target={target} rules={rules} docs={courtDocs}/>}</>}
     <details className="library-tools"><summary>{coach?"Schedule training or event":"Add to my schedule"}</summary><form className="grid" onSubmit={add}>
       <div className="field-pair"><label>Activity type<select value={kind} onChange={e=>setKind(e.target.value as EventKind)}>{["Session","Game","Practice"].map(k=><option key={k}>{k}</option>)}</select></label><label>Event date<input type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label></div>
       {coach&&kind==="Session"&&<label>Session to schedule<select value={template} onChange={e=>setTemplate(e.target.value)}><option value="">Custom session</option>{sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}

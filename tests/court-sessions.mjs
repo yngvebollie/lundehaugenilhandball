@@ -28,6 +28,7 @@ try{
  await pg.exec("create table public.beta_assignments(id uuid,squad uuid,athlete uuid,title text,kind text,exercises text[]);create table public.beta_workout_reviews(assignment uuid,exercise_stars smallint[],reviewed_at timestamptz);create table nhf_private.challenges(id uuid,team uuid,title text,exercises text[])");
  await pg.query("insert into beta_assignments values($1,$2,$3,'Strength','Session',array['Pushups','Planke'])",[aid,t,p]);await pg.query("insert into beta_workout_reviews values($1,array[4,0],now())",[aid]);await pg.query("insert into nhf_private.challenges values($1,$2,'Challenge',array['Pushups','Planke'])",[ch,t]);
  await pg.exec(await readFile(new URL("../supabase/migrations/20261109090453_assigned_activity_ratings.sql",import.meta.url),"utf8"));await pg.exec(await readFile(new URL("../supabase/migrations/20261109102800_coach_ratings_and_regular_activity.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");
+ await pg.exec("reset role");await pg.exec(await readFile(new URL("../supabase/migrations/20261109185344_regular_activity_checkins.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");
  const login=who=>pg.query("select set_config('test.uid',$1,false)",[who]);
  const rpc=(action,sid=null,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court($1,$2,$3,$4,$5,$6) v",[t,action,sid,rev,v,key]).then(r=>r.rows[0].v);
  const run=(cmd,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court_run($1,$2,$3,$4,$5,$6) v",[t,id,cmd,rev,key,v]).then(r=>r.rows[0].v);
@@ -45,6 +46,14 @@ try{
  await pg.query("select beta_share_rating($1,'','assignment',$2,'0','Pushups',5)",[t,aid]);await assert.rejects(ratings());await login(c);assert.equal((await ratings())[0].athlete,p);await assert.rejects(gym("add",{}));await login(outsider);await assert.rejects(ratings());await assert.rejects(gym());await login(p);
  const rule={kind:"gym",days:[2,4],minutes:45,weight:3,clock:"10:00",starts:"2025-01-01",ends:null};
  const fixed=await gym("add",rule);assert.equal(fixed[0].title,"Skolegym");await assert.rejects(gym("add",rule));await gym("add",{...rule,kind:"other",title:"Dans",days:[3]});
+ const d="2025-01-07",idRule=fixed[0].id,base={id:idRule,day:d,state:"done"};
+ const occ=async v=>(await gym("check",{...base,...v})).find(r=>r.id===idRule);
+ assert.deepEqual((await occ({})).checks[d],{done:true,minutes:45,weight:3});
+ const updated=await occ({minutes:30,weight:2});assert.equal(updated.minutes,45);assert.deepEqual(updated.checks,{[d]:{done:true,minutes:30,weight:2}});
+ await assert.rejects(occ({day:"2025-01-08"}));await assert.rejects(occ({day:"2099-01-01"}));await assert.rejects(occ({weight:6}));
+ await login(other);await assert.rejects(occ({}));await login(c);await assert.rejects(occ({}));assert.equal((await gym()).find(r=>r.id===idRule).checks[d].minutes,30);
+ await login(outsider);await assert.rejects(gym());await login(p);assert.deepEqual((await occ({state:"skipped"})).checks[d],{done:false,minutes:0,weight:0});
+ assert.deepEqual((await occ({state:"clear"})).checks,{});
  await login(other);assert.deepEqual(await gym(),[]);await assert.rejects(gym("stop",{id:fixed[0].id}));await login(c);assert.equal((await gym()).length,2);await login(p);assert.ok((await gym("stop",{id:fixed[0].id})).find(r=>r.id===fixed[0].id).ends);
  await login(c);const key=crypto.randomUUID(),save={plan,notes:{private:"PRIVATE_SENTINEL"}};
  assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);await assert.rejects(rpc("save",id,0,save));
