@@ -1,10 +1,10 @@
 import {originals} from "../development/model";
 export const themes=["Kast og mottak","Skudd","Finter","Forsvar","Samspill","Keeper","Fysisk"];
 export const blocks=["Oppvarming","Teknikk","Spill","Avslutning"] as const;
-export type Drill={nhfLink?:string;sourceMeta?:{category:string};id:string;title:string;instructions:string;theme:string;technique:string;age:string;equipment:string[];space:string;minPlayers:number|null;maxPlayers:number|null;minKeepers:number|null;challenge:string;training:number|null;source:"Klubb"|"NHF";vimeo:string;original:string;tip:string;block:string};
+export type Drill={filmUrl?:string;embedFilm?:boolean;filmLabel?:string;nhfLink?:string;sourceMeta?:{category:string};id:string;title:string;instructions:string;theme:string;technique:string;age:string;equipment:string[];space:string;minPlayers:number|null;maxPlayers:number|null;minKeepers:number|null;challenge:string;training:number|null;source:"Klubb"|"NHF"|"NHF-lenke";vimeo:string;original:string;tip:string;block:string};
 function drill(id:string,title:string,instructions:string,theme:string,block:string,minPlayers:number,equipment:string[]=["Baller"],space="Korridor",minKeepers=0):Drill{return {id,title,instructions,theme,technique:theme,age:"Alle",equipment,space,minPlayers,maxPlayers:null,minKeepers,challenge:"Tilpasset",training:600,source:"Klubb",vimeo:"",original:"",tip:"Avtal tempo og avstand med treneren.",block};}
 export const baseDrills:Drill[]=[
- drill("club:warm","Bevegelse med ball","Beveg dere i ledig rom. På signal bytter dere retning og finner en ny pasningspartner.","Kast og mottak","Oppvarming",2),
+ {...drill("club:warm","Bevegelse med ball","Beveg dere i ledig rom. På signal bytter dere retning og finner en ny pasningspartner.","Kast og mottak","Oppvarming",2),filmUrl:"https://vimeo.com/171375042",filmLabel:"Beslektet film: Lek med ball (NHF)"},
  drill("club:balance","Speil føttene","Følg partnerens sideveis bevegelser. Bytt hvem som leder.","Fysisk","Oppvarming",2,[]),
  ...originals.map((x,i)=>drill(x.id,x.title,x.instructions,i===2?"Finter":"Kast og mottak","Teknikk",2,i===0?["Baller"]:["Baller","Kjegler"])),
  drill("club:defend","Én mot én gjennom port","Forsvarer holder seg mellom angriper og port. Bytt roller etter hvert forsøk.","Forsvar","Teknikk",2,["Kjegler"]),

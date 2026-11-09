@@ -4,6 +4,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
  const p=await b.newPage({viewport:{width:390,height:844}}),base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217";
  await p.goto(base+"/okter/demo?vis=bank");await p.getByRole("searchbox").waitFor();
  p.setDefaultTimeout(8000);
+ await p.getByRole("button",{name:"NHF Øvelsesbank"}).click();await p.getByRole("navigation",{name:"Spillfase"}).getByRole("button",{name:/Kontra-retur/}).click();assert.equal(await p.locator(".court-drill-link").count(),1);await p.locator(".court-drill-link").click();assert.equal(await p.getByRole("link",{name:"Se film hos vimeo.com"}).getAttribute("href"),"https://vimeo.com/804889122");assert.equal(await p.locator("iframe").count(),0);await p.getByRole("button",{name:"Øvelsesbanken",exact:true}).click();
  const seed={source:"NHF",sourceMeta:{category:"Småspill"},theme:"Forsvar",technique:"Testteknikk",age:"10-12",original:"https://www.ovelsesbanken.no/ovelser/10-12",tip:"",instructions:"Fiktiv detaljtekst",vimeo:"",equipment:[],training:null};
  await p.evaluate(s=>localStorage.setItem("nhf-court-demo-v1:demo:bank",JSON.stringify([{...s,id:"nhf:fixtureA",title:"A testøvelse"},{...s,id:"nhf:fixtureB",title:"B testøvelse"}])),seed);
  await p.goto(base+"/okter?vis=bank");await p.getByRole("combobox",{name:"Kilde",exact:true}).selectOption("NHF");await p.getByLabel("Grupper etter").selectOption("category");await p.getByRole("heading",{name:"Småspill"}).waitFor();

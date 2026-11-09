@@ -1,4 +1,5 @@
 import {db,demo,type Snapshot} from "../beta";
+import {referenceDrills} from "./films";
 import {strength} from "../strength";
 import {baseDrills,validatePlan,type Drill,type Plan} from "./model";
 export const courtEnabled=demo||process.env.NEXT_PUBLIC_COURT_SESSIONS==="true";
@@ -37,7 +38,7 @@ export async function court(data:Snapshot,action="read",sid:string|null=null,exp
   else if(action!=="read")throw Error("Ingen tilgang.");
   result={sessions:sessions.filter(x=>(!sid||x.id===sid)&&(coach||visible(x))).map(x=>({id:x.id,plan:coach?x.plan:x.shared!,rev:x.rev,published:x.published,archived:x.archived,edited:x.edited,seen:seen[x.id],...(coach?{notes:x.notes,audience:x.audience,sharedPlan:x.shared}:{})})),favorites:fav,catalog:custom,teamExercises:data.library.map(e=>({id:e.id,name:e.name,dose:e.dose}))};
  }
- const catalog=[...baseDrills,...result.catalog,...result.teamExercises.map(x=>existing(x.id,x.name,x.dose)),...strength.map(x=>existing(x.id,x.name,x.dose))];
+ const catalog=[...baseDrills,...referenceDrills,...result.catalog,...result.teamExercises.map(x=>existing(x.id,x.name,x.dose)),...strength.map(x=>existing(x.id,x.name,x.dose))];
  return {sessions:result.sessions||[],favorites:(result.favorites||[]).filter(k=>catalog.some(x=>x.id===k)),catalog};
 }
 export type Run={snap:Plan;index:number;steps:{status:string;elapsed:number}[];since:number|null;finished:boolean;owner:string;rev:number;now:number;reflection:string|null};

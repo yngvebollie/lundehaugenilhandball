@@ -3,6 +3,7 @@ import {ArrowDown,ArrowUp,Copy,Eye,LockKeyhole,Plus,Save,Shuffle,Trash2,Unlock,W
 import type {Snapshot} from "@/lib/beta";
 import {court,type Doc,type Packet} from "@/lib/court/client";
 import {blank,blocks,copyPlan,generate,initialRules,item,mins,nextLine,osloInstant,themes,total,validatePlan,wallTime,type Drill,type Item,type Plan,type Rules} from "@/lib/court/model";
+import {media} from "@/lib/court/films";
 import {CourtBank} from "./court-bank";
 import {CourtSummary,itemTitle} from "./court-view";
 type Props={data:Snapshot;packet:Packet;initial:Plan;automatic:boolean;existing?:Doc;changed:()=>void;close:()=>void};
@@ -52,7 +53,7 @@ export function CourtBuilder({data,packet,initial,automatic,existing,changed,clo
  {cur.ex?<label>Bytt øvelse<select value={cur.ex} onChange={e=>setItem({ex:e.target.value,prepareVideo:false})}>{packet.catalog.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>:<label>Aktivitet<input value={cur.manual} onChange={e=>setItem({manual:e.target.value})}/></label>}
  <label>Blokk<input list="court-blocks" value={cur.block} onChange={e=>setItem({block:e.target.value})}/></label><datalist id="court-blocks">{blocks.map(x=><option key={x}>{x}</option>)}</datalist>
  <div className="court-fields">{(["work","setup"] as const).map(k=><label key={k}>{k==="work"?"Øving (min)":"Overgang (min)"}<input type="number" min="0" step="0.1" value={mins(cur[k])} onChange={e=>setItem({[k]:Math.round(Number(e.target.value)*60)})}/></label>)}</div>
- {packet.catalog.some(x=>x.id===cur.ex&&/^\d{1,15}$/.test(x.vimeo))&&<label className="dev-check"><input type="checkbox" checked={!!cur.prepareVideo} onChange={e=>setItem({prepareVideo:e.target.checked})}/>Be spillerne se videoen før trening</label>}
+ {packet.catalog.some(x=>x.id===cur.ex&&!!media(x))&&<label className="dev-check"><input type="checkbox" checked={!!cur.prepareVideo} onChange={e=>setItem({prepareVideo:e.target.checked})}/>Be spillerne se videoen før trening</label>}
  <label>Spillerinstruksjon<textarea value={cur.instructions} onChange={e=>setItem({instructions:e.target.value})}/></label><label>Læringspunkt<input value={cur.points} onChange={e=>setItem({points:e.target.value})}/></label><label>Gruppering<input value={cur.group} onChange={e=>setItem({group:e.target.value})}/></label>
  <label>Privat trenernotat<textarea value={notes[cur.id]||""} onChange={e=>edit(p,{...notes,[cur.id]:e.target.value})}/></label><button aria-pressed={cur.locked} onClick={()=>setItem({locked:!cur.locked})}>{cur.locked?<LockKeyhole size={16}/>:<Unlock size={16}/>} {cur.locked?"Låst ved regenerering":"Lås aktivitet"}</button></>:<p>Velg eller legg til en aktivitet.</p>}
  <label>Økttype<select value={p.purpose} onChange={e=>patch({purpose:e.target.value as Plan["purpose"]})}><option value="team">Lagtrening</option><option value="individual">Egentrening</option></select></label>

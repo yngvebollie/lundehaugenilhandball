@@ -4,6 +4,11 @@ import {readFile} from "node:fs/promises";
 import {PGlite} from "@electric-sql/pglite";
 registerHooks({resolve(s,c,next){if(s==="../development/model"&&c.parentURL?.includes("/court/"))return next("../development/model.ts",c);return next(s,c);}});
 const {baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
+const {referenceDrills,media}=await import("../src/lib/court/films.ts");
+for(const d of referenceDrills){assert.ok(media(d)?.href);assert.equal(media(d)?.embed,"");}
+assert.equal(media({...baseDrills[0],filmUrl:"javascript:alert(1)"}),null);
+assert.equal(media({...baseDrills[0],filmUrl:"https://youtu.be/Abc1234DEFg",embedFilm:true}).embed,"https://www.youtube-nocookie.com/embed/Abc1234DEFg");
+assert.equal(media({...baseDrills[0],source:"NHF",vimeo:""}),null);
 const {sourceRecords,fetchNHF}=await import("../src/lib/court/source.ts");
 const plan=generate(baseDrills,initialRules);assert.equal(total(plan),5400);assert.equal(plan.items.length,7);plan.items[1].locked=true;plan.items[1].points="Behold";
 const regen=generate(baseDrills,initialRules,plan,2);assert.deepEqual(regen.items[1],plan.items[1]);assert.equal(total(regen),5400);
@@ -19,12 +24,14 @@ try{
  create function nhf_private.coaches(t uuid) returns boolean language sql security definer as $$select exists(select from public.beta_members where squad=t and id=auth.uid() and role='coach')$$;
  create function nhf_private.club_active() returns boolean language sql as $$select coalesce(current_setting('test.admin',true),'false')='true' and auth.uid()='${c}'$$;`);
  await pg.query("insert into beta_teams values($1),($2)",[t,dest]);for(const [a,team,role] of [[c,t,"coach"],[second,t,"coach"],[p,t,"athlete"],[other,t,"athlete"],[outsider,dest,"coach"]]){await pg.query("insert into auth.users values($1)",[a]);await pg.query("insert into beta_members values($1,$2,$3)",[a,team,role]);}
- await pg.exec(await readFile(new URL("../supabase/migrations/20261108190430_court_sessions.sql",import.meta.url),"utf8"));await pg.exec("set role authenticated");
+ await pg.exec(await readFile(new URL("../supabase/migrations/20261108190430_court_sessions.sql",import.meta.url),"utf8"));await pg.exec(await readFile(new URL("../supabase/migrations/20261109072404_court_exercise_ratings.sql",import.meta.url),"utf8"));for(const x of referenceDrills)assert.equal((await pg.query("select nhf_private.court_available($1,$2) ok",[t,x.id])).rows[0].ok,true);await pg.exec("set role authenticated");
  const login=who=>pg.query("select set_config('test.uid',$1,false)",[who]);
  const rpc=(action,sid=null,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court($1,$2,$3,$4,$5,$6) v",[t,action,sid,rev,v,key]).then(r=>r.rows[0].v);
  const run=(cmd,rev=0,v={},key=crypto.randomUUID())=>pg.query("select beta_court_run($1,$2,$3,$4,$5,$6) v",[t,id,cmd,rev,key,v]).then(r=>r.rows[0].v);
  const imp=(a,rs=[])=>pg.query("select beta_court_source($1,$2,$3) v",[t,a,JSON.stringify(rs)]).then(r=>r.rows[0].v);
  const rights=(a)=>pg.query("select beta_court_rights($1,$2,'TEST FIXTURE APPROVAL',true)",[t,a]);
+ const stars=(score,id="club:warm",team=t)=>pg.query("select beta_court_rating($1,$2,$3) as n",[team,id,score]).then(r=>r.rows[0].n);
+ await login(p);assert.equal(await stars(null),null);assert.equal(await stars(1),1);assert.equal(await stars(5),5);assert.equal(await stars(null),5);await assert.rejects(stars(0));await assert.rejects(stars(6));await assert.rejects(stars(4,"missing"));await assert.rejects(stars(4,"club:warm",dest));await login(other);assert.equal(await stars(null),null);await login(c);await assert.rejects(stars(5));await assert.rejects(pg.query("select * from nhf_private.court_exercise_ratings"));
  await login(c);const key=crypto.randomUUID(),save={plan,notes:{private:"PRIVATE_SENTINEL"}};
  assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);assert.equal((await rpc("save",id,0,save,key)).sessions[0].rev,1);await assert.rejects(rpc("save",id,0,save));
  await login(p);await assert.rejects(rpc("read",id));await assert.rejects(rpc("save",id,1,save));await login(c);await assert.rejects(rpc("publish",id,1,{scope:"players",players:[outsider]}));
