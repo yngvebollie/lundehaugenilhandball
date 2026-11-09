@@ -10,6 +10,7 @@ export async function regular(data:Snapshot,action="read",v:Partial<Rule>={}):Pr
   const r={...v,id:crypto.randomUUID(),team:data.me.squad,athlete:data.me.id} as Rule;
   const min=(time:string)=>Number(time.slice(0,2))*60+Number(time.slice(3,5));
   if(!r.days.length||!r.starts||r.ends&&r.ends<r.starts||min(r.clock)+r.minutes>=1440)throw Error("Kontroller dager, periode og klokkeslett.");
+  if(r.kind==="gym"&&rows.some(x=>x.profile_gym&&x.athlete===r.athlete&&x.days.some(d=>r.days.includes(d))&&(!x.ends||r.starts<=x.ends)&&(!r.ends||x.starts<=r.ends)))throw Error("Skolegym er allerede planlagt på en av disse dagene");
   if(rows.some(x=>x.athlete===r.athlete&&x.days.some(d=>r.days.includes(d))&&(!x.ends||r.starts<=x.ends)&&(!r.ends||x.starts<=r.ends)&&min(r.clock)<min(x.clock)+x.minutes&&min(x.clock)<min(r.clock)+r.minutes))throw Error("Aktiviteten overlapper en annen fast aktivitet");
   rows.push(r);
  }else if(action==="stop"){rows=rows.flatMap(r=>r.id!==v.id||r.athlete!==data.me.id?[r]:r.checks?.[today()]?[{...r,ends:today()}]:r.starts>=today()?[]:[{...r,ends:r.ends&&r.ends<today()?r.ends:plusDay(today(),-1)}]);}

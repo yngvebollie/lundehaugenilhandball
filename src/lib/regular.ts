@@ -1,6 +1,6 @@
 export type Check={done:boolean;minutes:number;weight:number};
 export type CheckInput={id:string;day:string;state:"done"|"skipped"|"clear";minutes?:number;weight?:number};
-export type Rule={id:string;team:string;athlete:string;kind:"gym"|"other";title:string;days:number[];clock:string;minutes:number;weight:number;starts:string;ends:string|null;checks?:Record<string,Check>};
+export type Rule={id:string;team:string;athlete:string;kind:"gym"|"other";profile_gym?:boolean;title:string;days:number[];clock:string;minutes:number;weight:number;starts:string;ends:string|null;checks?:Record<string,Check>};
 export const weekdays=["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
 export const intensity=["","Lett","Moderat","Moderat+","Hard","Svært hard"];
 export function onDate(rules:Rule[],day:string,target=""){

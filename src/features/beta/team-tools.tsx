@@ -1,4 +1,4 @@
-import {AthleteName,joinName,legacyNames} from "./athlete-name";
+import {CoachPositions} from "./player-wizard";
 import { useState, type FormEvent } from "react";
 import { Users, UserRound,KeyRound,Link as LinkIcon,Mail,Copy,RefreshCw } from "lucide-react";
 import { createTeam, demo, emailInvites, inviteBatch, saveTeamDetails, saveProfile, type Member, type Snapshot } from "@/lib/beta";
@@ -17,6 +17,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [logo,setLogo]=useState(savedLogo);
   const [newName,setNewName]=useState(""),[status,setStatus]=useState("");
   const [tab,setTab]=useState("Inviter"),[method,setMethod]=useState("Lenke");
+  useEffect(()=>{if(new URLSearchParams(location.search).get("vis")==="posisjoner")setTab("Posisjonsønsker");},[]);
   const [email,setEmail]=useState("");
   const [role,setRole]=useState<Member["role"]>("athlete");
   const [links,setLinks]=useState<{email:string;url:string}[]>([]);
@@ -30,7 +31,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
       setLinks(result.links);setStatus(result.accepted?result.links.length+" invitation email(s) accepted for sending.":"Email acceptance not confirmed. Share the links below.");
     });
   }
-  return <section className="panel panel-pad grid" id="team"><h2><Users/> {teamName}</h2><nav className="workspace-tabs" aria-label="Lagadministrasjon">{["Inviter","Medlemmer","Lagprofil","Søknader"].map(v=><button className={tab===v?"current":""} key={v} aria-pressed={tab===v} onClick={()=>{setTab(v);setStatus("");}}>{v}</button>)}</nav>
+  return <section className="panel panel-pad grid" id="team"><h2><Users/> {teamName}</h2><nav className="workspace-tabs" aria-label="Lagadministrasjon">{["Inviter","Medlemmer","Posisjonsønsker","Lagprofil","Søknader"].map(v=><button className={tab===v?"current":""} key={v} aria-pressed={tab===v} onClick={()=>{setTab(v);setStatus("");}}>{v}</button>)}</nav>
     {tab==="Lagprofil"&&<>
     <p className="muted">Coaching staff · {data.roster.filter(m=>m.role==="coach").map(m=>m.name).join(", ")}</p>
     <form className="grid" onSubmit={async e=>{e.preventDefault();const next=name.trim();if(next&&await run(()=>saveTeamDetails(data.me.squad,next,logo))){setName(next);setStatus("Team details saved.");}}}><label>Team name<input value={name} maxLength={80} required onChange={e=>{setName(e.target.value);setStatus("");}}/></label>
@@ -38,6 +39,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     {logo&&<button className="btn" type="button" onClick={()=>setLogo("")}>Remove logo</button>}<button className="btn primary" disabled={busy||!name.trim()||(name.trim()===teamName&&logo===savedLogo)}>Save</button></form>
     <details className="library-tools"><summary>Add another team</summary><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
     </>}
+    {tab==="Posisjonsønsker"&&<CoachPositions data={data}/>}
     {tab==="Medlemmer"&&<TeamStaff data={data} busy={busy} run={run}/>}
     {tab==="Inviter"&&<><h3>Inviter til {teamName}</h3>
     <label>Rolle i laget<select value={role} onChange={e=>{setRole(e.target.value as Member["role"]);setLinks([]);setStatus("");setCopied(false);}}><option value="athlete">Utøver</option>{data.admins.includes(data.me.id)&&<option value="coach">Trener</option>}</select></label>
@@ -74,10 +76,9 @@ async function thumbnail(file:File,fit=false){
   }finally{img.close();}
 }
 export function Profile({me,busy,run}:{me:Member;busy:boolean;run:Run}){
-  const old=legacyNames(me.name);
-  const [given,setGiven]=useState(me.given_name||old.given),[family,setFamily]=useState(me.family_name||old.family),[shirt,setShirt]=useState(me.shirt_number||""),[position,setPosition]=useState(me.position||""),[bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
+  const [bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
   return <section className="panel panel-pad grid"><h2><UserRound/> Utøverprofil</h2>{photo&&<img src={photo} width={80} height={80} alt="Profilbilde av utøveren"/>}
     <label>Profilbilde<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e=>{const f=e.target.files?.[0];if(f)try{setPhoto(await thumbnail(f));setNote("");}catch(err){setNote((err as Error).message);}}}/></label>{photo&&<button className="btn" onClick={()=>setPhoto("")}>Fjern profilbilde</button>}
-    <AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/><label>Draktnummer<input type="text" inputMode="numeric" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label><label>Playing position<input value={position} maxLength={80} onChange={e=>setPosition(e.target.value)}/></label><label>About me<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
-    <button className="btn primary" disabled={busy||!given.trim()||!family.trim()||joinName(given,family).length>100||!!shirt&&!/^[1-9][0-9]{0,2}$/.test(shirt)} onClick={async()=>{if(await run(()=>saveProfile(me,{name:joinName(given,family),given_name:given.trim(),family_name:family.trim(),position,bio,photo,shirt_number:shirt||null})))setNote("Profilen er lagret.");}}>Lagre profil</button>{note&&<p role="status">{note}</p>}</section>;
+    <a className="btn" href="/athlete?profil=rediger">Rediger spillerprofil og posisjonsønsker</a><label>Om meg<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
+    <button className="btn primary" disabled={busy} onClick={async()=>{if(await run(()=>saveProfile(me,{name:me.name,given_name:me.given_name,family_name:me.family_name,shirt_number:me.shirt_number,position:me.position,bio,photo})))setNote("Profilen er lagret.");}}>Lagre profil</button>{note&&<p role="status">{note}</p>}</section>;
 }

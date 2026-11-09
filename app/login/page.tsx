@@ -34,6 +34,7 @@ export default function Login(){
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
     const qp=new URLSearchParams(location.search);setNext(["development","court","bank","ratings"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
+    if(param==="athlete"&&qp.get("register")==="1")setJoin(true);
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
     if(!db)return;

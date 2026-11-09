@@ -50,7 +50,7 @@ export default function Apply(){
       await join(signed||email);
     }catch(err){setNote((err as Error).message||"Registrering mislyktes.");}finally{setBusy(false);}
   }
-  async function openTeam(){if(!info)return;const id=demo?sessionStorage.getItem("nhf-persona"):(await db?.auth.getUser())?.data.user?.id;if(id)selectTeam(id,info.id);location.assign(info.role==="coach"?"/":"/athlete");}
+  async function openTeam(){if(!info)return;const id=demo?sessionStorage.getItem("nhf-persona"):(await db?.auth.getUser())?.data.user?.id;if(id)selectTeam(id,info.id);location.assign(info.role==="coach"?"/":"/athlete?profil=ny");}
   const success=mail||info&&request?.status==="Approved";
   return <PublicShell><section className="entry-content grid">
     {success?<><SignupSuccess name={name} email={email||signed} team={info?.name} role={info?.role||(short?shortRole:"athlete")} known={mail==="created"} joined={request?.status==="Approved"} onOpen={request?.status==="Approved"?openTeam:undefined}/>{mail&&!request&&<button className="btn" type="button" disabled={busy} onClick={()=>{setMail("");setExisting(true);setMagic(false);setNote(signed?"":"Logg inn med passordet ditt for å bli med på laget.");}}>Jeg har bekreftet e-posten</button>}</>:<>

@@ -37,8 +37,8 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
   const finished=plans.filter(p=>completed(p.id)===p.exercises.length);
   const due=plans.filter(p=>p.day<=now);
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
-  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"My profile":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":tab==="Merker"?"Merker":"My progress"}</h1></header>
-    <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name}</button>)}</nav>
+  return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"Min profil":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":tab==="Merker"?"Merker":"My progress"}</h1></header>
+    <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name==="Profile"?"Min profil":t.name}</button>)}</nav>
     {courtEnabled&&(tab==="Today"||tab==="Messages")&&<CourtNotices key={data.me.squad+data.me.id} data={data}/>}
     {courtEnabled&&tab==="Today"&&<a className="challenge-shortcut" href="/okter"><Dumbbell size={17}/>Mine økter og øvelsesbank</a>}
     {developmentVisible&&(tab==="Today"||tab==="Profile")&&<a className="challenge-shortcut" href="/utvikling"><Activity size={17}/> Min utvikling</a>}
