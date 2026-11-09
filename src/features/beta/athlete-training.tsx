@@ -11,6 +11,7 @@ import {challenges,phase,type Challenge} from "@/lib/challenges";
 import {AchievementBar,Challenges} from "./challenges";
 import {BadgePanel} from "./badge-panel";
 import {Medal,Trophy} from "lucide-react";
+import {AssignedRating} from "./court-rating";
 import {CourtNotices} from "./court-notices";
 import {courtEnabled} from "@/lib/court/client";
 import {developmentVisible} from "@/lib/development/flags";
@@ -60,8 +61,8 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
         <fieldset className="exercise-list"><legend>{p.kind&&p.kind!=="Session"?"Attendance":"Exercise checklist"}</legend>{p.exercises.map((line,i)=>{
           const checked=data.checks.some(c=>c.assignment===p.id&&c.step===i);
           const text=line.toLocaleLowerCase().trim(),eligible=openChallenges.flatMap(c=>(c.exercises||[]).filter(n=>{const name=n.toLocaleLowerCase().trim();return text===name||text.startsWith(name)&&/^(?:\\s*[·:]|\\s+\\d)/.test(text.slice(name.length));}).map(n=>({id:c.id,title:c.title,exercise:n})));
-          return <div key={i}><label className={"exercise-row "+(checked?"checked":"")}><input type="checkbox" checked={checked} disabled={busy||!active} onChange={async e=>{const value=e.target.checked;if(await run(()=>checkExercise(p.id,i,value))&&workout&&value&&n+1===p.exercises.length)setCelebrate(p.id);}}/><span>{line}</span></label>{eligible.map(c=><button type="button" className="challenge-shortcut" key={c.id+c.exercise} onClick={()=>{setChallengeStart(c);setTab("Utfordringer");}}><Trophy size={14}/>Registrer sett i {c.title}</button>)}</div>;
-        })}</fieldset>
+          return <div key={i}><label className={"exercise-row "+(checked?"checked":"")}><input type="checkbox" checked={checked} disabled={busy||!active} onChange={async e=>{const value=e.target.checked;if(await run(()=>checkExercise(p.id,i,value))&&workout&&value&&n+1===p.exercises.length)setCelebrate(p.id);}}/><span>{line}</span></label><AssignedRating data={data} kind="assignment" activity={p.id} item={String(i)} caption={!workout&&line==="Attended "+p.kind?.toLowerCase()?p.title:line}/>{eligible.map(c=><button type="button" className="challenge-shortcut" key={c.id+c.exercise} onClick={()=>{setChallengeStart(c);setTab("Utfordringer");}}><Trophy size={14}/>Registrer sett i {c.title}</button>)}</div>;
+        })}</fieldset>{!p.exercises.length&&<AssignedRating data={data} kind="assignment" activity={p.id} item="activity" caption={p.title}/>}
         {n===p.exercises.length&&workout&&<ReviewForm session={p} review={data.reviews.find(r=>r.assignment===p.id)} run={run} busy={busy}/>}
         {celebrate===p.id&&<Celebration title={p.title} onClose={()=>setCelebrate("")}/>}
         {n===p.exercises.length&&<button className="btn" onClick={async()=>{const text="Completed "+p.title+" · "+p.day;try{if(navigator.share)await navigator.share({text});else {await navigator.clipboard.writeText(text);setShared(p.id);}}catch{setShared("");}}}>{shared===p.id?"Completion copied":"Share completion"}</button>}

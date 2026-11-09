@@ -6,6 +6,7 @@ import {development} from "@/lib/development/client";
 import {axisObservation,busyGoal,countPractice,journey,label,levels,localDay,profiles,type Goal,type Profile} from "@/lib/development/model";
 import type {Packet} from "@/lib/development/types";
 import {plannerBridge} from "@/lib/development/flags";
+import {CourtRating} from "./court-rating";
 import {DevelopmentSetup} from "./development-setup";
 import {MeritReview} from "./development-merits";
 import {BulkPractice} from "./development-bulk";
@@ -55,7 +56,7 @@ function PlayerPage({data,person}:{data:Snapshot;person:string}){
  return <><nav className="dev-tabs" aria-label="Utviklingsvisning">{tabs.map(k=><button key={k} aria-pressed={tab===k} onClick={()=>{T(k);D(false);F("");X("");SK("");}}>{k}</button>)}</nav>{fail}{note&&<p className="dev-saved" role="status">{note}</p>}
  {form?<Editor key={form+goalId} kind={form} profile={profile} initialSkill={skill} packet={packet} g={form==="new"?undefined:g} close={()=>F("")} busy={busy} write={write}/>:
  exercise&&selected&&g?<section className="dev-panel dev-detail"><button className="dev-back" onClick={()=>{X("");D(true);}}><ArrowLeft/> Mitt mål</button><h3><Dumbbell/> {selected.title}</h3><p>{selected.instructions}</p><p><b>Trenerens holdepunkt:</b> {g.assignments.find(a=>a.exercise===exercise)?.cue||"Ingen ekstra tilpasning."}</p><small>{selected.format} · {selected.equipment} · {selected.space}</small>
- {reviewable&&<PracticeButton plan={packet} exercise={exercise} goal={g} busy={busy} write={write}/>}
+ {!coach&&<CourtRating key={person+exercise} data={data} id={exercise}/>}{reviewable&&<PracticeButton plan={packet} exercise={exercise} goal={g} busy={busy} write={write}/>}
  {coach&&plannerBridge&&data.me.squad!=="development-preview"&&<a className="dev-secondary" href={"/?devExercise="+encodeURIComponent(exercise)+"#builder"}>Til øktutkast <ChevronRight size={16}/></a>}</section>:
  skill?<section className="dev-panel dev-detail"><button className="dev-back" onClick={()=>SK("")}><ArrowLeft/> Oversikt</button><h3><Activity/> {label(skill)}</h3><strong>{obs?levels[obs.level-1]:"Ikke vurdert"}</strong>{obs&&<p>{dateText(obs.observed)} · {obs.rubric} · {obs.criterion}<br/>{obs.context}<br/>{obs.feedback}</p>}
  {(profiles[profile] as Record<string,string[]>)[skill]&&<div className="dev-actions">{(profiles[profile] as Record<string,string[]>)[skill].map(sub=><button key={sub} onClick={()=>SK(sub)}>{label(sub)}</button>)}</div>}

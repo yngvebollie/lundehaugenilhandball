@@ -12,6 +12,7 @@ export function AchievementBar({data}:{data:Snapshot}){
   return <details className="achievement-bar"><summary><Medal size={19}/><strong>Mine prestasjoner</strong><span>{earned} merker · {awards.length} utfordringer</span></summary>
     <a href="/merker">Se alle mine merker</a>{error?<p role="alert">{error}</p>:!awards.length?<p>Ingen avsluttede utfordringer ennå.</p>:awards.map(a=><div key={a.id}><Medal size={16}/><span><strong>{a.winner?"Vinner":"Deltaker"} · {a.title}</strong><small>{a.total} {a.unit} · {a.ends}</small></span></div>)}</details>;
 }
+import {AssignedRating} from "./court-rating";
 export function Challenges({data,startWith}:{data:Snapshot;startWith?:{id:string;exercise:string}}){
   const coach=data.me.role==="coach";
   const [all,setAll]=useState<Challenge[]>([]),[id,setId]=useState(startWith?.id||""),[board,setBoard]=useState<Score[]>([]),[busy,setBusy]=useState(false),[note,setNote]=useState("");
@@ -50,6 +51,7 @@ export function Challenges({data,startWith}:{data:Snapshot;startWith?:{id:string
         {!!current.exercises?.length&&<label>Øvelse<select value={exercise||current.exercises[0]} onChange={e=>{setExercise(e.target.value);entry.current="";}}>{current.exercises.map(n=><option key={n}>{n}</option>)}</select></label>}
         <label>{current.unit} i dette settet<input type="number" inputMode="numeric" min={1} max={100000} step={1} required value={amount} onChange={e=>{entry.current="";setAmount(e.target.value);}}/></label>
         <button disabled={busy||!amount} className="btn primary"><Plus size={16}/>Registrer sett</button></form>}
+      {!coach&&(current.exercises?.length?current.exercises.map((name,i)=><AssignedRating key={current.id+":"+i} data={data} kind="challenge" activity={current.id} item={String(i)} caption={name}/>):<AssignedRating data={data} kind="challenge" activity={current.id} item="activity" caption={current.title}/>)}
       {!coach&&<details className="library-tools" open><summary>Mine registreringer · {board.find(x=>x.mine)?.total||0} {current.unit}</summary>{history.length?history.map(h=><div className="challenge-ex-row" key={h.entry}><span>{h.logged_at?new Date(h.logged_at).toLocaleString("nb-NO",{timeZone:"Europe/Oslo",dateStyle:"short",timeStyle:"short"}):""} · {h.exercise||current.title}</span><strong>{h.amount} {current.unit}</strong></div>):<p>Ingen egne sett registrert.</p>}</details>}
       <header className="feature-heading"><h3>Resultatliste</h3><small>{current.anonymous?<><ShieldCheck size={14}/> Anonym</>:"Synlig for laget"}</small></header>
       {!coach&&<small>{board.some(r=>r.mine)?"Din plass: "+board.find(r=>r.mine)!.place+" av "+board.length:"Din plass vises etter ditt første sett."}</small>}

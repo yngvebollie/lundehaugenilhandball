@@ -537,5 +537,7 @@ h3 {
 input::placeholder,textarea::placeholder{color:var(--muted-2)}
 .body-diagram text{fill:var(--muted)}
 .chart-line{background-color:var(--bg-soft)}
+.assigned-rating{margin:4px 0 12px;font-size:.875rem}.assigned-rating summary{cursor:pointer;color:var(--accent);padding:5px 0}.assigned-rating .court-rating button,.dev-room .court-rating button{width:44px;min-height:44px;color:var(--accent);border:1px solid var(--border);background:var(--panel);border-radius:5px}
+
 
 

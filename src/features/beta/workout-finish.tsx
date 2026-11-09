@@ -19,11 +19,10 @@ function Stars({label,value,onChange,optional=false}:{label:string;value:number;
   return <fieldset className="star-picker"><legend>{label}</legend><div>{[1,2,3,4,5].map(n=><button key={n} type="button" aria-label={n+" out of 5"} aria-pressed={value===n} onClick={()=>onChange(optional&&value===n?0:n)}><Star size={22} fill={n<=value?"currentColor":"none"}/></button>)}</div></fieldset>;
 }
 export function ReviewForm({session,review,run,busy}:{session:Assignment;review?:WorkoutReview;run:Run;busy:boolean}){
-  const [stars,setStars]=useState(review?.stars||0),[steps,setSteps]=useState(review?.exercise_stars||session.exercises.map(()=>0)),[comment,setComment]=useState(review?.comment||""),[status,setStatus]=useState("");
-  return <form className="grid workout-review" onSubmit={async e=>{e.preventDefault();if(await run(()=>saveReview({assignment:session.id,stars,exercise_stars:steps,comment:comment.trim()},Boolean(review))))setStatus("Review shared with your coach.");}}>
-    <h3>Workout review</h3><p className="muted">How useful was the training? Rate the workout and any exercises you want to review.</p>
+  const [stars,setStars]=useState(review?.stars||0),[comment,setComment]=useState(review?.comment||""),[status,setStatus]=useState("");
+  return <form className="grid workout-review" onSubmit={async e=>{e.preventDefault();if(await run(()=>saveReview({assignment:session.id,stars,exercise_stars:review?.exercise_stars||session.exercises.map(()=>0),comment:comment.trim()},Boolean(review))))setStatus("Review shared with your coach.");}}>
+    <h3>Workout review</h3><p className="muted">How useful was the training? Rate the workout as a whole.</p>
     <Stars label="Overall workout" value={stars} onChange={n=>{setStars(n);setStatus("");}}/>
-    <details className="library-tools"><summary>Rate individual exercises</summary>{session.exercises.map((x,i)=><Stars key={i} label={x} value={steps[i]} optional onChange={n=>{setSteps(steps.map((s,k)=>k===i?n:s));setStatus("");}}/>)}</details>
     <label>Comment for your coach<textarea maxLength={1000} value={comment} onChange={e=>{setComment(e.target.value);setStatus("");}}/></label>
     <button disabled={busy||!stars} className="btn">{review?"Update review":"Save review"}</button>{status&&<p role="status">{status}</p>}
   </form>;

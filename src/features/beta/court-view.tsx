@@ -3,6 +3,7 @@ import {ArrowLeft,ArrowRight,Pause,Play,Printer,SkipForward,Square,RotateCcw} fr
 import {mins,nextLine,wallTime,type Drill,type Plan} from "@/lib/court/model";
 import {runCourt,type Run} from "@/lib/court/client";
 import type {Snapshot} from "@/lib/beta";
+import {AssignedRating} from "./court-rating";
 import {DrillDetail} from "./court-bank";
 function exerciseFor(i:Plan["items"][number],bank:Drill[]){const d=bank.find(x=>x.id===i.ex);return d&&i.snapshot?{...i.snapshot,vimeo:d.vimeo,original:d.original,filmUrl:d.filmUrl,embedFilm:d.embedFilm,filmLabel:d.filmLabel}:d;}
 export const itemTitle=(i:Plan["items"][number],bank:Drill[])=>i.ex?exerciseFor(i,bank)?.title||"Utilgjengelig øvelse":i.manual;
@@ -12,7 +13,7 @@ export function CourtSummary({plan:p,bank,seen,onSeen,viewer}:{viewer?:Snapshot;
  function show(n:number){I(n);O(true);onSeen?.(p.items[n].id);}
  return <section className="court-share"><div className="dev-actions"><h2>{p.title}</h2><button onClick={()=>window.print()}><Printer size={16}/>Skriv ut / PDF</button></div><p>{p.goal}</p><small>{p.start?wallTime(p.start).replace("T"," · "):"Uten fast dato"} · {p.venue||"Sted ikke satt"} · {mins(p.items.reduce((n,x)=>n+x.work+x.setup,0))} min</small><p><b>Utstyr:</b> {p.kit||"Ikke angitt"}</p>
  <ol className="court-timeline">{nextLine(p).map((i,n)=><li key={i.id}><button onClick={()=>show(n)} aria-pressed={open&&index===n}><small>{p.start?wallTime(new Date(Date.parse(p.start)+i.offset*1000).toISOString()).slice(11):mins(i.offset)+" min"}</small><span><strong>{itemTitle(i,bank)}</strong><small>{i.block} · {mins(i.work)} min{ i.setup>0&&" + "+mins(i.setup)+" min overgang"}</small><small className="court-print-only">{i.instructions} {i.points} {i.ex&&bank.find(d=>d.id===i.ex)?.source} {i.ex&&bank.find(d=>d.id===i.ex)?.original}</small></span><ArrowRight size={16}/></button></li>)}</ol>
- {it&&open&&<div className="dev-panel court-step"><h3>Aktivitet {index+1} av {p.items.length}</h3>{drill?<DrillDetail key={drill.id} d={drill} viewer={viewer}/>:<p>{itemTitle(it,bank)}</p>}{it.instructions&&<p>{it.instructions}</p>}{it.points&&<p><b>Dette øver vi på:</b> {it.points}</p>}<div className="dev-actions"><button disabled={!index} onClick={()=>show(index-1)}><ArrowLeft size={16}/>Forrige</button><button disabled={index===p.items.length-1} onClick={()=>show(index+1)}>Neste øvelse<ArrowRight size={16}/></button></div></div>}</section>;
+ {it&&open&&<div className="dev-panel court-step"><h3>Aktivitet {index+1} av {p.items.length}</h3>{drill?<DrillDetail key={drill.id} d={drill} viewer={viewer}/>:<p>{itemTitle(it,bank)}</p>}{!it.ex&&viewer?.me.role==="athlete"&&<AssignedRating data={viewer} kind="manual" activity={p.id} item={it.id} caption={it.manual}/>} {it.instructions&&<p>{it.instructions}</p>}{it.points&&<p><b>Dette øver vi på:</b> {it.points}</p>}<div className="dev-actions"><button disabled={!index} onClick={()=>show(index-1)}><ArrowLeft size={16}/>Forrige</button><button disabled={index===p.items.length-1} onClick={()=>show(index+1)}>Neste øvelse<ArrowRight size={16}/></button></div></div>}</section>;
 }
 const time=(ms:number)=>[Math.floor(ms/60000),Math.floor(ms/1000)%60].map(n=>String(n).padStart(2,"0")).join(":");
 export function CourtRun({data,sid,bank}:{data:Snapshot;sid:string;bank:Drill[]}){
