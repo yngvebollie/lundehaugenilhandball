@@ -1,3 +1,4 @@
+import {phoneLogin,playerAlias} from "../_shared/player-identity.ts";
 // Only this function has the admin credential. Never accept a target account ID or a role from the caller.
 const base=Deno.env.get("SUPABASE_URL")!, secret=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Cache-Control":"no-store"};
@@ -20,15 +21,15 @@ Deno.serve(async req=>{
    return changed.ok?reply(200,{ok:true}):reply(400,{error:"Kunne ikke oppdatere passordet. Be treneren om en ny lenke."});
   }
   const email=String(b.email||"").trim().toLowerCase(),name=String(b.name||"").trim(),phone=String(b.phone||"").trim(),kind=String(b.kind||"none"),cred=String(b.token||"");
-  if(b.action!=="register"||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)||email.length>254||email.endsWith(".invalid")||name.length<1||name.length>100||!/^\+?[0-9 ().-]{7,30}$/.test(phone)||!/^\d{7,15}$/.test(phone.replace(/\D/g,""))||!["link","email","athlete_code","none"].includes(kind)||cred.length>64)return reply(400,{error:"Kontroller navn, telefon, e-post og invitasjon."});
-  const check=await admin("/rest/v1/rpc/beta_player_enroll_check",{addr:email,k:kind,cred,ip_hash:await hash(req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown")});
+  if(b.action!=="register"||email!==""&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)||!email&&!phoneLogin(phone)||email.length>254||email.endsWith(".invalid")||name.length<1||name.length>100||!/^\+?[0-9 ().-]{7,30}$/.test(phone)||!/^\d{7,15}$/.test(phone.replace(/\D/g,""))||!["link","email","athlete_code","none"].includes(kind)||cred.length>64)return reply(400,{error:"Kontroller navn, telefon, e-post og invitasjon."});
+  const check=await admin("/rest/v1/rpc/beta_player_enroll_identity",{addr:email,k:kind,cred,ip_hash:await hash(req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown")});
   if(!check.ok)return reply(503,{error:"Innmelding er midlertidig utilgjengelig."});
-  const mode=await check.json();if(mode==="coach")return reply(200,{coach:true});
+  const {mode,contact}=await check.json();if(mode==="coach")return reply(200,{coach:true});
   if(mode==="limit")return reply(429,{error:"For mange forsøk. Prøv igjen senere."});
   if(mode!=="athlete")return reply(400,{error:"Kan ikke opprette konto. Logg inn hvis du har en konto, eller kontroller laginvitasjonen."});
-  const login="p."+(await hash(email)).slice(0,60)+"@players.lundehaugenil.invalid";
+  const login=await playerAlias(email||"tel:"+phoneLogin(phone));
   const user_metadata={full_name:name,given_name:String(b.given||"").slice(0,100),family_name:String(b.family||"").slice(0,100),shirt_number:/^[1-9][0-9]{0,2}$/.test(b.shirt)?b.shirt:null,contact_phone:phone,...(kind==="none"?{}:{club_invite_kind:kind,club_invite_token:cred})};
-  const created=await admin("/auth/v1/admin/users",{email:login,password:b.password,email_confirm:true,app_metadata:{club_login:"athlete",contact_email:email},user_metadata});
+  const created=await admin("/auth/v1/admin/users",{email:login,password:b.password,email_confirm:true,app_metadata:{club_login:"athlete",contact_email:contact,login_phone:email?null:phoneLogin(phone)},user_metadata});
   if(!created.ok)return reply(400,{error:"Kunne ikke opprette konto. Kontroller passordet eller logg inn med eksisterende konto."});
   return reply(200,{login});
  }catch{return reply(400,{error:"Kunne ikke behandle forespørselen."});}

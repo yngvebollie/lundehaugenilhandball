@@ -45,11 +45,11 @@ export default function Apply(){
       if(!demo&&!signed){
         const path="/apply?"+(short?shortRole+"_code="+encodeURIComponent(short):"link="+encodeURIComponent(code))+"&finish=1";
         if(magic){await emailSignIn(email,path,!existing,name,phone,{kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",token:short||code,shirt,given,family});setMail("sent");return;}
-        if(existing){auto.current=email.trim()+code;await passwordLogin(email,password,athlete);}
+        if(existing){auto.current=email.trim()+code;await passwordLogin(athlete?(email||phone):email,password,athlete);}
         else if(athlete){await registerPlayer({email,password,name,phone,given,family,shirt,kind:short?"athlete_code":"link",token:short||code});}
         else{const {data,error}=await db!.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,club_invite_kind:short?(shortRole==="coach"?"coach_code":"athlete_code"):"link",club_invite_token:short||code},emailRedirectTo:clubLink(path)}});if(error)throw error;if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
       }
-      await join(signed||email);
+      await join(signed||email||(athlete?phone:""));
     }catch(err){setNote((err as Error).message||"Registrering mislyktes.");}finally{setBusy(false);}
   }
   async function openTeam(){if(!info)return;const id=demo?sessionStorage.getItem("nhf-persona"):(await db?.auth.getUser())?.data.user?.id;if(id)selectTeam(id,info.id);location.assign(info.role==="coach"?"/":"/athlete?profil=ny");}
@@ -63,7 +63,7 @@ export default function Apply(){
       {athlete?<AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/>:<label>Fullt navn<input required maxLength={100} autoComplete="name" value={name} onChange={e=>setName(e.target.value)}/></label>}
       <label>Telefonnummer<input type="tel" required maxLength={30} autoComplete="tel" placeholder="+47" value={phone} onChange={e=>setPhone(e.target.value)}/></label>
       {(short?shortRole:info?.role)==="athlete"&&<label>Draktnummer (valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())} placeholder="F.eks. 28"/></label>}
-      <label>E-post<input type="email" required readOnly={!!signed} autoComplete="email" value={signed||email} onChange={e=>setEmail(e.target.value)}/></label>
+      <label>{signed?"Innlogget som":athlete?"E-post (valgfritt)":"E-post"}<input type={signed?"text":"email"} required={!athlete} readOnly={!!signed} autoComplete="email" value={signed||email} onChange={e=>setEmail(e.target.value)}/></label>{athlete&&!signed&&<small>Uten e-post bruker du telefonnummer og passord til å logge inn.</small>}
       {!demo&&!signed&&!magic&&<label>Passord<input required type="password" minLength={existing?1:8} autoComplete={existing?"current-password":"new-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}
       <small>{athlete&&(short||info?.direct)?"Velg passord og gå rett til laget. Ingen e-postbekreftelse.":short||info?.direct?"Bekreft e-postadressen din én gang. Invitasjonen gir deg deretter tilgang til laget.":"Dette er en eldre søknadslenke. Be treneren om en direkte invitasjon for å slippe godkjenning."}</small>
       <button className="btn primary" disabled={busy}>{busy?"Et øyeblikk …":signed||demo?"Bli med på laget":magic?"Send innloggingslenke":existing?"Logg inn og fortsett":"Opprett konto"}</button>

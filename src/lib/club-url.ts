@@ -5,7 +5,7 @@ export const clubOrigin="https://app.lundehaugenil.no";
 export function clubLink(path:string,demoOrigin?:string){
   const base=demoOrigin||clubOrigin;
   const url=new URL(path,base);
-  if(!path.startsWith("/")||url.origin!==new URL(base).origin||!["/apply","/join","/login"].includes(url.pathname))throw Error("Ugyldig returadresse.");
+  if(!path.startsWith("/")||url.origin!==new URL(base).origin||!["/apply","/join","/login","/player-reset"].includes(url.pathname))throw Error("Ugyldig returadresse.");
   url.hash="";
   return url.href;
 }

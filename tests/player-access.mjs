@@ -19,6 +19,7 @@ try{
  create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('test.uid',true),'')::uuid $$;
  grant usage on schema nhf_private to authenticated;`);
  await pg.exec(await readFile(new URL("../supabase/migrations/20261109201608_athlete_password_access.sql",import.meta.url),"utf8"));
+ await pg.exec(await readFile(new URL("../supabase/migrations/20261109204300_optional_athlete_email.sql",import.meta.url),"utf8"));
  await pg.exec("create trigger finish after insert on auth.users for each row execute function nhf_private.finish_signup_invite()");
  await pg.query("insert into beta_teams values($1),($2)",[team,away]);
  for(const [id,t] of [[coach,team],[other,away]]){await pg.query("insert into auth.users values($1,$2,now(),'{}','{}')",[id,id+"@example.test"]);await pg.query("insert into beta_members values($1,$2,'Coach','coach')",[id,t]);}
@@ -26,6 +27,8 @@ try{
  await pg.query("insert into nhf_private.invites values($1,$2,$3,'athlete',now()+interval '1 hour')",[token,team,addr]);
  const check=(k,v)=>one("select beta_player_enroll_check($1,$2,$3,'peer') v",[addr,k,v]);
  await pg.exec("set role service_role");assert.equal(await check("email",token),"athlete");assert.equal(await check("link",uid()),"invalid");assert.equal(await check("none",""),"athlete");
+ const lookup=(k,v)=>one("select beta_player_enroll_identity('',$1,$2,'test') v",[k,v]);
+ assert.deepEqual(await lookup("none",""),{mode:"athlete",contact:null});assert.deepEqual(await lookup("email",token),{mode:"athlete",contact:addr});
  await pg.exec("set role anon");await assert.rejects(check("none",""));await pg.exec("reset role");
  await pg.query("insert into nhf_private.signup_intents values($1,'email',$2,'pending',null)",[player,token]);
  await pg.query("insert into auth.users values($1,$2,now(),$3,$4)",[player,"p.test@players.lundehaugenil.invalid",{full_name:"Test Player",contact_phone:"12345678"},{club_login:"athlete",contact_email:addr}]);

@@ -34,7 +34,7 @@ export default function Login(){
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
-    const qp=new URLSearchParams(location.search);setNext(["development","court","bank","ratings"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role");const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
+    const qp=new URLSearchParams(location.search);setNext(["development","court","bank","ratings"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role")||(qp.has("invite")?"athlete":null);const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
     if(param==="athlete"&&qp.get("register")==="1")setJoin(true);
     if(param==="coach"||param==="athlete"){setSelected(true);setRole(param);setAccount(param==="athlete"?"liv":"coach");}
     if(demo)setAccounts(demoAccounts());
@@ -55,15 +55,15 @@ export default function Login(){
         await emailSignIn(email,path,registering,name,phone,invite?{kind:"email",token:invite,shirt,given,family}:teamCode?{kind:"athlete_code",token:teamCode,shirt,given,family}:undefined);setMail("sent");return;
       }
       if(demo){
-        if(invite)joinDemo(invite,email.trim().toLowerCase(),name.trim());
-        else if(join&&role==="athlete"){registerDemoAthlete(email.trim().toLowerCase(),name.trim());location.assign(joinPath);return;}
+        if(invite)joinDemo(invite,(email||phone).trim().toLowerCase(),name.trim());
+        else if(join&&role==="athlete"){registerDemoAthlete((email||phone).trim().toLowerCase(),name.trim());location.assign(joinPath);return;}
         else sessionStorage.setItem("nhf-persona",account);
       }else{
         if(!db)throw Error("Both Supabase public settings are required.");
         if(!signed){
           if(signup||(join&&role==="athlete")){
             const immediate=(role==="athlete"||!!invite)&&await registerPlayer({email,password,name,phone,given,family,shirt,kind:invite?"email":teamCode?"athlete_code":"none",token:invite||teamCode});
-            if(!immediate){const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,...(invite?{club_invite_kind:"email",club_invite_token:invite}:teamCode?{club_invite_kind:"athlete_code",club_invite_token:teamCode}:{})}}});
+            if(!immediate){if(!email.trim())throw Error("Oppgi e-post for trenerkontoen.");const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:clubLink(invite?"/login?new=1&invite="+encodeURIComponent(invite):joinPath),data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim(),shirt_number:shirt||null,...(invite?{club_invite_kind:"email",club_invite_token:invite}:teamCode?{club_invite_kind:"athlete_code",club_invite_token:teamCode}:{})}}});
             if(error)throw error;
             if(!data.session){setMail(data.user?.identities?.length?"created":"sent");return;}}
           }else{
@@ -103,7 +103,7 @@ export default function Login(){
       {(!signed&&(signup||join)||signed&&invite)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
       {(invite||join&&role==="athlete")&&<label>Draktnummer (utøver, valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label>}
       {join&&role==="athlete"&&!invite&&<label>Team code (optional)<input maxLength={6} minLength={6} autoCapitalize="characters" value={teamCode} onChange={e=>setTeamCode(e.target.value.toUpperCase().trim())}/></label>}
-      {signed?<p>Signed in as {signed}</p>:<><label>Email<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
+      {signed?<p>Signed in as {signed}</p>:<><label>{role==="athlete"?(signup||join?"E-post (valgfritt)":"Telefonnummer eller e-post"):"Email"}<input required={!(role==="athlete"&&(signup||join))} type={role==="athlete"&&!signup&&!join?"text":"email"} autoComplete={signup||join?"email":"username"} value={email} onChange={e=>setEmail(e.target.value)}/></label>{role==="athlete"&&(signup||join)&&<small>Hopper du over e-post, logger du inn med telefonnummer og passord.</small>}{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
     <button className="btn primary" disabled={busy}>{magic&&!signed?"Email me a sign-in link":invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
     {role!=="athlete"&&!invite&&!demo&&!signed&&<button className="btn" onClick={()=>{setMagic(!magic);setMessage("");}}>{magic?"Use a password":"Sign in with a magic link"}</button>}
