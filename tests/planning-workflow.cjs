@@ -6,6 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   try{
     const page=await browser.newPage();page.setDefaultTimeout(8000);
     await page.goto(base+"/login?role=coach");await page.getByRole("button",{name:"Sign in",exact:true}).click();
+    await page.getByRole("link",{name:"Weekly planner",exact:true}).click();
     const weekly=page.locator("#weekly"),builder=page.locator("#builder");
     await weekly.getByLabel("Week containing").fill("2025-12-31");
     await weekly.getByRole("heading",{name:"Week 1 · 29 Dec 2025 to 4 Jan 2026"}).waitFor();
@@ -32,7 +33,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
     await weekly.locator(".week-item").getByText("Footwork session").waitFor();
     await page.reload();await weekly.getByText("Development groups · coaches only",{exact:true}).click();
     assert.equal(await groups.getByLabel("Liv Berg").isChecked(),true);
-    await page.goto(base+"/team");await page.getByText("Add another team",{exact:true}).click();
+    await page.goto(base+"/team");await page.getByRole("button",{name:"Lagprofil",exact:true}).click();await page.getByText("Add another team",{exact:true}).click();
     await page.getByLabel("New team name").fill("Empty test team");await page.getByRole("button",{name:"Create team",exact:true}).click();
     await page.getByLabel("Current team").selectOption({label:"Empty test team"});
     await page.goto(base+"/#weekly");await weekly.getByRole("button",{name:"Next week",exact:true}).click();

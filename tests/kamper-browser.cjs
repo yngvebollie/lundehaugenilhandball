@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
 (async()=>{
  const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge"});
  try{
-  const base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217",p=await browser.newPage({viewport:{width:390,height:844}});p.setDefaultTimeout(12000);
+  const base=process.env.BETA_TEST_URL||"http://127.0.0.1:3217",p=await browser.newPage({viewport:{width:390,height:844}});p.setDefaultTimeout(12000);await p.clock.setFixedTime(new Date("2026-11-07T08:00:00Z"));
   await p.goto(base+"/login?role=coach");await p.getByRole("button",{name:"Sign in",exact:true}).click();await p.waitForURL(base+"/");
   await p.getByRole("link",{name:"Kamper",exact:true}).click();
   await p.getByRole("link",{name:/Hundvåg – Sola/}).click();

@@ -7,7 +7,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
   const p=await ctx.newPage();p.setDefaultTimeout(12000);
   const image=async(page,name)=>{if(process.env.UI_QA_DIR)await page.screenshot({path:process.env.UI_QA_DIR+"/"+name+".png"});};
   async function login(page,role,id){await page.goto(base+"/login?role="+role);if(id)await page.getByLabel("Demo account").selectOption(id);await page.getByRole("button",{name:"Sign in",exact:true}).click();await page.waitForURL(role==="coach"?base+"/":base+"/athlete");}
-  await p.goto(base+"/login");assert.equal(await p.locator(".public-shell").evaluate(el=>getComputedStyle(el).backgroundColor),"rgb(250, 251, 249)");
+  await p.goto(base+"/login");assert.equal(await p.locator(".public-shell").evaluate(el=>getComputedStyle(el).backgroundColor),"rgb(250, 250, 253)");
   await login(p,"coach");await p.goto(base+"/match");await p.getByRole("link",{name:/Hundvåg – Sola/}).waitFor();await image(p,"desktop-kamper");
   await p.goto(base+"/challenges");await p.getByText("Opprett utfordring",{exact:true}).click();await p.getByLabel("Navn på utfordringen").fill("Pushup challenge");
   await p.getByLabel("Bibliotek eller egen øvelse").fill("Push-up");await p.getByRole("button",{name:"Legg til øvelse"}).click();
