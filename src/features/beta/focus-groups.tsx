@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Target } from "lucide-react";
 import { toggleFocus, type Snapshot } from "@/lib/beta";
@@ -9,7 +10,7 @@ export function FocusGroups({data,date,busy,run,onDraft}:{data:Snapshot;date:str
   const [selected,setSelected]=useState(0);
   const focus=focuses[selected],members=data.focusMembers.filter(r=>r.focus===focus.id);
   const players=data.roster.filter(m=>m.role==="athlete");
-  return <details className="library-tools focus-groups"><summary><Target size={16}/> Development groups · coaches only</summary>
+  return <details className="library-tools focus-groups"><summary><Target size={16}/> Development groups · coaches only</summary><FeatureInfo topic="groups"/>
     <div className="grid"><label>Training focus<select value={selected} onChange={e=>setSelected(Number(e.target.value))}>{focuses.map((f,i)=><option key={f.id} value={i}>{f.name}</option>)}</select></label>
     <p className="muted">Athletes see assigned sessions, not group membership or focus labels.</p>
     <fieldset><legend>Athletes · {members.length} selected</legend>{players.map(p=>{const checked=members.some(r=>r.athlete===p.id);

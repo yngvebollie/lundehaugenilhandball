@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useEffect, useRef, useState } from "react";
 import { CheckCheck, Star } from "lucide-react";
 import { saveReview, type Assignment, type WorkoutReview } from "@/lib/beta";
@@ -21,7 +22,7 @@ function Stars({label,value,onChange,optional=false}:{label:string;value:number;
 export function ReviewForm({session,review,run,busy}:{session:Assignment;review?:WorkoutReview;run:Run;busy:boolean}){
   const [stars,setStars]=useState(review?.stars||0),[comment,setComment]=useState(review?.comment||""),[status,setStatus]=useState("");
   return <form className="grid workout-review" onSubmit={async e=>{e.preventDefault();if(await run(()=>saveReview({assignment:session.id,stars,exercise_stars:review?.exercise_stars||session.exercises.map(()=>0),comment:comment.trim()},Boolean(review))))setStatus("Review shared with your coach.");}}>
-    <h3>Workout review</h3><p className="muted">How useful was the training? Rate the workout as a whole.</p>
+    <FeatureInfo topic="ratings"><h3>Workout review</h3></FeatureInfo><p className="muted">How useful was the training? Rate the workout as a whole.</p>
     <Stars label="Overall workout" value={stars} onChange={n=>{setStars(n);setStatus("");}}/>
     <label>Comment for your coach<textarea maxLength={1000} value={comment} onChange={e=>{setComment(e.target.value);setStatus("");}}/></label>
     <button disabled={busy||!stars} className="btn">{review?"Update review":"Save review"}</button>{status&&<p role="status">{status}</p>}

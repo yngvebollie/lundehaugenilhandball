@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {today,type Snapshot} from "@/lib/beta";
 import {createMatch,matches,outcomes,saveShot,shots,undoShot,type Match,type Outcome,type Shot} from "@/lib/matches";
@@ -27,7 +28,7 @@ export function MatchPad({data}:{data:Snapshot}){
   function select(id:string){setChosen(id);setShooter("");setAssist("");setTarget(null);setOrigin(null);setEventId(crypto.randomUUID());setNote("");}
   async function run(fn:()=>Promise<void>){setBusy(true);try{await fn();setRevision(n=>n+1);}catch(e){setNote((e as Error).message);}finally{setBusy(false);}}
   const onGoal=outcome==="Goal"||outcome==="Saved";
-  return <section className="panel panel-pad grid match-pad"><div className="feature-heading"><h2>Match recorder</h2><span className="badge orange">Pad mode</span></div>
+  return <section className="panel panel-pad grid match-pad"><div className="feature-heading"><h2>Match recorder</h2><FeatureInfo topic="live"/><span className="badge orange">Pad mode</span></div>
     <label>Match<select disabled={busy} value={chosen} onChange={e=>select(e.target.value)}><option value="">Set up a match</option>{all.map(m=><option key={m.id} value={m.id}>{m.day} · {m.opponent}</option>)}</select></label>
     {!match?<form className="grid" onSubmit={e=>{e.preventDefault();void run(async()=>{const m={id:crypto.randomUUID(),team:data.me.squad,opponent:title.trim(),day:date,lineup};await createMatch(m);setAll([...all,m]);select(m.id);setNote("Lineup ready.");});}}>
     <div className="field-pair"><label>Opponent<input required maxLength={100} value={title} onChange={e=>setTitle(e.target.value)}/></label><label>Match date<input required type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></div>

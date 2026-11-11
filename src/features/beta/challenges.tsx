@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Award as Medal,Plus,ShieldCheck,Trophy,HelpCircle,X} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
@@ -30,7 +31,7 @@ export function Challenges({data,startWith}:{data:Snapshot;startWith?:{id:string
     void update();window.addEventListener("focus",update);window.addEventListener("storage",update);const timer=setInterval(update,15000);
     return()=>{active=false;clearInterval(timer);window.removeEventListener("focus",update);window.removeEventListener("storage",update);};},[refresh]);
   async function run(fn:()=>Promise<void>){if(lock.current)return;lock.current=true;setBusy(true);setNote("");try{await fn();}catch(e){setNote((e as Error).message);}finally{lock.current=false;setBusy(false);}}
-  return <section className="challenge-work grid"><header><span className="eyeline">{data.teams.find(t=>t.id===data.me.squad)?.name}</span><h2><Trophy size={22}/> Utfordringer</h2></header>
+  return <section className="challenge-work grid"><header><span className="eyeline">{data.teams.find(t=>t.id===data.me.squad)?.name}</span><FeatureInfo topic="challenge"><h2><Trophy size={22}/> Utfordringer</h2></FeatureInfo></header>
     <details className="library-tools"><summary><HelpCircle size={16}/> Slik fungerer en utfordring</summary><p>Treneren velger øvelser, måleenhet og periode. Utøveren åpner Utfordringer, velger øvelse og registrerer ett sett om gangen. Flere sett samme dag legges sammen. For eksempel: 10 armhevinger om morgenen og 8 om kvelden gir 18 repetisjoner.</p><p>En avkrysset øvelse i en vanlig treningsøkt gir ikke poeng automatisk. Før settet én gang her. Når perioden er over, får deltakerne et merke; høyeste total vinner, også ved delt førsteplass.</p></details>
     {coach&&<details className="library-tools"><summary>Opprett utfordring</summary><form className="grid" onSubmit={e=>{e.preventDefault();void run(async()=>{const next=await createChallenge(data,{title:name.trim(),unit:unit.trim(),starts:start,ends:end,anonymous,exercises:selectedExercises,instructions,badge_key:badge||null});setId(next);setBoard([]);setHistory([]);setName("");setExercises([]);setPick("");setBadge("");setInstructions("");setNote("Utfordring opprettet.");});}}>
       <div className="field-pair"><label>Navn på utfordringen<input required maxLength={100} placeholder="Pushup challenge" value={name} onChange={e=>setName(e.target.value)}/></label><label>Enhet<input required maxLength={24} value={unit} onChange={e=>setUnit(e.target.value)}/></label></div>

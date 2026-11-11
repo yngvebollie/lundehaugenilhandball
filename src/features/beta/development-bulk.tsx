@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {plannerBridge} from "@/lib/development/flags";
 import type {Snapshot} from "@/lib/beta";
@@ -16,7 +17,7 @@ export function BulkPractice({data,rows}:{data:Snapshot;rows:Row[]}){
     await development(data,row.id,packet.rev,{action:"practice",key:pending[row.id],v:{goals,exercise,context:"Bekreftet av trener i fellesøvelse"}});next[row.id]="Registrert";
    }catch(e){next[row.id]=(e as Error).message||"Ikke lagret";}R({...next});K({...pending});
   }B(false);N("Se resultat ved hver spiller.");}
- return <details className="dev-bulk"><summary>Bekreft faktisk øving for flere spillere</summary>
+ return <details className="dev-bulk"><summary>Bekreft faktisk øving for flere spillere</summary><FeatureInfo topic="development"/>
  <label>Felles øvelse<select value={exercise} onChange={e=>{E(e.target.value);reset();}} disabled={busy}><option value="">Velg tildelt øvelse</option>{ids.filter(i=>catalog.has(i)).map(id=><option key={id} value={id}>{catalog.get(id)}</option>)}</select></label>
  {exercise&&<><p>Velg bare spillere du observerte i denne øvelsen.</p>{relevant.map(p=><label className="dev-check" key={p.id}><input type="checkbox" checked={selected.includes(p.id)} disabled={busy||results[p.id]==="Registrert"} onChange={e=>S(e.target.checked?[...selected,p.id]:selected.filter(x=>x!==p.id))}/>{p.name} {results[p.id]&&<strong>{results[p.id]}</strong>}</label>)}
  <button className="dev-primary" disabled={busy||!selected.length||selected.every(id=>results[id]==="Registrert")} onClick={confirm}>Bekreft øving for {selected.length} spillere</button>

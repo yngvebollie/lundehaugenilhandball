@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {ClipboardPaste,Download,FileText,Save,Upload} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
@@ -52,7 +53,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
   const issues=draft?[...validateReport(draft,g.nif_id),...teamIssues(draft)]:[];
   const report=editing?draft:saved?.reviewed;
   const index=report?.players[picked]?.side===side?picked:(report?.players.findIndex(p=>p.side===side)??-1),player=report?.players[index];
-  return <section className="grid review-work"><header className="feature-heading"><h3><FileText size={17}/> Kamprapport</h3>
+  return <section className="grid review-work"><header className="feature-heading"><FeatureInfo topic="report"><h3><FileText size={17}/> Kamprapport</h3></FeatureInfo>
     {g.nif_id&&<a href={"https://www.handball.no/system/kamper/kamprapport/?matchid="+g.nif_id} target="_blank" rel="noreferrer"><Download size={15}/> Åpne NHF-rapport</a>}</header>
     {saved&&<div className="day-strip"><small>Lagret · revisjon {saved.revision}</small><button className="btn" disabled={busy} onClick={()=>act(async()=>{const {downloadReport}=await import("@/lib/report-export");await downloadReport(saved.reviewed,saved.revision);setNote("PDF eksportert.");})}><Download size={16}/>Last ned PDF</button><button className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);}}>Rediger lagret rapport</button>
       {!demo&&saved.original.method!=="paste"&&<button className="btn" onClick={()=>act(async()=>{const result=await db!.storage.from("kamprapporter").download(privatePath(g,saved.digest));if(result.error)throw result.error;setPreview(URL.createObjectURL(result.data));})}>Vis original PDF</button>}</div>}

@@ -1,0 +1,13 @@
+.title{display:flex;align-items:center;gap:.35rem;min-width:0;flex-wrap:wrap}
+.title>h1,.title>h2,.title>h3{margin:0}
+.title .info,.dialog button{display:inline-grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border:0;border-radius:50%;background:transparent;color:#55566d;cursor:pointer}
+.title .info:hover,.dialog button:hover{background:#fce6f1;color:#9b0050}
+.title button:focus-visible{outline:2px solid #af0055;outline-offset:1px}
+.dialog{box-sizing:border-box;position:fixed;inset:0;margin:auto;width:min(27rem,calc(100% - 2rem));max-height:85dvh;padding:1.3rem;color:#171a32;background:white;border:1px solid #d8d8df;border-radius:8px;text-align:left;box-shadow:0 12px 50px #10172d32;font:normal 1rem/1.55 system-ui}
+.dialog:not([open]){display:none}
+.dialog::backdrop{background:#12182b70}
+.dialog header{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.dialog h2{font-size:1.18rem;margin:0}
+.dialog p{margin:.55rem 0 1rem}
+.dialog p:last-child{margin-bottom:0}
+@media(pointer:coarse){.title .info,.dialog button{width:44px;height:44px}}

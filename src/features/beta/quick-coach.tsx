@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { db,demo } from "@/lib/beta";
@@ -20,7 +21,7 @@ export function QuickCoach({onApply}:{onApply:(program:QuickProgram)=>void}){
       }
     }catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
-  return <section id="ai-coach" className="quick-coach panel panel-pad grid"><div className="feature-heading"><h2><Sparkles/> Coach AI</h2><Help label="How to use Coach AI">Describe the body focus, difficulty and whether you want one workout or a week. Review the suggestion, open it in the builder, then edit, save or publish. For suggestions based on scheduled team load, choose Suggest week in Weekly planner.</Help></div>
+  return <section id="ai-coach" className="quick-coach panel panel-pad grid"><div className="feature-heading"><FeatureInfo topic="ai"><h2><Sparkles/> Coach AI</h2></FeatureInfo><Help label="How to use Coach AI">Describe the body focus, difficulty and whether you want one workout or a week. Review the suggestion, open it in the builder, then edit, save or publish. For suggestions based on scheduled team load, choose Suggest week in Weekly planner.</Help></div>
     <form className="prompt-row" onSubmit={e=>{e.preventDefault();void suggest();}}><label>Describe your workout<input required maxLength={1800} value={brief} disabled={busy} onChange={e=>{setBrief(e.target.value);setDraft(null);}} placeholder="Lower body medium workout"/></label><button disabled={busy||!brief.trim()} className="btn primary">{busy?"Drafting…":"Suggest program"}</button></form>
     <small className="muted">{demo?"Local exercise-library suggestions":"OpenAI assisted"} · Coach review before publishing</small>
     {error&&<p role="alert">{error}</p>}{draft&&<div className="grid"><strong>{draft.name}</strong>{draft.sessions.map((s,i)=><div key={i}><b>Day {s.offset+1} · {s.title}</b><ul>{s.exercises.map((l,k)=><li key={k}>{l}</li>)}</ul></div>)}<button className="btn" onClick={()=>onApply(draft)}>Use in builder · replace current draft</button></div>}

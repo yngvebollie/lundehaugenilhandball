@@ -1,5 +1,19 @@
 import example from "./example.json";
 import {empty,type Goal,type Plan,type Observation} from "./model";
+export function rosterExample(id:string):Plan{
+ const s=examplePlan();
+ if(id==="liv")return s;
+ if(id!=="demo-b"&&id!=="demo-c")return empty();
+ const finte=id==="demo-b",g=s.goals[finte?1:0];
+ g.stage=finte?2:0;
+ g.status=finte?"awaiting_review":"active";
+ g.feedback=finte?"Du kom forbi på utsiden i småspillet. Prøv samme temposkifte mot en ny forsvarer.":"Start med korte pasninger i par. Se etter et ledig rom før du tar imot ballen.";
+ s.goals=[g];
+ s.practices=s.practices.filter(p=>p.goals.includes(g.id)).slice(0,finte?2:1).map(p=>({...p,by:id}));
+ s.observations=s.observations.filter(o=>finte?o.skill==="finter"||o.skill==="fotarbeid":o.skill==="mottak");
+ s.history=[{id:"avtale-"+id,action:"publish",at:g.agreedAt!,by:"test-coach",subject:g.id,message:"Mål avtalt: "+g.title,public:true}];
+ return s;
+}
 // Browser-local fixtures only; neither the API nor the SQL migration imports this file.
 export function examplePlan():Plan{
  const s=empty(),e=example.goal;

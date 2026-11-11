@@ -1,5 +1,6 @@
 "use client";
 
+import {FeatureInfo} from "./feature-info";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, BookOpen, CalendarDays, Download, Dumbbell, LogOut, Users } from "lucide-react";
 import { clubRole,db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
@@ -113,5 +114,5 @@ function Coach({data,busy,run,hash}:{data:Snapshot;busy:boolean;run:Run;hash:str
       <QuickCoach onApply={openDraft}/>
       <ProgramBuilder key={quick?.id} initial={quick?.draft} data={data} busy={busy} run={run} onDirty={flagDraft} onCalendar={show}/>
     </>}/>
-    <section className="panel panel-pad grid" id="schedule"><header className="page-head"><h2><CalendarDays/> Training schedule</h2><button onClick={report} className="btn"><Download size={16}/>CSV</button></header><label>Filter by day<input type="date" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{schedule.map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{p.day} · {players.find(a=>a.id===p.athlete)?.name}</p></div><span className="badge blue">{count(data,p.id)} / {p.exercises.length} done</span></div>)}{!schedule.length && <p>No workouts scheduled for this selection.</p>}</section></>;
+    <section className="panel panel-pad grid" id="schedule"><header className="page-head"><FeatureInfo topic="week"><h2><CalendarDays/> Training schedule</h2></FeatureInfo><button onClick={report} className="btn"><Download size={16}/>CSV</button></header><label>Filter by day<input type="date" value={filter} onChange={e=>setFilter(e.target.value)}/></label>{schedule.map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{p.day} · {players.find(a=>a.id===p.athlete)?.name}</p></div><span className="badge blue">{count(data,p.id)} / {p.exercises.length} done</span></div>)}{!schedule.length && <p>No workouts scheduled for this selection.</p>}</section></>;
 }

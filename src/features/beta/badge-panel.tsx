@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {Flame,CalendarCheck,AlarmClock,Flag,CirclePlus,HeartPulse,CalendarDays,Zap,RotateCcw,Crosshair,Repeat,BookOpen,Footprints,ClipboardCheck,TrendingUp,ShieldPlus,Goal,Target,Hand,Award,Ticket,ListOrdered,ShieldCheck,Share2,ChartNoAxesColumnIncreasing,ScanEye,Shuffle,Timer,Layers,StepForward,Users,Sun,HelpingHand,Sprout,Scale,Star,Handshake,Shield,Sparkles,Megaphone,BatteryCharging,Lightbulb,Heart,AudioLines,Gauge,Award as Medal,Check} from "lucide-react";
 import {badges,badgeAction,badgeUnit,catalogTargets,blankBadges,coachBadges,automatic,reach,tier,type Badge,type BadgeState} from "@/lib/badges";
@@ -22,7 +23,7 @@ export function BadgePanel({data}:{data:Snapshot}){
  const id=coach?(players.find(p=>p.id===pick)?.id||players[0]?.id||""):data.me.id;
  const [sample,setSample]=useState("Med eksempelfremgang");
  useEffect(()=>{const params=new URLSearchParams(location.search);if(coach&&(params.has("game")||params.has("athlete"))){setMode("Utøvere");setId(params.get("athlete")||"");}},[coach]);
- return <section className="grid merker"><header className="feature-heading"><h2><Medal size={22}/> {coach?"Merker og kvalifisering":"Mine merker"}</h2>
+ return <section className="grid merker"><header className="feature-heading"><FeatureInfo topic="badge"><h2><Medal size={22}/> {coach?"Merker og kvalifisering":"Mine merker"}</h2></FeatureInfo>
  {coach&&mode==="Utøvere"&&players.length>0&&<label>Utøver<select aria-label="Utøver" value={id} onChange={e=>setId(e.target.value)}>{players.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label>}</header>
  {coach&&<nav className="workspace-tabs" aria-label="Merkevisning">{["Merkekatalog","Utøvere","Utøvervisning"].map(v=><button key={v} className={mode===v?"current":""} aria-pressed={mode===v} onClick={()=>setMode(v)}>{v}</button>)}</nav>}
  {coach&&mode==="Merkekatalog"?<Catalog data={data}/>:coach&&mode==="Utøvervisning"?<><div className="merke-preview"><div><strong>Forhåndsvisning av utøversiden</strong><small>Eksempelutøver · Ingen endringer lagres</small></div><label>Eksempel<select value={sample} onChange={e=>setSample(e.target.value)}><option>Med eksempelfremgang</option><option>Ny utøver</option></select></label></div><Collection key={sample} data={data} id="" preview={sample}/></>:id?<Collection key={data.me.squad+":"+id} data={data} id={id}/>:<p>Ingen registrerte utøvere på laget ennå. <a href="/team">Inviter en utøver</a></p>}</section>;

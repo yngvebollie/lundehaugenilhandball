@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {PasswordHelp} from "./password-help";
 import {clubLink} from "@/lib/club-url";
 import {useEffect,useState} from "react";
@@ -27,7 +28,7 @@ export function ShareLink({data,busy,run,role}:Props&{role:Member["role"]}){
   const team=data.me.squad;
   useEffect(()=>{let alive=true;setRecord(null);setNote("");applicationLink(team,role,"get").then(r=>{if(alive)setRecord(r);}).catch(e=>{if(alive)setNote(e.message);});return ()=>{alive=false;};},[team,role]);
   const url=record?clubLink("/apply?link="+encodeURIComponent(record.token),demo?location.origin:undefined):"";
-  return <section className="grid"><h3><LinkIcon size={17}/> Inviter med lenke</h3><p className="muted">{role==="athlete"?"Utøveren velger passord og kommer inn på laget uten å bekrefte e-post.":"Trenere bekrefter e-posten sin. Del trenerlenker kun med personer som skal ha tilgang til utøverdata."}</p>
+  return <section className="grid"><h3><LinkIcon size={17}/> Inviter med lenke</h3><FeatureInfo topic="team"/><p className="muted">{role==="athlete"?"Utøveren velger passord og kommer inn på laget uten å bekrefte e-post.":"Trenere bekrefter e-posten sin. Del trenerlenker kun med personer som skal ha tilgang til utøverdata."}</p>
     <div className="day-strip"><button className={url?"btn":"btn primary"} disabled={busy} onClick={()=>{if(url&&!window.confirm("Erstatte lenken? Den gamle slutter å virke."))return;void run(async()=>{setRecord(await applicationLink(team,role,"issue"));setNote("Invitasjonen er klar.");});}}>{url?"Erstatt invitasjonslenke":"Opprett invitasjonslenke"}</button>
     {url&&<button className="btn" disabled={busy} onClick={()=>run(async()=>{await applicationLink(team,role,"revoke");setRecord(null);setNote("Link revoked.");})}>Deaktiver lenke</button>}</div>
     {record&&!record.direct&&<p className="km-status">Denne gamle lenken krever godkjenning. Erstatt den for å dele en direkte invitasjon.</p>}{record&&<><label>Lagets invitasjonslenke<input readOnly value={url} onFocus={e=>e.target.select()}/></label><small>Expires {new Date(record.expires).toLocaleDateString("en-GB")}</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(url);setNote("Link copied.");}catch{setNote("Select the link above to copy it.");}}}><Copy size={16}/>Kopier invitasjonslenke</button></>}

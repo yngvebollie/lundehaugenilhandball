@@ -11,8 +11,8 @@ export async function development(data:Snapshot,person:string,rev=0,cmd?:Command
  const coach=data.me.role==="coach";
  if(!coach&&person!==data.me.id||!data.roster.some(p=>p.id===person&&p.role==="athlete"&&p.squad===team))throw Error("Ingen tilgang.");
  const storage=preview?sessionStorage:localStorage,key="nhf-development-demo-v2:"+team+":"+person,source=storage.getItem(key);
- const {examplePlan}=await import("./demo");
- const record:{rev:number;plan:Plan;notes:Packet["notes"]}=source?JSON.parse(source):{rev:0,plan:person==="liv"?examplePlan():empty(),notes:[]};
+ const {examplePlan,rosterExample}=await import("./demo");
+ const record:{rev:number;plan:Plan;notes:Packet["notes"]}=source?JSON.parse(source):{rev:0,plan:preview?rosterExample(person):person==="liv"?examplePlan():empty(),notes:[]};
  const allowed=new Set(published(record.plan,false).goals.flatMap(g=>g.assignments.map(x=>x.exercise)));
  const exercises=catalog((coach?data.library:demoDevelopmentExercises(team,allowed)).map(e=>({id:e.id,title:e.name,instructions:e.dose}))),sessions=data.plans.filter(p=>p.athlete===person&&p.squad===team).map(p=>({id:p.id,title:p.title,day:p.day}));
  if(cmd){if(!record.plan.receipts[cmd.key]&&rev!==record.rev)throw Error("Planen er endret. Hent siste versjon.");

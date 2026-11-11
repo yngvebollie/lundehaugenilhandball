@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Bell, CheckCheck, Send } from "lucide-react";
 import { acceptNotice, postNotices, today, type Notice, type Snapshot } from "@/lib/beta";
@@ -31,7 +32,7 @@ export function CoachNotices({data,run,busy}:Props){
 }
 export function AthleteNotices({data,run,busy}:Props){
   const rows=ordered(data.notices);
-  return <section className="panel panel-pad grid"><h2><Bell/> Team notices</h2>
+  return <section className="panel panel-pad grid"><FeatureInfo topic="notice"><h2><Bell/> Team notices</h2></FeatureInfo>
     {!rows.length&&<p className="muted">No team notices yet.</p>}
     {rows.filter(n=>!n.read_at).map(n=><article className="notice-entry" key={n.id}><strong>{n.cadence} · {period(n)}</strong><p className="notice-body">{n.body}</p><button className="btn primary" disabled={busy} onClick={()=>void run(()=>acceptNotice(n.id))}><CheckCheck size={16}/>Accept · I've read it</button></article>)}
     {rows.some(n=>n.read_at)&&<details className="library-tools"><summary>Accepted notices ({rows.filter(n=>n.read_at).length})</summary>{rows.filter(n=>n.read_at).map(n=><article key={n.id} className="notice-entry"><strong>{period(n)}</strong><p className="notice-body">{n.body}</p><small>Accepted {timestamp(n.read_at!)}</small></article>)}</details>}

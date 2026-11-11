@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {clubDirectory,type Directory,type Snapshot} from "@/lib/beta";
 import "./squad-stats.css";
@@ -10,7 +11,7 @@ export function DirectoryPanel({data}:{data:Snapshot}){
   const groups=new Map<string,{name:string;role:string;teams:string[]}>(),teamLabel=(id:string)=>rows.teams.find(t=>t.id===id)?.name||"";
   for(const m of members){const p=groups.get(m.id)||{name:m.name,role:m.role,teams:[]};p.teams.push(teamLabel(m.team)+(m.admin?" (admintrener)":""));groups.set(m.id,p);}
   const list=[...groups].filter(([,p])=>(tab==="Alle brukere"||p.role===(tab==="Trenere"?"coach":"athlete"))&&by(p.name+" "+p.teams.join(" "))).sort(([,a],[,b])=>a.name.localeCompare(b.name,"nb"));
-  return <section className="grid squad-stats"><header className="competition-heading"><div><h2>{data.club?.active?"Hele klubben":"Mine lag"}</h2><small>{teams.length} lag · {groups.size} unike brukere</small></div><select aria-label="Filtrer på lag" value={team} onChange={e=>setTeam(e.target.value)}><option value="">Alle lag</option>{rows.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></header>
+  return <section className="grid squad-stats"><header className="competition-heading"><div><FeatureInfo topic="directory"><h2>{data.club?.active?"Hele klubben":"Mine lag"}</h2></FeatureInfo><small>{teams.length} lag · {groups.size} unike brukere</small></div><select aria-label="Filtrer på lag" value={team} onChange={e=>setTeam(e.target.value)}><option value="">Alle lag</option>{rows.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></header>
     <nav className="workspace-tabs" aria-label="Brukeroversikt">{["Alle brukere","Trenere","Utøvere","Invitasjoner","Lag"].map(t=><button key={t} className={tab===t?"current":""} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t}</button>)}</nav>
     <label>Søk<input type="search" placeholder="Navn, lag eller invitasjon" value={query} onChange={e=>setQuery(e.target.value)}/></label>
     <div className="player-list-scroll"><table className="table stat-table"><thead><tr>{(tab==="Lag"?["Lag","Trenere","Utøvere"]:tab==="Invitasjoner"?["Invitasjon","Rolle","Lag","Status","Utløper"]:["Navn","Rolle","Lag"]).map(c=><th key={c}>{c}</th>)}</tr></thead>

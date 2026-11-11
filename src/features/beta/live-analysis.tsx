@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Pause,Play,Square,Undo2} from "lucide-react";
 import {db,demo,today,type Snapshot} from "@/lib/beta";
@@ -24,7 +25,7 @@ function Season({team,reg,games}:{team:string;reg:string;games:Fixture[]}){
  const [logs,set]=useState<GameLog[]>(),[error,E]=useState(""),[opponent,OP]=useState("");
  useEffect(()=>{let alive=true;(async()=>{const rows:GameLog[]=demo?(await Promise.all(games.map(async g=>({match:g.id,session:await liveMatch(g.id)})))).filter(g=>g.session.version).map(g=>({match:g.match,events:g.session.events})):(await db!.rpc("beta_live_season",{t:team,reg}).throwOnError()).data;if(alive)set(rows)})().catch(e=>{if(alive)E(e.message)});return()=>{alive=false};},[reg,team]);
  const byId=new Map(games.map(g=>[g.id,g.opponent])),filtered=logs?.filter(l=>!opponent||byId.get(l.match)===opponent)||[];
- return error?<p role="alert">{error}</p>:!logs?<p>Laster analyse …</p>:<><h2>Sesonganalyse</h2><label>Motstander<select value={opponent} onChange={e=>OP(e.target.value)}><option value="">Alle motstandere</option>{[...new Set(logs.map(l=>byId.get(l.match)).filter((v):v is string=>!!v))].sort().map(n=><option key={n}>{n}</option>)}</select></label><p>{filtered.length} {filtered.length===1?"kamp":"kamper"} med egen registrering</p><LiveSummary events={filtered.flatMap(r=>r.events)}/></>;
+ return error?<p role="alert">{error}</p>:!logs?<p>Laster analyse …</p>:<><FeatureInfo topic="live"><h2>Sesonganalyse</h2></FeatureInfo><label>Motstander<select value={opponent} onChange={e=>OP(e.target.value)}><option value="">Alle motstandere</option>{[...new Set(logs.map(l=>byId.get(l.match)).filter((v):v is string=>!!v))].sort().map(n=><option key={n}>{n}</option>)}</select></label><p>{filtered.length} {filtered.length===1?"kamp":"kamper"} med egen registrering</p><LiveSummary events={filtered.flatMap(r=>r.events)}/></>;
 }
 function Recorder({g,data}:{g:Fixture;data:Snapshot}){
  const [s,S]=useState<Session>(),[tick,T]=useState(Date.now()),[tab,A]=useState("Keeper"),[choice,C]=useState<Kind>("save"),[keeper,K]=useState(""),[player,P]=useState(""),[assist,H]=useState(""),[origin,O]=useState("Ukjent"),[phase,F]=useState("Etablert"),[busy,B]=useState(false),[note,N]=useState(""),[finish,V]=useState(false),[filter,Q]=useState("Alle");
@@ -44,7 +45,7 @@ function Recorder({g,data}:{g:Fixture;data:Snapshot}){
   void send("event",{kind,side,player:player.trim(),keeper:opp?keeper.trim():"",assist:kind==="goal"?assist.trim():null,origin,phase,x,y});
  }
  const actors=data.roster.filter(m=>m.role==="athlete").map(m=>m.name);
- return <><div className="live-clock"><div><small>{g.home} – {g.away}</small><h2>{clock(elapsed(s,tick+offset.current))}</h2><span>{s.period}. omgang · {{idle:"Ikke startet",running:"Pågår",paused:"Pause",finished:"Avsluttet"}[s.status]}</span></div><div className="live-clock-actions">
+ return <><div className="live-clock"><div><small>{g.home} – {g.away}</small><FeatureInfo topic="live"><h2>{clock(elapsed(s,tick+offset.current))}</h2></FeatureInfo><span>{s.period}. omgang · {{idle:"Ikke startet",running:"Pågår",paused:"Pause",finished:"Avsluttet"}[s.status]}</span></div><div className="live-clock-actions">
  {s.status==="idle"?<button className="btn primary" disabled={busy} onClick={()=>send("start")}><Play size={17}/> Start kampen</button>:on?<button className="btn" disabled={busy} onClick={()=>send("pause")}><Pause size={17}/> Pause klokka</button>:s.status==="paused"?<><button className="btn primary" disabled={busy} onClick={()=>send("resume")}><Play size={16}/> Fortsett</button>{s.period<6&&<button className="btn" disabled={busy} onClick={()=>send("period")}>Start {s.period+1}. omgang</button>}</>:null}
  {["running","paused"].includes(s.status)&&<button className="btn" onClick={()=>V(!finish)} disabled={busy}><Square size={15}/> Avslutt</button>}</div></div>
  {finish&&<div className="live-confirm"><strong>Avslutte registreringen? Kampen blir skrivebeskyttet.</strong><button className="btn" onClick={()=>V(false)}>Avbryt</button><button className="btn primary" disabled={busy} onClick={()=>send("finish")}>Avslutt kampen</button></div>}

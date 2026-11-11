@@ -1,5 +1,6 @@
 "use client";
 
+import {FeatureInfo} from "@/features/beta/feature-info";
 import { useEffect, useState, type FormEvent } from "react";
 import { db, demo, demoAccounts, joinDemo, registerDemoAthlete,selectTeam } from "@/lib/beta";
 import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList } from "lucide-react";
@@ -91,7 +92,7 @@ export default function Login(){
   const choice=!selected&&!invite;
   return <PublicShell><div className="entry-content">
     {!choice&&!invite&&<a className="entry-back" href={next?"/login?next="+next:"/login"}><ArrowLeft size={16}/>Choose another role</a>}
-    <h1>{choice?"Team sign-in":invite?"Join your team":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1>
+    <FeatureInfo topic="entry"><h1>{choice?"Team sign-in":invite?"Join your team":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1></FeatureInfo>
     {choice?<><p className="entry-lead">Choose your role to continue.</p><nav className="entry-roles" aria-label="Account role">
       <a className="entry-role athlete" href={"/login?role=athlete"+onward} aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
       <a className="entry-role coach" href={"/login?role=coach"+onward} aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>

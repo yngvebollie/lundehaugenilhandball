@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useEffect, useState } from "react";
 import {plannerBridge} from "@/lib/development/flags";
 import {catalog as developmentCatalog} from "@/lib/development/catalog";
@@ -61,7 +62,7 @@ export function ProgramBuilder({data,busy,run,initial,onDirty,onCalendar}:{data:
   return <div className="grid" id="builder"><section className="panel panel-pad grid">
     <PublishingTeam data={data}/>
     {offeredExercise&&<button className="btn" onClick={()=>{edit({text:[current.text,offeredExercise.title].filter(Boolean).join("\n"),manual:true});setOffered("");history.replaceState(null,"","/#builder");}}><Plus size={16}/> Legg «{offeredExercise.title}» i utkastet</button>}
-    <div className="feature-heading"><h2><ClipboardList/> Program builder</h2><div className="day-strip"><a className="btn" href="#plan-drafts">Weekly suggestions</a><a className="btn" href="#ai-coach">Ask Coach AI</a></div></div>
+    <div className="feature-heading"><FeatureInfo topic="builder"><h2><ClipboardList/> Program builder</h2></FeatureInfo><div className="day-strip"><a className="btn" href="#plan-drafts">Weekly suggestions</a><a className="btn" href="#ai-coach">Ask Coach AI</a></div></div>
     <CoachAI key={active+"-"+loaded} source={current.text} apply={d=>{
       if(d.mode==="rewrite")edit({text:d.text,manual:true});
       else if(d.mode==="exercise")setGenerated({id:crypto.randomUUID(),value:d});

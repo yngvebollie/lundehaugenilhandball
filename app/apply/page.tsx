@@ -1,4 +1,5 @@
 "use client";
+import {FeatureInfo} from "@/features/beta/feature-info";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {AthleteName,joinName,legacyNames} from "@/features/beta/athlete-name";
 import {PublicShell} from "@/features/beta/public-shell";
@@ -56,7 +57,7 @@ export default function Apply(){
   const success=mail||info&&request?.status==="Approved";
   return <PublicShell><section className="entry-content grid">
     {success?<><SignupSuccess name={name} email={email||signed} team={info?.name} role={info?.role||(short?shortRole:"athlete")} known={mail==="created"} joined={request?.status==="Approved"} onOpen={request?.status==="Approved"?openTeam:undefined}/>{mail&&!request&&<button className="btn" type="button" disabled={busy} onClick={()=>{setMail("");setExisting(true);setMagic(false);setNote(signed?"":"Logg inn med passordet ditt for å bli med på laget.");}}>Jeg har bekreftet e-posten</button>}</>:<>
-    <h1>{info?"Bli med i "+info.name:short?(shortRole==="coach"?"Bli med som trener":"Bli med som utøver"):"Laginvitasjon"}</h1>
+    <FeatureInfo topic="entry"><h1>{info?"Bli med i "+info.name:short?(shortRole==="coach"?"Bli med som trener":"Bli med som utøver"):"Laginvitasjon"}</h1></FeatureInfo>
     {!ready?<p>Kontrollerer invitasjonen …</p>:!info&&!short?<p>Lenken har utløpt eller er erstattet. Be om en ny invitasjon.</p>:<>
     <strong>{(short?shortRole:info?.role)==="coach"?"Invitasjon som trener":"Invitasjon som utøver"}</strong>
     {request&&!short&&!info?.direct?<p role="status">{request.status==="Declined"?"Søknaden ble avslått.":"Søknaden er registrert med en eldre søknadslenke. Be om en ny direkte invitasjon for å komme inn uten godkjenning."}</p>:<form className="grid" onSubmit={submit}>

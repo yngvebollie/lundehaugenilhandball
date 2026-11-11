@@ -1,4 +1,5 @@
 "use client";
+import {FeatureInfo} from "@/features/beta/feature-info";
 import {useCallback,useEffect,useState} from "react";
 import {admissions,applications,db,demo,demoAccounts,type Team,type Application} from "@/lib/beta";
 import {ClubCrest} from "@/features/beta/club-crest";
@@ -28,7 +29,7 @@ export default function JoinTeam(){
       if(result!==true)throw Error(String(result));if(!team){location.assign("/athlete");return;}await refresh();setNotice("Application sent to the coaching staff.");
     }catch(e){setNotice((e as Error).message);}finally{setBusy(false);}
   }
-  return <main className="login grid"><div className="brand"><ClubCrest/><span>Lundehaugen IL</span></div><h1>Join a team</h1>
+  return <main className="login grid"><div className="brand"><ClubCrest/><span>Lundehaugen IL</span></div><FeatureInfo topic="entry"><h1>Join a team</h1></FeatureInfo>
     <label>Your name<input maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>
     <form className="grid" onSubmit={e=>{e.preventDefault();void act();}}><label>Six-character team code<input required minLength={6} maxLength={6} value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/></label><button disabled={!name.trim()||busy} className="btn primary">Join with code</button></form>
     <h2>Teams accepting applications</h2>{teams.map(t=><div className="result" key={t.id}><strong>{t.name}</strong><button className="btn" disabled={!name.trim()||busy||requests.some(r=>r.team===t.id)} onClick={()=>act(t.id)}>{requests.find(r=>r.team===t.id)?.status||"Apply to team"}</button></div>)}{!teams.length&&<p>No teams are listed. Ask your coach for a code or invitation.</p>}

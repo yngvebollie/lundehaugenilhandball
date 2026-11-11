@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useCallback,useEffect,useState} from "react";
 import {ArrowLeft,CalendarDays,ChevronRight,ClipboardList,ExternalLink,Minus,Plus,RefreshCw,Save,Settings,Star,Trophy} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
@@ -38,7 +39,7 @@ export function Kamper({data}:{data:Snapshot}){
   const registered=regs.find(r=>r.org_id===inputId);
   function add(){setOrg("");setCup("");setSquadName("");setNote("");setAdding(true);setView("teams");setId("");history.replaceState(null,"","/match?view=teams");}
   return <div className={"squad-space"+(id?" detail-mode":"")}>
-    {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><h3>Spillelag</h3>
+    {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><FeatureInfo topic="matches"><h3>Spillelag</h3></FeatureInfo>
       {regs.map(r=><button className={active?.id===r.id?"current":""} key={r.id} aria-pressed={active?.id===r.id} onClick={()=>choose(r.id)}><span><strong>{label(r)}</strong><small>NIF {r.org_id}</small></span><ChevronRight size={16}/></button>)}
       {admin&&<button className="rail-add" onClick={add}><Plus size={16}/>Legg til lag</button>}</aside>}
     <section className="grid kamper">
@@ -111,7 +112,7 @@ function MatchDetail({data,game:g,reload}:{data:Snapshot;game:Fixture;reload:()=
     {section==="Kampinformasjon"&&<div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div>}
     {!g.registration&&!g.completed&&g.day<=today()&&<form className="day-strip" onSubmit={e=>{e.preventDefault();void mutate("finished",null,{score},"Sluttresultat lagret.");}}><label>Sluttresultat<input required pattern="[0-9]+ *[-:] *[0-9]+" maxLength={20} placeholder="24-21" value={score} onChange={e=>setScore(e.target.value)}/></label><button disabled={busy} className="btn">Marker ferdig</button></form>}
     <div hidden={section!=="Kamprapport"}><ReportEditor game={g} data={data} onSaved={read}/></div><div hidden={section!=="Spillere"}><div className="grid">
-    <div className="feature-heading"><h3>Spillerstatistikk</h3>{g.completed&&<a href={"/merker?game="+g.id}>Koble utøver til kampmerker</a>}</div>
+    <div className="feature-heading"><FeatureInfo topic="stats"><h3>Spillerstatistikk</h3></FeatureInfo>{g.completed&&<a href={"/merker?game="+g.id}>Koble utøver til kampmerker</a>}</div>
     {d&&<PlayerList rows={d.rows} form={form} selected={selected} pick={pick} day={g.day}/>}
     {d&&!d.rows.some(p=>p.report_listed||confirmed(p)||p.stats||p.discrepancy)&&<p>Ingen spillerlinjer ennå.</p>}
     <details className="library-tools"><summary>Deltakelse og spillerutvalg</summary><div className="grid">

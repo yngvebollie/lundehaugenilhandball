@@ -14,7 +14,11 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||"playwright");
         if(process.env.ENTRY_SCREENSHOTS&&label==="Athlete login")await page.screenshot({path:process.env.ENTRY_SCREENSHOTS+"/team-sign-in-"+width+".png"});
         await row.click();await page.getByRole("button",{name:"Sign in",exact:true}).waitFor();
         await page.getByRole("button",{name:"Create account",exact:true}).click();
-        await page.getByLabel(label==="Athlete login"?"Your name":"Team invitation link or code").waitFor();
+        if(label==="Athlete login"){
+          await page.getByLabel("Fornavn",{exact:true}).waitFor();
+          await page.getByLabel("Etternavn",{exact:true}).waitFor();
+          assert.equal(await page.getByLabel("E-post (valgfritt)",{exact:true}).evaluate(e=>e.required),false);
+        }else await page.getByLabel("Team invitation link or code").waitFor();
         await page.getByRole("link",{name:"Choose another role"}).click();
       }
       await page.getByRole("link",{name:"Platform documentation"}).click();

@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import type {Rule} from "@/lib/regular";
 import { Info,Sparkles } from "lucide-react";
@@ -20,7 +21,7 @@ export function WeekSuggestion({data,week,target,run,busy,onDraft,onNext,regular
     const rows=results.flatMap(r=>r.drafts.map(d=>({id:crypto.randomUUID(),athlete:r.p.id,squad:data.me.squad,title:d.title,day:d.day,exercises:d.exercises,program_name:style+" week"})));
     if(rows.length&&await run(()=>publish(rows))){setPreview(false);setMessage(rows.length+" suggested sessions added to the planner.");}
   }
-  return <section className="week-suggest grid"><div className="feature-heading"><h3><Sparkles size={17}/> Suggest weekly program</h3><Help label="How weekly suggestions work">Choose a style and preview each athlete’s additions. Existing sets, previous logged sets, hard ratings and court time limit the draft. Games and occupied training days are protected. Add to planner when ready.</Help></div>
+  return <section className="week-suggest grid"><div className="feature-heading"><FeatureInfo topic="suggest"><h3><Sparkles size={17}/> Suggest weekly program</h3></FeatureInfo><Help label="How weekly suggestions work">Choose a style and preview each athlete’s additions. Existing sets, previous logged sets, hard ratings and court time limit the draft. Games and occupied training days are protected. Add to planner when ready.</Help></div>
     <div className="day-strip">{styles.map(s=><button key={s} className={"btn "+(style===s?"selected":"")} aria-pressed={s===style} onClick={()=>{setStyle(s);setPreview(false);setMessage("");}}>{s}</button>)}<button disabled={busy} className="btn primary" onClick={()=>{setPreview(true);setMessage("");}}>Suggest week</button></div>
     {preview&&<>{unassigned&&<p role="status">No athletes yet. Preview and save a template now; invite an athlete before publishing.</p>}
       {results.map(r=><div className="week-review" key={r.p.id}><strong>{r.p.name}</strong><p>{r.existing} sets scheduled · {r.court} court minutes · {r.fixed} min faste aktiviteter · {r.logged} sets logged last week{r.hard?" · Hard feedback":""}</p>

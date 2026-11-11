@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useMemo,useState} from "react";
 import {ChevronDown,ChevronRight,Volleyball} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
@@ -34,7 +35,7 @@ export function PlayerStatistics({data}:{data:Snapshot}){
    .filter(p=>p.name.toLocaleLowerCase("nb").includes(search.toLocaleLowerCase("nb").trim())&&(!active||p.filtered.length>0))
    .sort((a,b)=>(b.m.goals??-1)-(a.m.goals??-1)||(b.m.games??0)-(a.m.games??0)||a.name.localeCompare(b.name,"nb"));
  const cols=views[view] as readonly Column[];
- return <section className="grid squad-stats"><header className="competition-heading"><div><h2>Spillerstats · {season}</h2><small>{active?.games??games} unike spilte kamper · {new Set(visible.flatMap(p=>p.filtered.map(r=>r.fixtureKey))).size} med spillerdata</small></div>
+ return <section className="grid squad-stats"><header className="competition-heading"><div><FeatureInfo topic="stats"><h2>Spillerstats · {season}</h2></FeatureInfo><small>{active?.games??games} unike spilte kamper · {new Set(visible.flatMap(p=>p.filtered.map(r=>r.fixtureKey))).size} med spillerdata</small></div>
  {view!=="Nivåfordeling"&&<label>Spillelag og nivå<select value={level} onChange={e=>setLevel(e.target.value)}><option value="">Alle nivåer</option>{levels.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>}</header>
  <nav className="workspace-tabs" aria-label="Samlet spillerstatistikk">{(Object.keys(views) as (keyof typeof views)[]).map(v=><button key={v} aria-pressed={view===v} className={view===v?"current":""} onClick={()=>{if(view==="Nivåfordeling"&&v!==view)setLevel("");setExpand("");setView(v);}}>{v}</button>)}</nav>
  {view==="Nivåfordeling"&&<nav className="workspace-tabs" aria-label="Velg spillelag"><button aria-pressed={!active} className={!active?"current":""} onClick={()=>{setLevel("");setExpand("");}}>Alle</button>{levels.map(n=><button key={n.id} aria-pressed={active?.id===n.id} className={active?.id===n.id?"current":""} onClick={()=>{setLevel(n.id);setExpand("");}}>{n.label}</button>)}</nav>}

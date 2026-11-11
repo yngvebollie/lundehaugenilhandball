@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {Star} from "lucide-react";
 import {teamRatings,type RatingRow} from "@/lib/coach-feedback";
@@ -22,7 +23,7 @@ export function CoachRatings({data}:{data:Snapshot}){
   const batch=groups.get(title)||[];batch.push(row);groups.set(title,batch);
  }
  const count=[...groups.values()].reduce((n,rs)=>n+rs.length,0);
- return <section className="grid" id="ratings"><header><h2><Star/> Øvelsesvurderinger</h2><p className="muted">{data.teams.find(t=>t.id===data.me.squad)?.name} · Kun trenere</p></header>
+ return <section className="grid" id="ratings"><header><FeatureInfo topic="ratings"><h2><Star/> Øvelsesvurderinger</h2></FeatureInfo><p className="muted">{data.teams.find(t=>t.id===data.me.squad)?.name} · Kun trenere</p></header>
  <div className="field-pair"><label>Spiller<select value={player} onChange={e=>P(e.target.value)}><option value="">Alle spillere</option>{[...names].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>Kilde<select value={source} onChange={e=>S(e.target.value)}><option value="">Alle kilder</option>{Object.entries(sources).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>Søk etter øvelse<input type="search" value={search} onChange={e=>Q(e.target.value)}/></label></div>
  {err?<p role="alert">{err} <button className="btn" onClick={()=>T(retry+1)}>Prøv igjen</button></p>:!rows?<p>Henter vurderinger …</p>:<><p>{count} vurderinger · {groups.size} øvelser</p>
  {[...groups].sort(([a],[b])=>a.localeCompare(b,"nb")).map(([title,rs])=><details className="library-tools" key={title}><summary>{title} · {(rs.reduce((n,r)=>n+r.stars,0)/rs.length).toLocaleString("nb",{maximumFractionDigits:1})}/5 · {rs.length} vurderinger</summary><div className="monitor-table"><table className="table"><thead><tr>{["Spiller","Stjerner","Kilde","Aktivitet","Dato"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{rs.map((r,i)=><tr key={i}><td>{names.get(r.athlete)}</td><td>{r.stars}/5</td><td>{sources[r.origin]}</td><td>{r.activity&&assignments.get(r.activity)?.title||"–"}</td><td>{new Date(r.updated).toLocaleDateString("nb-NO",{timeZone:"Europe/Oslo"})}</td></tr>)}</tbody></table></div></details>)}

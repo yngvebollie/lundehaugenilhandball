@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useRef,useState,type ReactNode} from "react";
 import {Check,ChevronLeft,ChevronRight} from "lucide-react";
 import {demo,type Snapshot} from "@/lib/beta";
@@ -25,7 +26,7 @@ function Form({initial,onDone,onCancel}:{initial:Wishes;onDone:(v:Wishes)=>Promi
   if(step===1&&v.days.length&&(!Number.isInteger(v.minutes)||v.minutes<1||v.minutes>600)){E("Velg mellom 1 og 600 minutter.");return;}
   if(step<4){S(step+1);return;}B(true);E("");try{await onDone({...v,given:v.given.trim(),family:v.family.trim(),minutes:v.days.length?v.minutes:45});}catch(x){E((x as Error).message);}finally{B(false);}
  }
- return <section className="pw-form panel panel-pad grid"><header><small>Min profil · Steg {step+1} av 5</small><progress value={step+1} max={5} aria-label="Profilsteg"/><h1 tabIndex={-1} ref={heading}>{titles[step]}</h1></header>
+ return <section className="pw-form panel panel-pad grid"><header><small>Min profil · Steg {step+1} av 5</small><progress value={step+1} max={5} aria-label="Profilsteg"/><FeatureInfo topic="wizard"><h1 tabIndex={-1} ref={heading}>{titles[step]}</h1></FeatureInfo></header>
  {step===0?<div className="pw-profile"><Kit number={v.shirt}/><div className="grid"><label>Fornavn<input autoComplete="given-name" value={v.given} onChange={e=>field("given",e.target.value)}/></label><label>Etternavn<input autoComplete="family-name" value={v.family} onChange={e=>field("family",e.target.value)}/></label><label>{v.email?.startsWith("+")?"Telefonnummer for innlogging":"E-post for innlogging"}<input type="text" value={v.email||""} readOnly/></label><label>Draktnummer<input inputMode="numeric" maxLength={3} value={v.shirt} onChange={e=>field("shirt",e.target.value.replace(/\D/g,""))}/></label></div></div>:
  step===1?<><p>Velg dagene som gjentar seg hver uke, eller gå videre uten skolegym.</p><div className="pw-options">{["Man","Tir","Ons","Tor","Fre"].map((x,i)=><button key={x} className="btn" aria-pressed={v.days.includes(i+1)} onClick={()=>field("days",toggle(v.days,i+1).sort())}>{x}</button>)}</div><strong>Varighet per gang</strong><div className="pw-options">{[45,90].map(n=><button key={n} className="btn" aria-pressed={!custom&&n===v.minutes} onClick={()=>{C(false);field("minutes",n);}}>{n} min</button>)}<button className="btn" aria-pressed={custom} onClick={()=>C(true)}>Egen tid</button></div>{custom&&<label>Antall minutter<input type="number" min="1" max="600" value={v.minutes||""} onChange={e=>field("minutes",Number(e.target.value))}/></label>}</>:
  step===2||step===3?<><p>Velg ett eller flere områder.</p><div className="pw-options">{Object.entries(step===2?skills:physical).map(([id,label])=>select(step===2?"skills":"physical",id,label))}</div></>:

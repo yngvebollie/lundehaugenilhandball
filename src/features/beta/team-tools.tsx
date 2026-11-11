@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {CoachPositions} from "./player-wizard";
 import { useState, type FormEvent } from "react";
 import { Users, UserRound,KeyRound,Link as LinkIcon,Mail,Copy,RefreshCw } from "lucide-react";
@@ -37,11 +38,11 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     <form className="grid" onSubmit={async e=>{e.preventDefault();const next=name.trim();if(next&&await run(()=>saveTeamDetails(data.me.squad,next,logo))){setName(next);setStatus("Team details saved.");}}}><label>Team name<input value={name} maxLength={80} required onChange={e=>{setName(e.target.value);setStatus("");}}/></label>
     {logo&&<img src={logo} width={72} height={72} alt="Team logo preview"/>}<label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e=>{const file=e.target.files?.[0];if(file)try{setLogo(await thumbnail(file,true));}catch(err){setStatus((err as Error).message);}}}/></label>
     {logo&&<button className="btn" type="button" onClick={()=>setLogo("")}>Remove logo</button>}<button className="btn primary" disabled={busy||!name.trim()||(name.trim()===teamName&&logo===savedLogo)}>Save</button></form>
-    <details className="library-tools"><summary>Add another team</summary><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
+    <details className="library-tools"><summary>Add another team</summary><FeatureInfo topic="team"/><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
     </>}
     {tab==="Posisjonsønsker"&&<CoachPositions data={data}/>}
     {tab==="Medlemmer"&&<TeamStaff data={data} busy={busy} run={run}/>}
-    {tab==="Inviter"&&<><h3>Inviter til {teamName}</h3>
+    {tab==="Inviter"&&<><FeatureInfo topic="team"><h3>Inviter til {teamName}</h3></FeatureInfo>
     <label>Rolle i laget<select value={role} onChange={e=>{setRole(e.target.value as Member["role"]);setLinks([]);setStatus("");setCopied(false);}}><option value="athlete">Utøver</option>{data.admins.includes(data.me.id)&&<option value="coach">Trener</option>}</select></label>
     <div className="stat-switch" role="group" aria-label="Invitasjonsmåte">{[["Lenke",LinkIcon],["Kode",KeyRound],["E-post",Mail]].map(([v,Icon])=>{const I=Icon as typeof Mail;return <button aria-pressed={method===v} key={String(v)} onClick={()=>{setMethod(String(v));setStatus("");}}><I size={15} aria-hidden="true"/> {String(v)}</button>;})}</div>
     {method==="Lenke"?<ShareLink key={data.me.squad+role} data={data} busy={busy} run={run} role={role}/>:method==="Kode"?<InviteCode key={data.me.squad+role} team={data.me.squad} role={role} busy={busy} run={run}/>:<>
@@ -77,7 +78,7 @@ async function thumbnail(file:File,fit=false){
 }
 export function Profile({me,busy,run}:{me:Member;busy:boolean;run:Run}){
   const [bio,setBio]=useState(me.bio||""),[photo,setPhoto]=useState(me.photo||""),[note,setNote]=useState("");
-  return <section className="panel panel-pad grid"><h2><UserRound/> Utøverprofil</h2>{photo&&<img src={photo} width={80} height={80} alt="Profilbilde av utøveren"/>}
+  return <section className="panel panel-pad grid"><h2><UserRound/> Utøverprofil</h2><FeatureInfo topic="wizard"/>{photo&&<img src={photo} width={80} height={80} alt="Profilbilde av utøveren"/>}
     <label>Profilbilde<input type="file" accept="image/jpeg,image/png,image/webp" onChange={async e=>{const f=e.target.files?.[0];if(f)try{setPhoto(await thumbnail(f));setNote("");}catch(err){setNote((err as Error).message);}}}/></label>{photo&&<button className="btn" onClick={()=>setPhoto("")}>Fjern profilbilde</button>}
     <a className="btn" href="/athlete?profil=rediger">Rediger spillerprofil og posisjonsønsker</a><label>Om meg<textarea value={bio} maxLength={500} onChange={e=>setBio(e.target.value)}/></label>
     <button className="btn primary" disabled={busy} onClick={async()=>{if(await run(()=>saveProfile(me,{name:me.name,given_name:me.given_name,family_name:me.family_name,shirt_number:me.shirt_number,position:me.position,bio,photo})))setNote("Profilen er lagret.");}}>Lagre profil</button>{note&&<p role="status">{note}</p>}</section>;

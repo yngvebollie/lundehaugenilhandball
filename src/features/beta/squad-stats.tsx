@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useMemo,useState} from "react";
 import {ArrowDown,ArrowUp} from "lucide-react";
 import {squadStatLines,type StatLine,type Fixture} from "@/lib/match-journal";
@@ -19,7 +20,7 @@ export function SquadStats({reg,fixtures}:{reg:string;fixtures:Fixture[]}){
   const players=[...byPlayer.values()].map(group=>{const last=group.reduce((a,b)=>b.day>a.day?b:a);return {...last,stats:metrics(group)};}).sort((a,b)=>{
     const l=a.stats[sort],r=b.stats[sort];return Number(l==null)-Number(r==null)||((l??0)-(r??0))*(desc?-1:1)||a.name.localeCompare(b.name,"nb");
   });
-  return <section className="grid squad-stats"><header className="competition-heading"><div><h2>Spillerstatistikk</h2><small>{games.length} spilte kamper{filtered&&" · "+new Set(filtered.map(x=>x.match_id)).size+" med spillerdata"}</small></div>
+  return <section className="grid squad-stats"><header className="competition-heading"><div><FeatureInfo topic="stats"><h2>Spillerstatistikk</h2></FeatureInfo><small>{games.length} spilte kamper{filtered&&" · "+new Set(filtered.map(x=>x.match_id)).size+" med spillerdata"}</small></div>
     {leagues.length>1&&<select aria-label="Turnering" value={league} onChange={e=>setLeague(e.target.value)}><option value="">Alle turneringer</option>{leagues.map(l=><option key={l}>{l}</option>)}</select>}</header>
     <nav className="workspace-tabs" aria-label="Statistikktype">{(Object.keys(tabs) as Tab[]).map(t=><button key={t} aria-pressed={tab===t} className={tab===t?"current":""} onClick={()=>{setTab(t);setSort(t==="Disiplin"?"warnings":t==="Trenerdata"?"saves":"goals");setDesc(true);}}>{t}</button>)}</nav>
     <div className="stat-switch" role="group" aria-label="Spillested">{["Alle","Hjemme","Borte"].map(v=><button aria-pressed={venue===v} key={v} onClick={()=>setVenue(v)}>{v}</button>)}</div>

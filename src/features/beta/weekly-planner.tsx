@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {court,courtEnabled,type Doc} from "@/lib/court/client";
 import {regular} from "@/lib/coach-feedback";
 import {onDate,type Rule} from "@/lib/regular";
@@ -56,7 +57,7 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
   }
   return <div className="grid" id="weekly"><section className="panel panel-pad grid">
     {coach&&<PublishingTeam data={data}/>}
-    <header className="page-head"><h2><CalendarDays/> Weekly planner</h2><div className="day-strip"><button aria-label="Previous week" className="btn" onClick={()=>navigate(trainingDay(week,-7))}><ChevronLeft size={16}/></button><button className="btn" onClick={()=>navigate(today())}>This week</button><button aria-label="Next week" className="btn" onClick={()=>navigate(trainingDay(week,7))}><ChevronRight size={16}/></button></div></header>
+    <header className="page-head"><FeatureInfo topic="week"><h2><CalendarDays/> Weekly planner</h2></FeatureInfo><div className="day-strip"><button aria-label="Previous week" className="btn" onClick={()=>navigate(trainingDay(week,-7))}><ChevronLeft size={16}/></button><button className="btn" onClick={()=>navigate(today())}>This week</button><button aria-label="Next week" className="btn" onClick={()=>navigate(trainingDay(week,7))}><ChevronRight size={16}/></button></div></header>
     <div className="field-pair"><label>Week containing<input type="date" value={week} onChange={e=>{if(e.target.value)navigate(e.target.value);}}/></label>{coach&&<label>Planner athlete<select value={target} onChange={e=>setTarget(e.target.value)}><option value="">Entire team</option>{players.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}</div>
     <h3 className="calendar-range">{weekLabel(week)}</h3>
     <div className="day-strip" aria-label="Calendar view">{([["Week",Columns3],["Agenda",List],...(coach?[["Compare",ChartColumn] as const]:[])] as const).map(([label,Icon])=><button className={"btn "+(view===label?"selected":"")} key={label} aria-pressed={view===label} onClick={()=>setView(label)}><Icon size={16}/>{label}</button>)}</div>
@@ -100,7 +101,7 @@ function Monitor({onTarget,data,week,target,plans,rules,docs,date,loadError}:{on
   const advice=!target?"Select an athlete above for an individual workload review.":!plans.length&&!hasRegular&&!hasPublished?"No activities scheduled in this week.":hard?"Review a reduction: "+hard+" session(s) felt hard. Check the athlete’s feedback before the next session.":
     hasRegular?"Ta med faste aktiviteter i vurderingen før du øker treningsmengden.":easy>=2&&easy===rated.length&&!games&&sets<=priorSets?"Review a small increase: all "+easy+" rated sessions felt easy and planned sets have not risen.":
     !rated.length?"Await athlete feedback before adjusting volume.":games?"Review game demands before adding extra work.":"Maintain the plan and review at the next check-in.";
-  return <section id="monitor" className="panel panel-pad grid"><h2><Activity/> Health monitor</h2><p><strong>{target?data.roster.find(p=>p.id===target)?.name:"Team totals"}</strong> · {weekLabel(week)}</p>
+  return <section id="monitor" className="panel panel-pad grid"><FeatureInfo topic="monitor"><h2><Activity/> Health monitor</h2></FeatureInfo><p><strong>{target?data.roster.find(p=>p.id===target)?.name:"Team totals"}</strong> · {weekLabel(week)}</p>
     {loadError?<p role="alert">Summen er utilgjengelig: {loadError}</p>:<ActivityLoad key={data.me.squad+date} data={data} date={date} target={target} onTarget={onTarget} rules={rules} docs={docs}/>}
     <div className="monitor-table"><table className="table"><thead><tr><th>Body focus</th><th>Exercises done / planned</th><th>Sets done / planned</th><th>Prior week planned sets</th></tr></thead><tbody>{current.body.map((b,i)=><tr key={b.region}><th>{b.region}</th><td>{b.done} / {b.planned}</td><td>{b.doneSets} / {b.sets}</td><td>{previous.body[i].sets}</td></tr>)}</tbody></table></div>
     <p className="muted">Sets count explicit prescriptions such as 3 x 8. A checked exercise counts its prescribed sets. Court minutes use the scheduled duration of games and practices.</p>

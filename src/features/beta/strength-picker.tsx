@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { broadZones, strength, type Lift } from "@/lib/strength";
@@ -19,7 +20,7 @@ export function StrengthPicker({data,run,busy,append}:{data:Snapshot;run:Run;bus
       setId(item.id);setNotice(item.name+" added to session.");
     }
   }
-  return <section className="strength-picker grid" id="strength-library"><header><h3>Strength library</h3><small className="muted">{strength.length} handball lifts · {data.library.length} team exercises · Your most used first</small></header>
+  return <section className="strength-picker grid" id="strength-library"><header><FeatureInfo topic="library"><h3>Strength library</h3></FeatureInfo><small className="muted">{strength.length} handball lifts · {data.library.length} team exercises · Your most used first</small></header>
     <div className="field-pair"><label><span><Search size={13}/> Search exercises</span><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Name or muscle"/></label><label>Body focus<select value={focus} onChange={e=>setFocus(e.target.value)}>{["All",...new Set(items.map(x=>x.region))].map(r=><option key={r}>{r}</option>)}</select></label></div>
     {selected?<><div className="lift-browser"><div className="lift-list" aria-label="Exercises ranked by your usage">{visible.map(e=><button key={e.id} aria-pressed={selected.id===e.id} onClick={()=>{setId(e.id);setNotice("");}}><span>{e.name}</span><small>{usage.get(e.id)?.uses?usage.get(e.id)?.uses+" uses":e.region}</small></button>)}</div><div className="anatomy"><BodyMap zones={selected.zones}/><span><i/> Target muscles</span></div></div>
     <div className="lift-summary"><div><strong>{selected.name}</strong><p>{selected.zones.join(" · ")||selected.region}</p><small>{selected.dose}</small></div><button className="btn primary" disabled={busy} onClick={()=>add(selected)}><Plus size={15}/>Add to session</button></div></>:<p>No exercises match this search.</p>}{notice&&<small role="status">{notice}</small>}</section>;

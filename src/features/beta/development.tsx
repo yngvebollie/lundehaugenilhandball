@@ -1,4 +1,5 @@
 "use client";
+import {FeatureInfo} from "./feature-info";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {Activity,ArrowLeft,ArrowRight,Check,ChevronRight,ClipboardCheck,Clock3,Dumbbell,Flag,Footprints,History,LockKeyhole,MessageCircle,Plus,Send,Star,Target,Trophy,UserRound} from "lucide-react";
 import {demo,type Snapshot} from "@/lib/beta";
@@ -15,13 +16,14 @@ import {dateText,Radar} from "./development-radar";
 import "./development.css";
 const tabs=["Oversikt","Mål","Øvelser","Historikk"] as const;
 const statuses:Record<string,string>={draft:"Kladd",proposed:"Foreslått",active:"Aktivt mål",awaiting_review:"Trener vurderer fremgangen",completed:"Bekreftet",paused:"På pause",archived:"Arkivert",cancelled:"Avsluttet"};
-function Journey({g}:{g:Goal}){return <section className="dev-panel dev-journey"><h3><Flag/> Målreise</h3><ol>{journey.map((l,i)=><li key={l} className={i<g.stage?"passed":i===g.stage?"here":""} aria-current={i===g.stage?"step":undefined}><span>{i<g.stage||g.stage===3&&i===3?<Check size={13}/>:i+1}</span>{l}</li>)}</ol></section>;}
+function Journey({g}:{g:Goal}){return <section className="dev-panel dev-journey"><FeatureInfo topic="journey"><h3><Flag/> Målreise</h3></FeatureInfo><ol>{journey.map((l,i)=><li key={l} className={i<g.stage?"passed":i===g.stage?"here":""} aria-current={i===g.stage?"step":undefined}><span>{i<g.stage||g.stage===3&&i===3?<Check size={13}/>:i+1}</span>{l}</li>)}</ol></section>;}
 function Progress({n,target}:{n:number;target:number|null}){return <div className="dev-practice-count"><small>{target?"Øvd "+n+" av "+target+" avtalte ganger":n+" registrerte øvinger"}</small>{target&&<progress value={Math.min(n,target)} max={target} aria-label="Avtalte øvinger"/>}</div>;}
-export function Development({data}:{data:Snapshot}){
+export function Development({data,highlights}:{data:Snapshot;highlights?:(id:string)=>React.ReactNode}){
  const coach=data.me.role==="coach",players=data.roster.filter(p=>p.role==="athlete"&&p.squad===data.me.squad).sort((a,b)=>a.name.localeCompare(b.name,"nb"));
  const [person,P]=useState(coach?(demo&&players.some(p=>p.id==="liv")?"liv":players[0]?.id||""):data.me.id),[queue,Q]=useState(false);
  useEffect(()=>{const wanted=new URLSearchParams(location.search).get("athlete");if(coach&&players.some(p=>p.id===wanted))P(wanted!);},[data.me.squad]);
- return <section className="dev-room"><div className="dev-personbar"><div><span className="dev-overline">{coach?"Trenerrom":"Spillerrom"} · {data.teams.find(t=>t.id===data.me.squad)?.name}</span><h2>{coach?(players.find(p=>p.id===person)?.name||"Spilleroversikt"):"Min utvikling"}</h2></div>{coach&&players.length>0&&<div className="dev-picker"><label>Utøver<select value={person} onChange={e=>{P(e.target.value);Q(false);}}>{players.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="dev-secondary" aria-pressed={queue} onClick={()=>Q(!queue)}><UserRound size={16}/> Lagoversikt</button></div>}</div>
+ return <section className="dev-room"><div className="dev-personbar"><div><span className="dev-overline">{coach?"Trenerrom":"Spillerrom"} · {data.teams.find(t=>t.id===data.me.squad)?.name}</span><FeatureInfo topic="development"><h2>{coach?(players.find(p=>p.id===person)?.name||"Spilleroversikt"):"Min utvikling"}</h2></FeatureInfo></div>{coach&&players.length>0&&<div className="dev-picker"><label>Utøver<select value={person} onChange={e=>{P(e.target.value);Q(false);}}>{players.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="dev-secondary" aria-pressed={queue} onClick={()=>Q(!queue)}><UserRound size={16}/> Lagoversikt</button></div>}</div>
+ {highlights?.(person)}
  {coach&&data.me.squad!=="development-preview"&&<DevelopmentSetup key={data.me.squad} data={data} empty={!players.length}/>}
  {demo&&data.me.squad!=="development-preview"&&<small className="dev-demo">Lokal demo · eksempeldata</small>}
  {!person?<p>Ingen utøvere på dette laget ennå. <a href="/team">Inviter en utøver til laget</a>.</p>:queue&&coach?<ReviewQueue data={data} pick={id=>{P(id);Q(false);}}/>:<PlayerPage key={data.me.squad+person+data.me.id} data={data} person={person}/>}</section>;

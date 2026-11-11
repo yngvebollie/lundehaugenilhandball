@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Library, Plus, Save } from "lucide-react";
 import { saveExercise, saveProgram, recordExerciseUse, type Snapshot } from "@/lib/beta";
@@ -29,7 +30,7 @@ export function SessionLibrary({data,run,busy,title,text,append,load,initial}:{d
       setSession(id);setNote("Session saved. It is also available in the weekly planner.");
     }
   }
-  return <details className="library-tools" open><summary><Library size={17}/> Exercise &amp; session library</summary><div className="grid">
+  return <details className="library-tools" open><summary><Library size={17}/> Exercise &amp; session library</summary><FeatureInfo topic="library"/><div className="grid">
     {plannerBridge&&<details><summary>Klubbens håndballøvelser</summary><div className="grid">{originals.map(x=><button type="button" className="btn" key={x.id} onClick={()=>append(x.title)}><Plus size={15}/>{x.title}</button>)}</div></details>}
     <StrengthPicker data={data} run={run} busy={busy} append={append}/>
     <div className="field-pair"><label>Exercise name<input maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="Pallof press"/></label><label>Sets, reps or time<input maxLength={100} value={dose} onChange={e=>setDose(e.target.value)} placeholder="3 x 10 per side"/></label><label>Primary focus<select value={region} onChange={e=>setRegion(e.target.value as Region)}>{regions.map(r=><option key={r}>{r}</option>)}</select></label></div>

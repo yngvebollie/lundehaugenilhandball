@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {ChevronLeft,ChevronRight} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
@@ -21,7 +22,7 @@ export function ActivityLoad({data,docs,rules,date,target:athlete,onTarget:T}:{r
  const stats=loadSummary(rules,events,res.rows||[],from,until,today(),athlete);
  const names=data.roster.filter(a=>a.role==="athlete"&&a.squad===data.me.squad);
  const line=(label:string,r:typeof stats.sum)=><tr key={label}><th scope="row">{label}</th><td>{r.planMin}</td><td>{r.planPoints}</td><td>{r.confirmed?r.actualMin:"–"}</td><td>{r.confirmed?r.actualPoints:"–"}</td><td>{r.pending}</td><td>{r.future}</td></tr>;
- return <section className="grid"><header className="page-head"><h3>Samlet belastning</h3><div className="day-strip" aria-label="Belastningsperiode">{(["Uke","Måned"] as const).map(x=><button key={x} className={"btn "+(period===x?"selected":"")} aria-pressed={period===x} onClick={()=>P(x)}>{x}</button>)}</div></header>
+ return <section className="grid"><header className="page-head"><FeatureInfo topic="load"><h3>Samlet belastning</h3></FeatureInfo><div className="day-strip" aria-label="Belastningsperiode">{(["Uke","Måned"] as const).map(x=><button key={x} className={"btn "+(period===x?"selected":"")} aria-pressed={period===x} onClick={()=>P(x)}>{x}</button>)}</div></header>
  <div className="field-pair"><label>Spiller i oversikten<select value={athlete} onChange={e=>T(e.target.value)}><option value="">Hele laget</option>{names.map(a=><option value={a.id} key={a.id}>{a.name}</option>)}</select></label><div className="day-strip"><button className="btn" aria-label="Forrige periode" onClick={()=>A(period==="Uke"?plusDay(from,-7):plusDay(from,-1))}><ChevronLeft size={16}/></button><strong>{from} – {plusDay(until,-1)}</strong><button className="btn" aria-label="Neste periode" onClick={()=>A(until)}><ChevronRight size={16}/></button></div></div>
  {res.error?<p role="alert">{res.error} <button className="btn" onClick={res.retry}>Prøv igjen</button></p>:!res.rows?<p role="status">Henter registreringer …</p>:<><div className="monitor-table"><table className="table"><caption>{names.find(a=>a.id===athlete)?.name||"Hele laget"} · {period}</caption><thead><tr>{["Aktivitet","Plan min","Plan poeng","Faktisk min","Faktisk poeng","Ubekreftet","Kommende"].map(col=><th scope="col" key={col}>{col}</th>)}</tr></thead><tbody>{(Object.keys(categories) as (keyof typeof categories)[]).map(k=>line(categories[k],stats.rows[k]))}</tbody><tfoot>{line("Totalt",stats.sum)}</tfoot></table></div>
  <small>Poeng = minutter × intensitet (1–5). En strek betyr at ingen faktisk belastning er registrert. Kamper gjelder spillerens planlagte kamper, ikke hele lagets terminliste.</small>{stats.sum.noDuration>0&&<small>{stats.sum.noDuration} planlagte aktiviteter mangler varighet og inngår ikke i planlagte poeng.</small>}</>}
@@ -30,7 +31,7 @@ export function ActivityLoad({data,docs,rules,date,target:athlete,onTarget:T}:{r
 export function DaySessionLoad({data,docs,date}:Props){
  const until=plusDay(date,1),events=eventsFor(data,docs,date,until,data.me.id),res=useEntries(data,date,until);
  if(!events.length||date>today())return null;
- return <section className="library-tools grid"><h3>Min trenings- og kampbelastning · {date}</h3>
+ return <section className="library-tools grid"><FeatureInfo topic="actual"><h3>Min trenings- og kampbelastning · {date}</h3></FeatureInfo>
  {res.error?<p role="alert">{res.error} <button className="btn" onClick={res.retry}>Prøv igjen</button></p>:res.rows?events.map(e=><EventEditor key={e.source+e.event+date} event={e} record={res.rows!.find(r=>r.source===e.source&&r.event===e.event)} save={async(n,w,clear)=>res.set(await sessionLoad(data,date,until,{event:e,minutes:n,weight:w,clear}))}/>):<p role="status">Henter registreringer …</p>}</section>;
 }
 function EventEditor({event:e,record,save}:{event:PlannedEvent;record?:EventLoad;save:(n:number,w:number,clear?:boolean)=>Promise<void>}){

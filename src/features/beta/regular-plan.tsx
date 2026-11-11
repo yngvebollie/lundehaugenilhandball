@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import {useState,type FormEvent} from "react";
 import {CalendarDays,Plus} from "lucide-react";
 import {today,type Snapshot} from "@/lib/beta";
@@ -47,7 +48,7 @@ export function LoadTotals({data,week,date,target,rules,docs}:{data:Snapshot;wee
  }
  return <section className="grid"><h3><CalendarDays size={17}/> Planlagt belastning</h3><div className="monitor-table"><table className="table"><thead><tr>{["Periode","Faste timer (antall)","Faste min","Økt- og kampmin","Min totalt","Belastningspoeng"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{row("Uke",week,plusDay(week,7))}{row("Måned",month,end)}</tbody></table></div>
  <small>Estimat, ikke oppmøte. Poeng = minutter × intensitet (1–5). Skolegym er normalt 3, lagtrening 4 og kamp 5. Økter uten varighet er ikke med i summen.{!target&&data.me.role==="coach"?" Lagtotalen summerer belastningen per spiller.":""}</small>
- <h3>Skolegym og annen fast aktivitet</h3><div className="monitor-table"><table className="table"><thead><tr>{["Periode","Planlagt min / poeng","Bekreftet min / poeng","Gjennomført","Ikke gjennomført","Ubekreftet","Kommende"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{([["Uke",week,plusDay(week,7)],["Måned",month,end]] as const).map(([label,start,until])=>{
+ <FeatureInfo topic="regular"><h3>Skolegym og annen fast aktivitet</h3></FeatureInfo><div className="monitor-table"><table className="table"><thead><tr>{["Periode","Planlagt min / poeng","Bekreftet min / poeng","Gjennomført","Ikke gjennomført","Ubekreftet","Kommende"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{([["Uke",week,plusDay(week,7)],["Måned",month,end]] as const).map(([label,start,until])=>{
  const s=regularComparison(rules,start,until,today(),target);
  return <tr key={label}><th>{label}</th><td>{s.plannedMinutes} / {s.planned}</td><td>{s.done+s.skipped?s.actualMinutes+" / "+s.actual:"–"}</td><td>{s.done}</td><td>{s.skipped}</td><td>{s.unknown}</td><td>{s.future}</td></tr>;
  })}</tbody></table></div><small>Planlagt gjelder hele perioden. Bekreftet belastning bygger bare på spillerens registreringer. En ubekreftet aktivitet er ikke fravær.</small></section>;

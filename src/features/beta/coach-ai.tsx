@@ -1,3 +1,4 @@
+import {FeatureInfo} from "./feature-info";
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { db, demo } from "@/lib/beta";
@@ -25,7 +26,7 @@ export function CoachAI({source,apply}:{source:string;apply:(draft:Suggestion)=>
       setDraft(parseDraft(mode,JSON.stringify(result)));
     }catch(error){setStatus((error as Error).message);}finally{setBusy(false);}
   }
-  return <details className="library-tools"><summary><Sparkles size={17}/> AI coach assistant</summary><div className="grid">
+  return <details className="library-tools"><summary><Sparkles size={17}/> AI coach assistant</summary><FeatureInfo topic="ai"/><div className="grid">
     <label>Draft task<select disabled={busy} value={mode} onChange={e=>{setMode(e.target.value as Mode);setDraft(null);setPaste("");setBrief("");setStatus("");}}>{Object.entries(labels).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label>
     <label>{mode==="rewrite"?"Editing instructions":"Training brief"}<textarea maxLength={1800} rows={3} disabled={busy} value={brief} onChange={e=>{setBrief(e.target.value);setDraft(null);}} placeholder={mode==="rewrite"?"Make the current session instructions clearer.":mode==="program"?"Two weeks, two sessions per week, bands only, game on Saturday.":"A core stability drill for a handball warm-up using a band."}/></label>
     {mode==="rewrite"&&source&&<details><summary>Session text included</summary><pre className="ai-text">{source}</pre></details>}
