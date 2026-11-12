@@ -3,7 +3,7 @@ import {registerHooks} from "node:module";
 import {readFile} from "node:fs/promises";
 import {PGlite} from "@electric-sql/pglite";
 registerHooks({resolve(s,c,next){if(s==="../development/model"&&c.parentURL?.includes("/court/"))return next("../development/model.ts",c);return next(s,c);}});
-const {baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
+const {alignPlanTimes,baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
 const {referenceDrills,media}=await import("../src/lib/court/films.ts");
 for(const d of referenceDrills){assert.ok(media(d)?.href);assert.equal(media(d)?.embed,"");}
 assert.equal(media({...baseDrills[0],filmUrl:"javascript:alert(1)"}),null);
@@ -11,6 +11,9 @@ assert.equal(media({...baseDrills[0],filmUrl:"https://youtu.be/Abc1234DEFg",embe
 assert.equal(media({...baseDrills[0],source:"NHF",vimeo:""}),null);
 const {sourceRecords,fetchNHF}=await import("../src/lib/court/source.ts");
 const plan=generate(baseDrills,initialRules);assert.equal(total(plan),5400);assert.equal(plan.items.length,7);plan.items[1].locked=true;plan.items[1].points="Behold";
+for(let minutes=10;minutes<=240;minutes+=5){const d=generate(baseDrills,{...initialRules,minutes});assert.equal(total(d),minutes*60);assert.ok(d.items.every(i=>i.work>=300&&i.work%300===0&&i.setup%300===0));}
+assert.throws(()=>generate(baseDrills,{...initialRules,minutes:92}));
+const legacy=alignPlanTimes({...plan,items:plan.items.map(i=>({...i,work:i.work-41,setup:41}))});assert.equal(total(legacy),5400);assert.ok(legacy.items.every(i=>i.work%300===0&&i.setup%300===0));
 const regen=generate(baseDrills,initialRules,plan,2);assert.deepEqual(regen.items[1],plan.items[1]);assert.equal(total(regen),5400);
 assert.throws(()=>generate(baseDrills,{...initialRules,minutes:10},plan));assert.throws(()=>generate([],initialRules));assert.notEqual(copyPlan(plan,true).items[0].id,plan.items[0].id);
 assert.equal(wallTime(osloInstant("2026-06-02T16:00")),"2026-06-02T16:00");assert.throws(()=>osloInstant("2026-03-29T02:30"));assert.throws(()=>osloInstant("2026-10-25T02:30"));

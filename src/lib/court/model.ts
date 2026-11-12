@@ -21,9 +21,20 @@ export type Plan={id:string;title:string;goal:string;venue:string;start:string;t
 export type Rules={age:string;minutes:number;players:number;keepers:number;focus:string[];equipment:string[];space:string;challenge:string};
 export const initialRules:Rules={age:"13–15",minutes:90,players:14,keepers:1,focus:["Kast og mottak","Forsvar"],equipment:["Baller","Kjegler","Vester"],space:"Halvbane",challenge:"Tilpasset"};
 export const blank=():Plan=>({id:crypto.randomUUID(),title:"Ny håndballøkt",goal:"",venue:"",start:"",target:5400,purpose:"team",origin:"manual",items:[],kit:"",expected:14});
-export const item=(ex="",manual="",block="Teknikk",work=600):Item=>({id:crypto.randomUUID(),ex,manual,block,work,setup:0,locked:false,instructions:"",points:"",group:""});
+export const gridTime=(seconds:number,min=0)=>Math.max(min,Math.round(seconds/300)*300);
+export const item=(ex="",manual="",block="Teknikk",work=600):Item=>({id:crypto.randomUUID(),ex,manual,block,work:gridTime(work,300),setup:0,locked:false,instructions:"",points:"",group:""});
 export const total=(p:Plan)=>p.items.reduce((sum,i)=>sum+i.work+i.setup,0);
-export const mins=(seconds:number)=>+(seconds/60).toFixed(1);
+export const mins=(seconds:number)=>Math.round(seconds/60);
+export function alignPlanTimes(p:Plan):Plan{
+ // Allocate against cumulative finish times so rounding does not inflate every activity.
+ const units=Math.max(p.items.length,Math.round(total(p)/300));let elapsed=0,used=0;
+ const items=p.items.map((it,n)=>{elapsed+=it.work+it.setup;
+  const end=Math.min(units-(p.items.length-n-1),Math.max(used+1,Math.round(elapsed/300)));
+  const duration=(end-used)*300,setup=Math.min(duration-300,gridTime(it.setup));used=end;
+  return {...it,work:duration-setup,setup};
+ });
+ return {...p,target:gridTime(p.target,600),items};
+}
 export const nextLine=(p:Plan)=>{let t=0;return p.items.map(i=>{const start=t;t+=i.work+i.setup;return {...i,offset:start,end:t};});};
 export function wallTime(instant:string){return instant?new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(instant)).replace(" ","T"):"";}
 export function osloInstant(local:string){
@@ -33,19 +44,27 @@ export function osloInstant(local:string){
 }
 export const eligible=(d:Drill,r:Rules)=>!!d.block&&d.minPlayers!=null&&d.minKeepers!=null&&(d.age==="Alle"||d.age===r.age)&&d.minPlayers<=r.players&&(!d.maxPlayers||r.players<=d.maxPlayers)&&d.minKeepers<=r.keepers&&d.equipment.every(e=>r.equipment.includes(e))&&["Korridor","Halvbane","Helbane"].indexOf(d.space)<=["Korridor","Halvbane","Helbane"].indexOf(r.space)&&(d.challenge==="Tilpasset"||d.challenge===r.challenge);
 export function generate(bank:Drill[],r:Rules,old?:Plan,seed=0){
- if(!Number.isInteger(r.minutes)||r.minutes<10||r.minutes>240||!Number.isInteger(r.players)||r.players<1||!Number.isInteger(r.keepers)||r.keepers<0||r.keepers>r.players)throw Error("Kontroller varighet, spillerantall og antall keepere.");
- const allowed=bank.filter(d=>eligible(d,r)),layout=["Oppvarming","Teknikk","Teknikk","Pause","Spill","Spill","Avslutning"],weights=[10,15,20,5,20,15,5],used=new Set<string>();
+ if(!Number.isInteger(r.minutes)||r.minutes%5||r.minutes<10||r.minutes>240||!Number.isInteger(r.players)||r.players<1||!Number.isInteger(r.keepers)||r.keepers<0||r.keepers>r.players)throw Error("Velg varighet i femminuttersintervaller, og kontroller antall spillere og keepere.");
+ const slots=r.minutes/5,indices=[0,1,4,6,3,2,5].slice(0,slots).sort((a,b)=>a-b);
+ const layout=indices.map(n=>["Oppvarming","Teknikk","Teknikk","Pause","Spill","Spill","Avslutning"][n]),weights=indices.map(n=>[10,15,20,5,20,15,5][n]);
+ const allowed=bank.filter(d=>eligible(d,r)),used=new Set<string>();
  for(const [n,i] of (old?.items||[]).entries())if(i.locked&&(n>=layout.length||i.ex&&!allowed.some(d=>d.id===i.ex)))throw Error("En låst aktivitet passer ikke med de nye rammene. Lås den opp eller endre rammene.");
  const items=layout.map((b,n)=>{const before=old?.items[n];if(before?.locked){used.add(before.ex);return {...before};}
   if(b==="Pause")return before?.block===b&&!before.ex?{...before}:item("","Vannpause",b);
   const options=allowed.filter(d=>d.block===b);if(!options.length)throw Error("Ingen godkjent øvelse passer i "+b+". Endre utstyr, baneplass eller spillerantall.");
-  const ranked=options.map((d,i)=>({d,score:(r.focus.includes(d.theme)?8:0)+(r.keepers&&d.minKeepers?5:0)-(used.has(d.id)?20:0),rotate:(i+seed)%options.length})).sort((a,b)=>b.score-a.score||a.rotate-b.rotate);
+  const ranked=options.map((d,i)=>({d,score:(r.focus.includes(d.theme)?8:0)+(r.keepers&&d.minKeepers?5:0)-(used.has(d.id)?40:0)-(seed>0&&before?.ex===d.id?16:0),rotate:(i+seed)%options.length})).sort((a,b)=>b.score-a.score||a.rotate-b.rotate);
   const d=ranked[0].d;used.add(d.id);return before?.ex===d.id?{...before}:item(d.id,"",b);
  });
  const locked=items.reduce((n,i)=>n+(i.locked?i.work+i.setup:0),0),remaining=r.minutes*60-locked,free=items.filter(i=>!i.locked);
- if(remaining<60*free.length||!free.length&&remaining!==0)throw Error("Låst tid passer ikke med øktmålet. Endre tid eller lås opp en aktivitet.");
- let allocated=0;const weight=items.reduce((n,i,k)=>n+(i.locked?0:weights[k]),0);
- items.forEach((it,k)=>{if(it.locked)return;const share=60+Math.floor((remaining-60*free.length)*weights[k]/weight),duration=it===free.at(-1)?remaining-allocated:share;allocated+=duration;it.setup=it.block==="Pause"||it.block==="Avslutning"?0:Math.min(60,duration-30);it.work=duration-it.setup;});
+ if(items.some(i=>i.locked&&(i.work%300||i.setup%300))||remaining<300*free.length||!free.length&&remaining!==0)throw Error("Låst tid passer ikke med øktmålet. Velg femminuttersintervaller eller lås opp en aktivitet.");
+ const weight=items.reduce((n,i,k)=>n+(i.locked?0:weights[k]),0);
+ const units=items.map(i=>i.locked?0:1);
+ // Assign each remaining five-minute block to the largest gap from its ideal share.
+ for(let left=remaining/300-free.length;left>0;left--){
+  let best=-1,gap=-Infinity;items.forEach((it,k)=>{const missing=remaining/300*weights[k]/weight-units[k];if(!it.locked&&missing>gap){best=k;gap=missing;}});
+  units[best]++;
+ }
+ items.forEach((it,k)=>{if(!it.locked){it.work=units[k]*300;it.setup=0;}});
  return {...(old||blank()),title:old?.title&&old.title!=="Ny håndballøkt"?old.title:r.focus.join(" og ")||"Håndballtrening",target:r.minutes*60,origin:"generated" as const,expected:r.players,items,kit:r.equipment.join(", ")};
 }
 export function copyPlan(p:Plan,template=false){return {...structuredClone(p),id:crypto.randomUUID(),title:p.title+(template?" · mal":" · kopi"),start:"",origin:template?"template" as const:p.origin==="template"?"manual" as const:p.origin,items:p.items.map(i=>({...i,id:crypto.randomUUID()}))};}
