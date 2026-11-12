@@ -25,6 +25,14 @@ export const referenceDrills:Drill[]=[
 export function filmAddress(value:string){
  try{const url=new URL(value);return url.protocol==="https:"&&!url.username&&!url.password&&!url.port&&url.hostname.includes(".")?url.href:"";}catch{return "";}
 }
+// Public Vimeo oEmbed thumbnails for the curated films; the files remain with Vimeo.
+const vimeoPosters:Record<string,string>={
+ "171375042":"576810979-cebac51c36bf57892806d4ff8b6a57987ceb3a00ad12a1c7bfd6b00c14af8bc8",
+ "804248109":"1623499128-c0e4b982472de09d3dd50d48618a4adcf05ab43c4e4a74d38d0dfcb9f2c79dca",
+ "793713427":"1598049868-32ac6f3e75aa849b851deabe0be5eb0cb9cf6268d2cc7c64b268b72db451fcfd",
+ "804889122":"1625083065-cb71908a18d67b74ef71d00cab276e417cac03e3113ff2170ec8325808b021b1",
+ "793607095":"1597750675-ca1127554d0186bc069e6d0828061fb8cc6cec730bb02e2ad493801bc2ca4f8c"
+};
 export function media(d:Drill){
  const legacy=/^\d{1,15}$/.test(d.vimeo);
  const href=legacy?"https://vimeo.com/"+d.vimeo:d.source==="NHF"?"":filmAddress(d.filmUrl||"");
@@ -35,6 +43,7 @@ export function media(d:Drill){
  const canEmbed=legacy||d.source==="Klubb"&&d.embedFilm===true;
  let embed="",poster="";
  if(canEmbed&&["vimeo.com","player.vimeo.com"].includes(host)&&v){const hash=v[2]||url.searchParams.get("h")||"";embed="https://player.vimeo.com/video/"+v[1]+"?dnt=1"+(/^[a-f0-9]{6,64}$/i.test(hash)?"&h="+hash:"");}
- if(canEmbed&&yt&&/^[a-zA-Z0-9_-]{11}$/.test(yt)){embed="https://www.youtube-nocookie.com/embed/"+yt;poster="https://i.ytimg.com/vi/"+yt+"/hqdefault.jpg";}
+ if(yt&&/^[a-zA-Z0-9_-]{11}$/.test(yt)){if(canEmbed)embed="https://www.youtube-nocookie.com/embed/"+yt;poster="https://i.ytimg.com/vi/"+yt+"/hqdefault.jpg";}
+ if(["vimeo.com","player.vimeo.com"].includes(host)&&v&&vimeoPosters[v[1]])poster="https://i.vimeocdn.com/video/"+vimeoPosters[v[1]]+"-d_640";
  return {href,embed,poster,host};
 }
