@@ -26,7 +26,20 @@ export function filmAddress(value:string){
  try{const url=new URL(value);return url.protocol==="https:"&&!url.username&&!url.password&&!url.port&&url.hostname.includes(".")?url.href:"";}catch{return "";}
 }
 // Public Vimeo oEmbed thumbnails for the curated films; the files remain with Vimeo.
+const clubFilms:Record<string,[string,string,string]>={
+ "club:zones":["969675399","forsvar/spill-og-motspill-1-mot-1/midtsektor","To mot to etter forflytning"],
+ "club:defend":["804294176","forsvar/teknikk/presse","Én mot én: press ballføreren"],
+ "club:feint":["804792146","angrep/teknikk/finte","Retningsskifte før skudd"],
+ "club:shoot":["804793821","angrep/teknikk/skudd-fra-lufta","Hoppskudd etter oppspill"]
+};
+export function withClubFilm(d:Drill):Drill{
+ const ref=clubFilms[d.id];return ref?{...d,filmUrl:"https://vimeo.com/"+ref[0],nhfLink:"https://www.ovelsesbanken.no/ovelser/13-15/"+ref[1],filmLabel:"Filmvariant fra NHF: "+ref[2]}:d;
+}
 const vimeoPosters:Record<string,string>={
+ "969675399":"1883090899-0b42200aa42af6ce969fab229944d71c5b09b28930a25d876a6cf065ab597297",
+ "804294176":"1623589194-cb8a4ab0578c18613f524af937a36015e93f10696ac62568677d81d1903041c1",
+ "804792146":"1624831391-180199062245d7c5264b96c0ccd4d52bb633f432c793342a5364f7acf8aca052",
+ "804793821":"1624838276-e8e4f0637d96b697c407b06eb587fc76abab06ef499c7e14088fe617c7bfe5e5",
  "171375042":"576810979-cebac51c36bf57892806d4ff8b6a57987ceb3a00ad12a1c7bfd6b00c14af8bc8",
  "804248109":"1623499128-c0e4b982472de09d3dd50d48618a4adcf05ab43c4e4a74d38d0dfcb9f2c79dca",
  "793713427":"1598049868-32ac6f3e75aa849b851deabe0be5eb0cb9cf6268d2cc7c64b268b72db451fcfd",

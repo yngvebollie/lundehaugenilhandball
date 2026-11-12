@@ -1,5 +1,5 @@
 import {db,demo,type Snapshot} from "../beta";
-import {referenceDrills} from "./films";
+import {referenceDrills,withClubFilm} from "./films";
 import {strength} from "../strength";
 import {baseDrills,validatePlan,type Drill,type Plan} from "./model";
 export const courtEnabled=demo||process.env.NEXT_PUBLIC_COURT_SESSIONS==="true";
@@ -12,6 +12,7 @@ const put=(k:string,v:unknown)=>localStorage.setItem(k,JSON.stringify(v));
 function existing(id:string,name:string,dose:string):Drill{return {id,title:name,instructions:dose,theme:"Fysisk",technique:"",age:"Ikke angitt",equipment:[],space:"",minPlayers:null,maxPlayers:null,minKeepers:null,challenge:"",training:null,source:"Klubb",vimeo:"",original:"",tip:"",block:""};}
 export async function court(data:Snapshot,action="read",sid:string|null=null,expected=0,v:Record<string,unknown>={},requestId:string=crypto.randomUUID()):Promise<Packet>{
  const t=data.me.squad,coach=data.me.role==="coach";let result:{sessions:Doc[];favorites:string[];catalog:Drill[];teamExercises:{id:string;name:string;dose:string}[]};
+ if(action==="save")validatePlan(v.plan as Plan);
  if(!demo){
   if(!courtEnabled)throw Error("Økter er ikke aktivert.");
   result=(await db!.rpc("beta_court",{t,action,sid,expected,v,request_id:requestId}).throwOnError()).data;
@@ -38,7 +39,7 @@ export async function court(data:Snapshot,action="read",sid:string|null=null,exp
   else if(action!=="read")throw Error("Ingen tilgang.");
   result={sessions:sessions.filter(x=>(!sid||x.id===sid)&&(coach||visible(x))).map(x=>({id:x.id,plan:coach?x.plan:x.shared!,rev:x.rev,published:x.published,archived:x.archived,edited:x.edited,seen:seen[x.id],...(coach?{notes:x.notes,audience:x.audience,sharedPlan:x.shared}:{})})),favorites:fav,catalog:custom,teamExercises:data.library.map(e=>({id:e.id,name:e.name,dose:e.dose}))};
  }
- const catalog=[...baseDrills,...referenceDrills,...result.catalog,...result.teamExercises.map(x=>existing(x.id,x.name,x.dose)),...strength.map(x=>existing(x.id,x.name,x.dose))];
+ const catalog=[...baseDrills.map(withClubFilm),...referenceDrills,...result.catalog,...result.teamExercises.map(x=>existing(x.id,x.name,x.dose)),...strength.map(x=>existing(x.id,x.name,x.dose))];
  return {sessions:result.sessions||[],favorites:(result.favorites||[]).filter(k=>catalog.some(x=>x.id===k)),catalog};
 }
 export type Run={snap:Plan;index:number;steps:{status:string;elapsed:number}[];since:number|null;finished:boolean;owner:string;rev:number;now:number;reflection:string|null};

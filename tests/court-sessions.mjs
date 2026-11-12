@@ -3,20 +3,21 @@ import {registerHooks} from "node:module";
 import {readFile} from "node:fs/promises";
 import {PGlite} from "@electric-sql/pglite";
 registerHooks({resolve(s,c,next){if(s==="../development/model"&&c.parentURL?.includes("/court/"))return next("../development/model.ts",c);return next(s,c);}});
-const {alignPlanTimes,baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
-const {referenceDrills,media}=await import("../src/lib/court/films.ts");
+const {limitPairRecap,item,alignPlanTimes,baseDrills,generate,total,initialRules,copyPlan,osloInstant,wallTime}=await import("../src/lib/court/model.ts");
+const {withClubFilm,referenceDrills,media}=await import("../src/lib/court/films.ts");
 for(const d of referenceDrills){assert.ok(media(d)?.href);assert.equal(media(d)?.embed,"");}
 assert.equal(media({...baseDrills[0],filmUrl:"javascript:alert(1)"}),null);
 assert.equal(media({...baseDrills[0],filmUrl:"https://youtu.be/Abc1234DEFg",embedFilm:true}).embed,"https://www.youtube-nocookie.com/embed/Abc1234DEFg");
 assert.equal(media({...baseDrills[0],source:"NHF",vimeo:""}),null);
 const {sourceRecords,fetchNHF}=await import("../src/lib/court/source.ts");
 const plan=generate(baseDrills,initialRules);assert.equal(total(plan),5400);assert.equal(plan.items.length,7);plan.items[1].locked=true;plan.items[1].points="Behold";
-for(let minutes=10;minutes<=240;minutes+=5){const d=generate(baseDrills,{...initialRules,minutes});assert.equal(total(d),minutes*60);assert.ok(d.items.every(i=>i.work>=300&&i.work%300===0&&i.setup%300===0));}
+for(let minutes=10;minutes<=240;minutes+=5){const d=generate(baseDrills,{...initialRules,minutes});assert.equal(total(d),minutes*60);assert.ok(d.items.filter(i=>i.ex==="club:close").every(i=>i.work+i.setup<=300));assert.ok(d.items.every(i=>i.work>=300&&i.work%300===0&&i.setup%300===0));}
 assert.throws(()=>generate(baseDrills,{...initialRules,minutes:92}));
 const legacy=alignPlanTimes({...plan,items:plan.items.map(i=>({...i,work:i.work-41,setup:41}))});assert.equal(total(legacy),5400);assert.ok(legacy.items.every(i=>i.work%300===0&&i.setup%300===0));
 const regen=generate(baseDrills,initialRules,plan,2);assert.deepEqual(regen.items[1],plan.items[1]);assert.equal(total(regen),5400);
 assert.throws(()=>generate(baseDrills,{...initialRules,minutes:10},plan));assert.throws(()=>generate([],initialRules));assert.notEqual(copyPlan(plan,true).items[0].id,plan.items[0].id);
 assert.equal(wallTime(osloInstant("2026-06-02T16:00")),"2026-06-02T16:00");assert.throws(()=>osloInstant("2026-03-29T02:30"));assert.throws(()=>osloInstant("2026-10-25T02:30"));
+const repair=limitPairRecap({...plan,items:[item("club:zones","","Spill",900),{...item("club:close"),work:900,setup:300}]});assert.equal(repair.items[0].work,1800);assert.equal(repair.items[1].work,300);assert.equal(repair.items[1].setup,0);assert.equal(media(withClubFilm(baseDrills.find(d=>d.id==="club:zones"))).href,"https://vimeo.com/969675399");
 const raw=Array.from({length:6},(_,i)=>({id:i+1,title:"Fiktiv "+i,subject:"Angrep",level:"13-15",vimeo_video_id:"1234",published:null})),rows=sourceRecords(raw);
 assert.throws(()=>sourceRecords([...raw,raw[0]]));assert.throws(()=>sourceRecords([]));await assert.rejects(fetchNHF(async()=>new Response("<html>")));
 const pg=new PGlite(),[t,c,p,other,second,outsider,dest]=Array.from({length:7},()=>crypto.randomUUID()),id=plan.id;
@@ -67,7 +68,7 @@ try{
  await rpc("publish",id,1,{scope:"players",players:[p]});await login(other);await assert.rejects(rpc("read",id));assert.equal((await rpc("read")).sessions.length,0);await login(outsider);await assert.rejects(rpc("read"));
  await login(p);const manual=plan.items.find(x=>!x.ex);assert.equal(await ar("manual",id,manual.id,manual.manual,5),5);const detail=(await rpc("read",id)).sessions[0];assert.equal(detail.notes,undefined);assert.ok(!JSON.stringify(detail).includes("PRIVATE_SENTINEL"));assert.equal(detail.audience,undefined);await rpc("seen",id,0,{item:plan.items[0].id});assert.equal((await rpc("read",id)).sessions[0].seen,plan.items[0].id);
  await rpc("favorite",null,0,{exercise:"club:passing",on:true});assert.deepEqual((await rpc("read")).favorites,["club:passing"]);await assert.rejects(run("start"));await login(c);assert.equal((await run("start")).rev,1);
- await rpc("save",id,2,{plan:{...plan,title:"Endret plan"},notes:{}});assert.equal((await run("read")).snap.title,plan.title);await login(second);await assert.rejects(run("pause",1));await login(c);
+ await login(second);assert.ok((await rpc("read",id)).sessions.length);await rpc("save",id,2,{plan:{...plan,title:"Endret plan"},notes:{}});await login(c);assert.equal((await run("read")).snap.title,plan.title);await login(second);await assert.rejects(run("pause",1));await login(c);
  const paused=await run("pause",1);assert.equal(paused.since,null);assert.equal((await run("read")).steps[0].elapsed,paused.steps[0].elapsed);
  await run("play",2);await run("next",3);const back=await run("back",4);assert.equal(back.steps[0].status,"done");assert.equal(back.since,null);await assert.rejects(run("play",5));await assert.rejects(run("finish",5));await run("finish",5,{confirmed:true});
  await rpc("unpublish",id,3);await login(p);await assert.rejects(ar("manual",id,manual.id,manual.manual,5));await assert.rejects(rpc("read",id));await login(c);await pg.query("select set_config('test.admin','true',false)");

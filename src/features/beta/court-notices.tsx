@@ -19,7 +19,7 @@ export function CourtNotices({data}:{data:Snapshot}){
   const date=wallTime(s.plan.start).slice(0,10),films=s.plan.items.flatMap(i=>{const d=packet.catalog.find(d=>d.id===i.ex),f=d&&media(d);return i.prepareVideo&&d&&f?[{i,d,f}]:[];});return {s,date,films};
  }).filter(x=>x.date===day||x.date>day&&x.date<=limit&&x.films.length).sort((a,b)=>a.s.plan.start.localeCompare(b.s.plan.start));
  return <>{[true,false].map(today=>{const group=rows.filter(x=>(x.date===day)===today);return group.length?<section key={String(today)} aria-label={today?"Dagens treningsmeldinger":"Forbered kommende trening"} className="grid">{group.map(({s,date,films})=>{const url="/okter?session="+encodeURIComponent(s.id),p=s.plan;
- return <article key={s.id} className="panel panel-pad grid athlete-session"><h2><Bell size={18}/>{today?"Ny trening i dag":"Før neste trening"}</h2><strong>{!today&&date+" · "}{wallTime(p.start).slice(11,16)} · {p.title}</strong>{p.venue&&<small>{p.venue}</small>}
+ return <article key={s.id} className="panel panel-pad grid athlete-session"><h2><Bell size={18}/>{today?"Ny trening i dag":"Før neste trening"}</h2><strong>{!today&&date+" · "}{p.start.length>10&&wallTime(p.start).slice(11,16)+" · "}{p.title}</strong>{p.venue&&<small>{p.venue}</small>}
  {films.map(({i,d,f})=><div className="grid" key={i.id}><a className="challenge-shortcut" href={url+"&item="+encodeURIComponent(i.id)}><Video size={16}/> Se før trening: {d.title}</a><p>{i.instructions||d.instructions}</p><a className="dev-secondary" href={f.href} target="_blank" rel="noreferrer">Åpne filmen hos {f.host}</a></div>)}<a className="btn primary" href={url}>Åpne treningen</a></article>;})}</section>:null;})}</>;
 }
 

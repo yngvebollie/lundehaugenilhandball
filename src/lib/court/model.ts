@@ -11,10 +11,10 @@ export const baseDrills:Drill[]=[
  drill("club:keep","Keeper og skuddvinkel","Avtal skuddside og intensitet. Keeper flytter seg med ballen før skytteren avslutter.","Keeper","Teknikk",3,["Baller"],"Halvbane",1),
  drill("club:shoot","Skudd etter pasning","Ta imot i fart og velg en avtalt skuddsone. Hent ballene samlet.","Skudd","Teknikk",2,["Baller"],"Halvbane"),
  drill("club:small","Småspill med pasningsvalg","Spill på avgrenset flate. Ballfører søker en ledig medspiller før avslutning.","Samspill","Spill",4,["Baller"],"Halvbane"),
- drill("club:zones","Forsvar to soner","To små lag forsvarer hver sin sone. Bytt roller etter ballvinning.","Forsvar","Spill",4,["Baller"],"Halvbane"),
+ {...drill("club:zones","To mot to: duellspill i forsvar","To angripere prøver å bryte gjennom. Forsvareren nærmest ballen møter ballføreren, mens den andre sikrer rommet bak. Bytt på å presse og sikre når ballen spilles videre. Bytt roller etter ballvinning.","Forsvar","Spill",4,["Baller"],"Halvbane"),technique:"Duellspill",tip:"Stans etter en pasning og spør: Hvem møter ballføreren nå, og hvem sikrer?"},
  drill("club:keeper-game","Småspill med keeperstart","Keeper setter ballen i spill. Laget finner bredde før avslutning.","Keeper","Spill",5,["Baller"],"Halvbane",1),
  drill("club:pairgame","Pasningsduell i korridor","Jobb parvis for å spille gjennom porten. Bytt side og rolle.","Kast og mottak","Spill",2,["Baller"]),
- drill("club:close","Oppsummering i par","Fortell partneren om et valg som fungerte, og ett dere vil prøve neste gang.","Samspill","Avslutning",2,[])
+ {...drill("club:close","Oppsummering i par","Fortell partneren om et valg som fungerte, og ett dere vil prøve neste gang.","Samspill","Avslutning",2,[]),training:300,tip:"La begge komme til orde. Bruk maks fem minutter til sammen."}
 ];
 export type Item={prepareVideo?:boolean;snapshot?:Drill|null;id:string;ex:string;manual:string;block:string;work:number;setup:number;locked:boolean;instructions:string;points:string;group:string};
 export type Plan={id:string;title:string;goal:string;venue:string;start:string;target:number;purpose:"team"|"individual";origin:"manual"|"generated"|"template";items:Item[];kit:string;expected:number};
@@ -22,9 +22,22 @@ export type Rules={age:string;minutes:number;players:number;keepers:number;focus
 export const initialRules:Rules={age:"13–15",minutes:90,players:14,keepers:1,focus:["Kast og mottak","Forsvar"],equipment:["Baller","Kjegler","Vester"],space:"Halvbane",challenge:"Tilpasset"};
 export const blank=():Plan=>({id:crypto.randomUUID(),title:"Ny håndballøkt",goal:"",venue:"",start:"",target:5400,purpose:"team",origin:"manual",items:[],kit:"",expected:14});
 export const gridTime=(seconds:number,min=0)=>Math.max(min,Math.round(seconds/300)*300);
-export const item=(ex="",manual="",block="Teknikk",work=600):Item=>({id:crypto.randomUUID(),ex,manual,block,work:gridTime(work,300),setup:0,locked:false,instructions:"",points:"",group:""});
+export const isPairRecap=(i:Pick<Item,"ex"|"manual">)=>i.ex==="club:close"||(!i.ex&&i.manual.trim().toLocaleLowerCase("nb")==="oppsummering i par");
+export const item=(ex="",manual="",block="Teknikk",work=600):Item=>({id:crypto.randomUUID(),ex,manual,block,work:isPairRecap({ex,manual})?300:gridTime(work,300),setup:0,locked:false,instructions:"",points:"",group:""});
 export const total=(p:Plan)=>p.items.reduce((sum,i)=>sum+i.work+i.setup,0);
 export const mins=(seconds:number)=>Math.round(seconds/60);
+export function limitPairRecap(p:Plan):Plan{
+ let extra=0;
+ const items=p.items.map(it=>{
+  if(!isPairRecap(it)||it.work+it.setup<=300)return it;
+  extra+=it.work+it.setup-300;
+  return {...it,work:300,setup:0};
+ });
+ if(!extra)return p;
+ const main=items.map((it,n)=>({it,n})).filter(({it})=>!it.locked&&!isPairRecap(it)&&["Spill","Teknikk"].includes(it.block));
+ for(let i=0;extra>0&&main.length;i++){const n=main[i%main.length].n,add=Math.min(300,extra);items[n]={...items[n],work:items[n].work+add};extra-=add;}
+ return {...p,items};
+}
 export function alignPlanTimes(p:Plan):Plan{
  // Allocate against cumulative finish times so rounding does not inflate every activity.
  const units=Math.max(p.items.length,Math.round(total(p)/300));let elapsed=0,used=0;
@@ -33,10 +46,11 @@ export function alignPlanTimes(p:Plan):Plan{
   const duration=(end-used)*300,setup=Math.min(duration-300,gridTime(it.setup));used=end;
   return {...it,work:duration-setup,setup};
  });
- return {...p,target:gridTime(p.target,600),items};
+ return limitPairRecap({...p,target:gridTime(p.target,600),items});
 }
 export const nextLine=(p:Plan)=>{let t=0;return p.items.map(i=>{const start=t;t+=i.work+i.setup;return {...i,offset:start,end:t};});};
-export function wallTime(instant:string){return instant?new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(instant)).replace(" ","T"):"";}
+export function wallTime(instant:string){if(/^\d{4}-\d{2}-\d{2}$/.test(instant))return instant;return instant?new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(instant)).replace(" ","T"):"";}
+export function sessionDate(start:string){return start?new Intl.DateTimeFormat("nb-NO",{timeZone:"Europe/Oslo",weekday:"long",day:"numeric",month:"long",year:"numeric",...(start.length>10?{hour:"2-digit",minute:"2-digit"}:{})}).format(new Date(start)):"Dato ikke satt";}
 export function osloInstant(local:string){
  if(!local)return "";const trial=Date.parse(local+"Z");if(!Number.isFinite(trial))throw Error("Ugyldig lokal tid.");
  const found=[1,2].map(h=>new Date(trial-h*3600000).toISOString()).filter(t=>wallTime(t)===local);
@@ -48,7 +62,7 @@ export function generate(bank:Drill[],r:Rules,old?:Plan,seed=0){
  const slots=r.minutes/5,indices=[0,1,4,6,3,2,5].slice(0,slots).sort((a,b)=>a-b);
  const layout=indices.map(n=>["Oppvarming","Teknikk","Teknikk","Pause","Spill","Spill","Avslutning"][n]),weights=indices.map(n=>[10,15,20,5,20,15,5][n]);
  const allowed=bank.filter(d=>eligible(d,r)),used=new Set<string>();
- for(const [n,i] of (old?.items||[]).entries())if(i.locked&&(n>=layout.length||i.ex&&!allowed.some(d=>d.id===i.ex)))throw Error("En låst aktivitet passer ikke med de nye rammene. Lås den opp eller endre rammene.");
+ for(const [n,i] of (old?.items||[]).entries())if(i.locked&&(isPairRecap(i)&&i.work+i.setup>300||n>=layout.length||i.ex&&!allowed.some(d=>d.id===i.ex)))throw Error("En låst aktivitet passer ikke med de nye rammene. Lås den opp eller endre rammene.");
  const items=layout.map((b,n)=>{const before=old?.items[n];if(before?.locked){used.add(before.ex);return {...before};}
   if(b==="Pause")return before?.block===b&&!before.ex?{...before}:item("","Vannpause",b);
   const options=allowed.filter(d=>d.block===b);if(!options.length)throw Error("Ingen godkjent øvelse passer i "+b+". Endre utstyr, baneplass eller spillerantall.");
@@ -65,10 +79,13 @@ export function generate(bank:Drill[],r:Rules,old?:Plan,seed=0){
   units[best]++;
  }
  items.forEach((it,k)=>{if(!it.locked){it.work=units[k]*300;it.setup=0;}});
- return {...(old||blank()),title:old?.title&&old.title!=="Ny håndballøkt"?old.title:r.focus.join(" og ")||"Håndballtrening",target:r.minutes*60,origin:"generated" as const,expected:r.players,items,kit:r.equipment.join(", ")};
+ const plan=limitPairRecap({...(old||blank()),title:old?.title&&old.title!=="Ny håndballøkt"?old.title:r.focus.join(" og ")||"Håndballtrening",target:r.minutes*60,origin:"generated",expected:r.players,items,kit:r.equipment.join(", ")});
+ if(total(plan)!==plan.target)throw Error("Lås opp en aktivitet i hoveddelen for å fordele tiden. Oppsummering i par er maks 5 min.");
+ return plan;
 }
 export function copyPlan(p:Plan,template=false){return {...structuredClone(p),id:crypto.randomUUID(),title:p.title+(template?" · mal":" · kopi"),start:"",origin:template?"template" as const:p.origin==="template"?"manual" as const:p.origin,items:p.items.map(i=>({...i,id:crypto.randomUUID()}))};}
 export function validatePlan(p:Plan,publishing=false){
+ if(p.items.some(it=>isPairRecap(it)&&it.work+it.setup>300))throw Error("Oppsummering i par kan vare i maks 5 minutter med overgang.");
  if(!p.title.trim()||p.title.length>120||p.items.length>80||!Number.isInteger(p.target)||p.target<60||p.target>86400||(!p.items.length&&publishing))throw Error("Oppgi øktnavn, målvarighet og minst én aktivitet før deling.");
  const ids=new Set();for(const i of p.items){if(ids.has(i.id)||!i.block.trim()||!i.ex&&!i.manual.trim()||!Number.isInteger(i.work)||!Number.isInteger(i.setup)||i.work<(publishing?1:0)||i.setup<0||i.work+i.setup>86400)throw Error("Kontroller blokk, aktivitet og tid.");ids.add(i.id);}
 }
