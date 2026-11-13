@@ -207,7 +207,7 @@ export async function thread(team:string,athlete:string):Promise<TeamMessage[]>{
   return ((await db!.from("beta_team_messages").select("*").match({team,athlete}).order("created_at",{ascending:false}).limit(100).throwOnError()).data as TeamMessage[]).reverse();
 }
 export async function sendTeamMessage(me:Member,athlete:string,body:string){
-  if(demo){const id=crypto.randomUUID();localStorage.setItem(prefix+"msg:"+id,JSON.stringify({id,team:me.squad,athlete,sender:me.id,body,created_at:new Date().toISOString()}));}
+  if(demo){const id=crypto.randomUUID();localStorage.setItem(prefix+"msg:"+id,JSON.stringify({id,team:me.squad,athlete,sender:me.id,body,created_at:new Date().toISOString()}));if(me.role==="coach")demoPlayerLog(me.squad,athlete,"Melding sendt",body,id);}
   else await db!.from("beta_team_messages").insert({team:me.squad,athlete,body}).throwOnError();
 }
 export type Application={team:string;person:string;name:string;status:"Pending"|"Approved"|"Declined";role?:Member["role"];phone?:string;email?:string};
@@ -309,7 +309,7 @@ export async function saveExercise(exercise:Exercise){
   else await db!.from("beta_exercises").insert(exercise).throwOnError();
 }
 export async function publish(rows: Assignment[]) {
-  if(demo) localStorage.setItem(prefix+"plan:"+rows[0].id, JSON.stringify(rows));
+  if(demo){localStorage.setItem(prefix+"plan:"+rows[0].id, JSON.stringify(rows));for(const row of rows)if(!row.personal)demoPlayerLog(row.squad,row.athlete,"Aktivitet lagt til",row.title+" · "+row.day,row.id);}
   else await db!.from("beta_assignments").insert(rows).throwOnError();
 }
 export async function saveProgram(program:Program,existing:boolean) {
@@ -340,4 +340,26 @@ export async function quickTraining(me:Member,id:string,title:string,local:strin
  if(!demo){await db!.rpc("beta_quick_training",{t:me.squad,k:id,label:title.trim(),at_time:instant,minutes_done:minutes}).throwOnError();return;}
  await publish([{id,squad:me.squad,athlete:me.id,title:title.trim(),day:local.slice(0,10),start_time:local.slice(11,16),minutes,kind:"Session",personal:true,exercises:["Gjennomført trening"]}]);
  await checkExercise(id,0);
+}
+export type PlayerLog={id:number|string;at_time:string;action:string;actor:string;detail:string};
+function demoPlayerLog(team:string,athlete:string,action:string,detail:string,subject:string){
+ const id=crypto.randomUUID();localStorage.setItem(prefix+"playerlog:"+team+":"+athlete+":"+id,JSON.stringify({id,actor:sessionStorage.getItem("nhf-persona")||"coach",at_time:new Date().toISOString(),action,detail,subject}));
+}
+export async function playerLog(team:string,athlete:string,limit:number):Promise<PlayerLog[]>{
+ if(demo)return localRows<PlayerLog>("playerlog:"+team+":"+athlete+":").sort((a,b)=>b.at_time.localeCompare(a.at_time)).slice(0,limit);
+ return (await db!.from("beta_player_log").select("id,at_time,action,actor,detail").match({team,athlete}).order("id",{ascending:false}).limit(limit).throwOnError()).data;
+}
+export async function changePlayer(data:Snapshot,p:string,k:string,cmd:"retract"|"exercises"|"remove",prior:string[]=[],lines:string[]=[]){
+ if(!demo){await db!.rpc("beta_change_player_plan",{t:data.me.squad,p,k,cmd,prior,lines}).throwOnError();return;}
+ if(data.me.role!=="coach"||!data.roster.some(m=>m.id===p&&m.squad===data.me.squad&&m.role==="athlete"))throw Error("Ingen tilgang.");
+ if(cmd==="retract"){const key=prefix+"msg:"+k,m=JSON.parse(localStorage.getItem(key)||"null") as TeamMessage|null;
+ if(!m||m.sender!==data.me.id||m.athlete!==p||m.team!==data.me.squad)throw Error("Du kan bare trekke tilbake egne meldinger.");
+ demoPlayerLog(m.team,p,"Melding trukket tilbake",m.body,k);localStorage.removeItem(key);return;}
+ for(const key of Object.keys(localStorage).filter(n=>n.startsWith(prefix+"plan:"))){
+ const rows=JSON.parse(localStorage.getItem(key)!) as Assignment[],a=rows.find(x=>x.id===k&&x.athlete===p&&x.squad===data.me.squad);if(!a)continue;
+ if(a.personal||a.day<today()||JSON.stringify(a.exercises)!==JSON.stringify(prior)||data.checks.some(c=>c.assignment===k)||data.reviews.some(c=>c.assignment===k)||data.feedback.some(c=>c.assignment===k))throw Error("Denne aktiviteten kan ikke endres.");
+ if(cmd==="exercises"&&(!lines.length||lines.length>40||lines.some(l=>!l.trim()||l.length>250)))throw Error("Kontroller øvelsene.");
+ demoPlayerLog(a.squad,p,cmd==="remove"?"Aktivitet fjernet":"Øvelser endret",a.title+" · "+a.day+(cmd==="exercises"?"\nFør: "+prior.join(", ")+"\nEtter: "+lines.join(", "):""),k);
+ localStorage.setItem(key,JSON.stringify(cmd==="remove"?rows.filter(x=>x.id!==k):rows.map(x=>x===a?{...x,exercises:lines}:x)));return;}
+ throw Error("Aktiviteten finnes ikke.");
 }
