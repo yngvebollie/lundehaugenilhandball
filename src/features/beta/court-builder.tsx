@@ -7,14 +7,14 @@ import {isPairRecap,limitPairRecap,sessionDate,alignPlanTimes,blocks,copyPlan,ge
 import {media} from "@/lib/court/films";
 import {CourtBank,DrillDetail} from "./court-bank";
 import {CourtSummary,itemTitle} from "./court-view";
-type Props={data:Snapshot;packet:Packet;initial:Plan;automatic:boolean;existing?:Doc;changed:()=>void;showTemplates:()=>void;close:()=>void};
-export function CourtBuilder({data,packet,initial,automatic,existing,changed,showTemplates,close}:Props){
+type Props={family:string;data:Snapshot;packet:Packet;initial:Plan;automatic:boolean;existing?:Doc;changed:()=>void;showTemplates:()=>void;close:()=>void};
+export function CourtBuilder({family,data,packet,initial,automatic,existing,changed,showTemplates,close}:Props){
  const stash="court-draft:"+data.me.squad+":"+data.me.id+":"+initial.id;
  const [recovery]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(stash)||"null") as {p:Plan;n:Record<string,string>;rev:number}|null}catch{return null}});
- const [p,P]=useState<Plan>(recovery?.p||initial),[notes,N]=useState<Record<string,string>>(recovery?.n||existing?.notes||{}),[seq,S]=useState(existing&&!recovery?0:1),[saved,L]=useState(0),rev=useRef(recovery?.rev??existing?.rev??0);
+ const [p,P]=useState<Plan>(recovery?.p||initial),[notes,N]=useState<Record<string,string>>({family:family||initial.id,...(recovery?.n||existing?.notes||{})}),[seq,S]=useState(existing&&!recovery?0:1),[saved,L]=useState(0),rev=useRef(recovery?.rev??existing?.rev??0);
  const [auto,Auto]=useState(automatic);
  const [rules,R]=useState<Rules>({...initialRules,minutes:mins(p.target),players:p.expected}),[selected,I]=useState(0),[bank,Bank]=useState<"add"|"replace"|"suggest"|null>(null),[dirty,D]=useState(""),[busy,B]=useState(false),[msg,M]=useState(""),[previous,G]=useState<Plan>(),[seed,Z]=useState(0),[step,Step]=useState(()=>{try{return Math.max(1,Math.min(3,Number(sessionStorage.getItem(stash+":step"))||1));}catch{return 1;}}),[scope,U]=useState(existing?.audience?"players":"team"),[players,A]=useState<string[]>(existing?.audience||[]),[startText,J]=useState(p.start?wallTime(p.start):""),[conflict,Y]=useState(false);
- const [templateName,TemplateName]=useState(""),[copying,Copying]=useState(false),[sharing,Share]=useState(false);
+ const [customName,CustomName]=useState(""),[templateName,TemplateName]=useState(""),[copying,Copying]=useState(false),[sharing,Share]=useState(false);
  const inflight=useRef(false),cur=p.items[selected],ready=saved===seq&&!busy&&!dirty&&rev.current>0&&(!startText||p.start&&wallTime(p.start)===startText);
  const currentDrill=cur&&packet.catalog.find(d=>d.id===cur.ex);
  const suggested=cur&&packet.catalog.find(d=>d.id===notes["suggest:"+cur.id]);
@@ -45,8 +45,9 @@ export function CourtBuilder({data,packet,initial,automatic,existing,changed,sho
  function addDrills(ds:Drill[]){if(!ds.length)return;if(bank==="suggest"&&cur){edit(p,{...notes,["suggest:"+cur.id]:ds[0].id,["author:"+cur.id]:data.me.name});Bank(null);return;}if(bank==="replace"&&cur){const d=ds[0];setItem({ex:d.id,manual:"",snapshot:undefined,prepareVideo:false,instructions:"",points:""});Bank(null);return;}const xs=ds.map(d=>item(d.id,"",d.block||"Teknikk",d.training||600));patch({items:[...p.items,...xs]});I(p.items.length);Bank(null);}
  function suggest(){try{const next=generate(packet.catalog,rules,p,seed);edit(next);G(p);I(0);Z(seed+1);go(2);}catch(e){M((e as Error).message);}}
  async function publish(){if(!ready)return;B(true);try{await court(data,"publish",p.id,rev.current,{scope,players});changed();close();}catch(e){M((e as Error).message);}finally{B(false);}}
- async function independent(template:boolean){if(copying)return;Copying(true);try{if(template)validatePlan(limitPairRecap(p),true);const next=copyPlan(limitPairRecap(p),template);next.title=next.title.slice(0,120);
+ async function independent(template:boolean){if(copying)return;Copying(true);try{if(template)validatePlan(limitPairRecap(p),true);const next=copyPlan(limitPairRecap(p),template);next.title=((template&&customName.trim())||next.title).slice(0,120);
  const copiedNotes=Object.fromEntries(next.items.flatMap((it,n)=>notes[p.items[n].id]?[[it.id,notes[p.items[n].id]]]:[]));
+ copiedNotes.family=notes.family||p.id;
  const result=await court(data,"save",next.id,0,{plan:next,notes:copiedNotes});if(!result.sessions.some(row=>row.id===next.id&&row.plan.items.length===p.items.length))throw Error("Lagringen ble ikke bekreftet.");
  changed();if(template)TemplateName(next.title);M(template?"Malen er lagret: "+next.title:"Ny kopi lagret.");}catch(e){M((e as Error).message);}finally{Copying(false);}}
  const rule=<K extends keyof Rules>(k:K,v:Rules[K])=>{R({...rules,[k]:v});G(undefined);};
@@ -85,7 +86,7 @@ export function CourtBuilder({data,packet,initial,automatic,existing,changed,sho
  {bank&&<><button onClick={()=>Bank(null)}>Avbryt øvelsesvalg</button><CourtBank actionLabel={bank==="suggest"?"Foreslå denne øvelsen":bank==="replace"?"Bruk denne i stedet":"Legg til i økt"} bank={packet.catalog} favorites={packet.favorites} mark={async id=>{await court(data,"favorite",null,0,{exercise:id,on:!packet.favorites.includes(id)});changed();}} add={d=>addDrills([d])} addMany={bank==="add"?addDrills:undefined}/></>}
  </>}
  {!bank&&<footer className="dev-actions court-step-actions"><button disabled={step===1} onClick={()=>go(step-1)}><ArrowLeft size={16}/>Forrige</button>
- {step>=2&&p.items.length>0&&<button disabled={copying||conflict} onClick={()=>independent(true)}><Save size={16}/>Lagre som mal</button>}
+ {step>=2&&p.items.length>0&&<><label>Navn på malen<input maxLength={120} value={customName} placeholder={p.title+" · mal"} onChange={e=>CustomName(e.target.value)}/></label><button disabled={copying||conflict} onClick={()=>independent(true)}><Save size={16}/>Lagre som mal</button></>}
  {step<4?<button className="dev-primary" onClick={()=>go(step+1)}>{step===3?<Eye size={16}/>:<ArrowRight size={16}/>}Neste: {["velg øvelser","tid og instruksjoner","forhåndsvis"][step-1]}</button>:!sharing&&p.origin!=="template"&&<button className="dev-primary" onClick={()=>Share(true)}>Velg mottakere <ArrowRight size={16}/></button>}</footer>}
  </div>;
 }

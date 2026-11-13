@@ -1,3 +1,4 @@
+import {QuickTrainingLog} from "./quick-training-log";
 import {FeatureInfo} from "./feature-info";
 import { useEffect,useState } from "react";
 import { Activity, CalendarDays, CheckCheck, ClipboardCheck, Dumbbell, UserRound, Users, Mail } from "lucide-react";
@@ -32,7 +33,7 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
   const [started,setStarted]=useState<Record<string,boolean>>({});
   const [celebrate,setCelebrate]=useState("");
   const now=today();
-  const plans=[...data.plans].sort((a,b)=>a.day.localeCompare(b.day));
+  const plans=[...data.plans].sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||""));
   const shown=plans.filter(p=>tab==="Plan"?(!selected||selected===p.day):p.day===now);
   const completed=(id:string)=>data.checks.filter(c=>c.assignment===id).length;
   const finished=plans.filter(p=>completed(p.id)===p.exercises.length);
@@ -40,6 +41,7 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
   return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><FeatureInfo topic={tab==="Profile"?"wizard":tab==="Plan"?"week":tab==="Progress"?"progress":tab==="Utfordringer"?"challenge":tab==="Merker"?"badge":tab==="Messages"?"notice":tab==="Team"?"team":"athlete"}><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Profile"?"Min profil":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":tab==="Merker"?"Merker":"My progress"}</h1></FeatureInfo></header>
     <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name==="Profile"?"Min profil":t.name}</button>)}</nav>
+    {(tab==="Today"||tab==="Progress")&&<QuickTrainingLog key={data.me.id} data={data} run={run} busy={busy}/>}
     {courtEnabled&&(tab==="Today"||tab==="Messages")&&<CourtNotices key={data.me.squad+data.me.id} data={data}/>}
     {courtEnabled&&tab==="Today"&&<a className="challenge-shortcut" href="/okter"><Dumbbell size={17}/>Mine økter og øvelsesbank</a>}
     {developmentVisible&&(tab==="Today"||tab==="Profile")&&<a className="challenge-shortcut" href="/utvikling"><Activity size={17}/> Min utvikling</a>}
@@ -47,7 +49,7 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
     {tab!=="Messages"&&data.notices.some(n=>!n.read_at)&&<button className="btn" onClick={()=>setTab("Messages")}><Mail size={18}/>{data.notices.filter(n=>!n.read_at).length} team notice(s) to acknowledge</button>}
     {tab==="Messages"&&<AthleteNotices data={data} busy={busy} run={run}/>}
     {tab==="Plan"&&<WeeklyPlanner data={data} busy={busy} run={run}/>}
-    {tab==="Merker"?<BadgePanel data={data}/>:tab==="Utfordringer"?<Challenges data={data} startWith={challengeStart}/>:tab==="Team"?<AthleteTeam data={data}/>:tab==="Messages"?<Conversation data={data}/>:tab==="Profile"?<><Profile me={data.me} busy={busy} run={run}/><a href="/merker" className="btn"><Medal size={16}/>Mine merker</a></>:tab==="Progress"?<><section className="panel panel-pad grid"><FeatureInfo topic="progress"><h2><Activity/> Training record</h2></FeatureInfo><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
+    {tab==="Merker"?<BadgePanel data={data}/>:tab==="Utfordringer"?<Challenges data={data} startWith={challengeStart}/>:tab==="Team"?<AthleteTeam data={data}/>:tab==="Messages"?<Conversation data={data}/>:tab==="Profile"?<><Profile me={data.me} busy={busy} run={run}/><a href="/merker" className="btn"><Medal size={16}/>Mine merker</a></>:tab==="Progress"?<><section className="panel panel-pad grid"><FeatureInfo topic="progress"><h2><Activity/> Training record</h2></FeatureInfo><div className="athlete-stats"><div><strong>{finished.length}</strong>Activities done</div><div><strong>{data.checks.filter(c=>plans.some(p=>p.id===c.assignment&&(!p.kind||p.kind==="Session"))).length}</strong>Exercises done</div><div><strong>{due.length?Math.round(dueFinished.length*100/due.length)+"%":"—"}</strong>Due activities complete</div></div></section><section className="grid"><h2>Session history</h2>{[...due].reverse().map(p=><div className="result" key={p.id}><div><strong>{p.title}</strong><p className="muted">{longDate(p.day)} {p.start_time?.slice(0,5)}{p.minutes?" · "+p.minutes+" min":""} · {completed(p.id)}/{p.exercises.length} checked</p></div><span>{data.feedback.find(f=>f.assignment===p.id)?.effort||"Unrated"}</span></div>)}{!due.length&&<p>No sessions due yet.</p>}</section></>:<>
     {tab==="Plan"&&<label>Training day<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">All dates</option>{Array.from(new Set(plans.map(p=>p.day))).map(d=><option key={d} value={d}>{longDate(d)}</option>)}</select></label>}
     {shown.map(p=>{
       const n=completed(p.id);

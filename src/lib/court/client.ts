@@ -42,7 +42,7 @@ export async function court(data:Snapshot,action="read",sid:string|null=null,exp
  const catalog=[...baseDrills.map(withClubFilm),...referenceDrills,...result.catalog,...result.teamExercises.map(x=>existing(x.id,x.name,x.dose)),...strength.map(x=>existing(x.id,x.name,x.dose))];
  return {sessions:result.sessions||[],favorites:(result.favorites||[]).filter(k=>catalog.some(x=>x.id===k)),catalog};
 }
-export type Run={snap:Plan;index:number;steps:{status:string;elapsed:number}[];since:number|null;finished:boolean;owner:string;rev:number;now:number;reflection:string|null};
+export type Run={snap:Plan;index:number;steps:{status:string;elapsed:number}[];since:number|null;finished:boolean;finishedAt?:string;owner:string;rev:number;now:number;reflection:string|null};
 export async function runCourt(data:Snapshot,sid:string,cmd="read",rev=0,v:Record<string,unknown>={},id=crypto.randomUUID()):Promise<Run|null>{
  const team=data.me.squad;if(!demo)return (await db!.rpc("beta_court_run",{t:team,sid,cmd,expected:rev,request_id:id,v}).throwOnError()).data;
  if(data.me.role!=="coach")throw Error("Trenertilgang kreves.");const k=key(team)+":run:"+sid,now=Date.now();let r=read<Run|null>(k,null);
@@ -52,6 +52,16 @@ export async function runCourt(data:Snapshot,sid:string,cmd="read",rev=0,v:Recor
  else if(r&&(!r.finished||cmd==="reflect")){const step=r.steps[r.index],running=r.since!=null;if(running){step.elapsed+=Math.max(0,now-r.since!);step.status="paused";}r.since=null;
  if(cmd==="pause"&&running){}else if(cmd==="play"&&!running&&!["done","skipped"].includes(step.status)){step.status="running";r.since=now;}
  else if(cmd==="reset"){step.elapsed=0;step.status="paused";}else if(["next","skip","back"].includes(cmd)){if(cmd!=="back"&&!["done","skipped"].includes(step.status))step.status=cmd==="skip"?"skipped":"done";r.index=Math.min(r.steps.length-1,Math.max(0,r.index+(cmd==="back"?-1:1)));}
- else if(cmd==="finish"){if(r.steps.some(s=>!["done","skipped"].includes(s.status))&&!v.confirmed)throw Error("Bekreft tidlig avslutning.");r.finished=true;r.steps.forEach(s=>{if(!["done","skipped"].includes(s.status))s.status="skipped";});}else if(cmd==="reflect"&&r.finished)r.reflection=String(v.text);else throw Error("Ugyldig timerhandling.");r.rev++;r.now=now;
+ else if(cmd==="finish"){if(r.steps.some(s=>!["done","skipped"].includes(s.status))&&!v.confirmed)throw Error("Bekreft tidlig avslutning.");r.finished=true;r.finishedAt=new Date(now).toISOString();r.steps.forEach(s=>{if(!["done","skipped"].includes(s.status))s.status="skipped";});}else if(cmd==="reflect"&&r.finished)r.reflection=String(v.text);else throw Error("Ugyldig timerhandling.");r.rev++;r.now=now;
  }else throw Error("Ingen aktiv økt.");put(k,r);return r;
+}
+export type PlayedSession={id:string;title:string;finished:string|null;planned:string};
+export async function courtHistory(data:Snapshot,family:string):Promise<PlayedSession[]>{
+ if(data.me.role!=="coach")return [];
+ if(!demo)return (await db!.rpc("beta_court_history",{t:data.me.squad,f:family}).throwOnError()).data;
+ const k=key(data.me.squad);
+ return read<Stored[]>(k,[]).filter(d=>(d.notes?.family||d.id)===family).flatMap(d=>{
+  const r=read<Run|null>(k+":run:"+d.id,null);
+  return r?.finished?[{id:d.id,title:r.snap.title,finished:r.finishedAt||null,planned:r.snap.start}]:[];
+ }).sort((a,b)=>(b.finished||b.planned).localeCompare(a.finished||a.planned));
 }

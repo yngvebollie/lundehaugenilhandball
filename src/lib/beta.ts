@@ -335,3 +335,9 @@ export async function checkExercise(assignment: string, step: number, checked=tr
     if(error && error.code!=="23505") throw error;
   }
 }
+export async function quickTraining(me:Member,id:string,title:string,local:string,instant:string,minutes:number){
+ if(me.role!=="athlete"||!title.trim()||title.trim().length>100||!Number.isInteger(minutes)||minutes<1||minutes>600||!Number.isFinite(Date.parse(instant))||Date.parse(instant)>Date.now())throw Error("Kontroller navn, tidspunkt og varighet. Økten må være gjennomført.");
+ if(!demo){await db!.rpc("beta_quick_training",{t:me.squad,k:id,label:title.trim(),at_time:instant,minutes_done:minutes}).throwOnError();return;}
+ await publish([{id,squad:me.squad,athlete:me.id,title:title.trim(),day:local.slice(0,10),start_time:local.slice(11,16),minutes,kind:"Session",personal:true,exercises:["Gjennomført trening"]}]);
+ await checkExercise(id,0);
+}
