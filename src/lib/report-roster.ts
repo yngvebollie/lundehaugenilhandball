@@ -11,9 +11,9 @@ export function suggestions(row:QueueRow,people:Member[]){
  return people.filter(p=>first(p.name)===first(row.name)&&p.shirt_number&&row.shirts.some(n=>shirt(n)!==""&&shirt(n)===shirt(p.shirt_number!)));
 }
 export const demoLinks=(team:string):LinkId[]=>JSON.parse(sessionStorage.getItem("report-roster:"+team)||"[]");
-export async function reportQueue(data:Snapshot,link?:LinkId):Promise<QueuePacket>{
+export async function reportQueue(data:Snapshot,batch?:{athlete:string;rows:QueueRow[]}):Promise<QueuePacket>{
  const t=data.me.squad;
- if(!demo)return (await db!.rpc("beta_report_roster",{t,...(link?{r:link.reg,p:link.player,a:link.athlete}:{})}).throwOnError()).data;
+ if(!demo)return (await (batch?db!.rpc("beta_link_report_group",{t,a:batch.athlete,entries:batch.rows.map(({reg,player})=>({reg,player}))}):db!.rpc("beta_report_roster",{t})).throwOnError()).data;
  const regs=await registrations(t),games=await seasonMatches(t,regs),links=demoLinks(t),rows=new Map<string,QueueRow>();
  for(const reg of regs){
   const lines=await squadStatLines(reg.id,games);
@@ -27,7 +27,7 @@ export async function reportQueue(data:Snapshot,link?:LinkId):Promise<QueuePacke
    }
   }
  }
- if(link){if(!rows.has(link.reg+":"+link.player)||links.some(l=>l.reg===link.reg&&(l.player===link.player||l.athlete===link.athlete))||!data.roster.some(m=>m.id===link.athlete&&m.role==="athlete"&&m.squad===t))throw Error("Koblingen er ikke tilgjengelig.");
- links.push(link);sessionStorage.setItem("report-roster:"+t,JSON.stringify(links));}
+ if(batch){if(!batch.rows.length)throw Error("Velg minst ett spillelag.");for(const {reg,player} of batch.rows){const link={reg,player,athlete:batch.athlete};if(!rows.has(link.reg+":"+link.player)||links.some(l=>l.reg===link.reg&&(l.player===link.player||l.athlete===link.athlete))||!data.roster.some(m=>m.id===link.athlete&&m.role==="athlete"&&m.squad===t))throw Error("Koblingen er ikke tilgjengelig.");
+ links.push(link);}sessionStorage.setItem("report-roster:"+t,JSON.stringify(links));}
  return {links,rows:[...rows.values()].filter(row=>!links.some(l=>l.reg===row.reg&&l.player===row.player))};
 }
