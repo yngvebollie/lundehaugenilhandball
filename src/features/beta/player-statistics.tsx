@@ -3,6 +3,7 @@ import {useEffect,useMemo,useState} from "react";
 import {ChevronDown,ChevronRight,Volleyball} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
 import {registrations,seasonMatches,squadStatLines,seasonSettings} from "@/lib/match-journal";
+import {demoLinks} from "@/lib/report-roster";
 import {groupPlayers,uniqueGames,type ClubLine,type LinkId} from "@/lib/club-player-stats";
 import {seasonGoldBalls} from "@/lib/opponent-stats";
 import {metrics,labels,tabs,type Column} from "@/lib/stat-metrics";
@@ -26,7 +27,7 @@ export function PlayerStatistics({data,overview=false}:{data:Snapshot;overview?:
  useEffect(()=>{let ok=true;const run=async()=>{
    const ss=await seasonSettings(data.me.squad),regs=await registrations(data.me.squad,ss),fixtures=await seasonMatches(data.me.squad,regs),byId=new Map(fixtures.map(g=>[g.id,g]));
    const results=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
-   const mappings:LinkId[]=demo?[]:(await db!.rpc("beta_roster_ids",{t:data.me.squad}).throwOnError()).data;
+   const mappings:LinkId[]=demo?demoLinks(data.me.squad):(await db!.rpc("beta_roster_ids",{t:data.me.squad}).throwOnError()).data;
    if(ok){setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
     setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size);setError("");}
  };void run().catch(e=>{if(ok)setError(e.message);});return()=>{ok=false;};},[data.me.squad,data]);
