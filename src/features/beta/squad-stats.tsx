@@ -8,7 +8,7 @@ import {seasonGoldBalls} from "@/lib/opponent-stats";
 import "./squad-stats.css";
 
 import {tabs,labels,metrics,type Tab,type Column} from "@/lib/stat-metrics";
-export function SquadStats({reg,fixtures}:{reg:string;fixtures:Fixture[]}){
+export function SquadStats({reg,fixtures,profileOf}:{profileOf?:(id:string)=>string|undefined;reg:string;fixtures:Fixture[]}){
   const [lines,setLines]=useState<StatLine[]>(),[error,setError]=useState(""),[tab,setTab]=useState<Tab>("Oversikt"),[venue,setVenue]=useState("Alle"),
     [sort,setSort]=useState<Column>("goals"),[desc,setDesc]=useState(true),[league,setLeague]=useState("");
   useEffect(()=>{let alive=true;setLines(undefined);setError("");squadStatLines(reg,fixtures).then(rows=>{if(alive)setLines(rows);}).catch(e=>{if(alive)setError(e.message);});return()=>{alive=false;};},[reg,fixtures]);
@@ -27,6 +27,6 @@ export function SquadStats({reg,fixtures}:{reg:string;fixtures:Fixture[]}){
     {error?<p role="alert">{error}</p>:!lines?<p role="status">Henter spillerstatistikk …</p>:!players.length?<p>Ingen registrerte spillerdata for disse kampene.</p>:
     <div className="player-list-scroll"><table className="table player-list stat-table"><caption>{tab} · {venue==="Alle"?"Alle baner":venue+"bane"}</caption>
       <thead><tr><th scope="col">Spiller</th>{tabs[tab].map(c=><th scope="col" key={c} aria-sort={sort!==c?"none":desc?"descending":"ascending"}><button onClick={()=>{setDesc(sort===c?!desc:true);setSort(c);}}>{labels[c]}{sort===c&&(desc?<ArrowDown size={12}/>:<ArrowUp size={12}/>)}</button></th>)}</tr></thead>
-      <tbody>{players.map(p=><tr key={p.player}><th scope="row"><small>#{p.shirt||"–"}</small> {p.name} {balls.has(p.player)&&<span className="season-balls" role="img" aria-label={balls.get(p.player)!.length+" gullballer denne sesongen"} title={balls.get(p.player)!.map(id=>{const g=fixtures.find(f=>f.id===id);return g?g.day+" · "+g.opponent:"Kamp";}).join("\n")}>{balls.get(p.player)!.map(id=><Volleyball size={14} key={id} aria-hidden="true"/>)}</span>}</th>{tabs[tab].map(c=><td key={c}>{p.stats[c]?.toLocaleString("nb-NO",{maximumFractionDigits:1})??"–"}</td>)}</tr>)}</tbody></table></div>}
+      <tbody>{players.map(p=><tr key={p.player}><th scope="row"><small>#{p.shirt||"–"}</small> {profileOf?.(p.player)?<a href={profileOf(p.player)}>{p.name}</a>:p.name} {balls.has(p.player)&&<span className="season-balls" role="img" aria-label={balls.get(p.player)!.length+" gullballer denne sesongen"} title={balls.get(p.player)!.map(id=>{const g=fixtures.find(f=>f.id===id);return g?g.day+" · "+g.opponent:"Kamp";}).join("\n")}>{balls.get(p.player)!.map(id=><Volleyball size={14} key={id} aria-hidden="true"/>)}</span>}</th>{tabs[tab].map(c=><td key={c}>{p.stats[c]?.toLocaleString("nb-NO",{maximumFractionDigits:1})??"–"}</td>)}</tr>)}</tbody></table></div>}
   </section>;
 }

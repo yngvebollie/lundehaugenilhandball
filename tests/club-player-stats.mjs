@@ -6,13 +6,15 @@ const sample=(reg,fixtureKey,player,name,goals)=>({reg,fixtureKey,level:reg,matc
 field_goals:goals,penalty:null,warnings:null,suspensions:null,disqualifications:null,errors:null,saves:null,missed:null,awards:null,rating:null});
 const roster=[{id:"A",name:"Example Player",role:"athlete",shirt_number:"28"},{id:"B",name:"No Games",role:"athlete"}];
 const rows=[sample("J13A","1","p1","Example Player",4),sample("J14A","2","p2","Example Player",6),sample("J13B","1","p3","Example Player",4)];
-const grouped=groupPlayers(rows,roster,[]);assert.equal(grouped.length,2);
+const links=rows.map(r=>({reg:r.reg,player:r.player,athlete:"A"}));
+assert.equal(groupPlayers(rows,roster,[]).find(p=>p.key==="A").rows.length,0);
+const grouped=groupPlayers(rows,roster,links);assert.equal(grouped.length,2);
 const g=uniqueGames(grouped.find(x=>x.key==="A").rows);assert.equal(g.conflicts,0);assert.equal(metrics(g.rows).games,2);assert.equal(metrics(g.rows).goals,10);assert.equal(metrics(g.rows).average,5);
 assert.equal(metrics(grouped.find(x=>x.key==="B").rows).goals,null);
 const diff=uniqueGames([...rows,sample("J14A","1","p2","Example Player",9)]);assert.equal(diff.conflicts,1);assert.equal(metrics(diff.rows).goals,6);
 assert.equal(groupPlayers([sample("J13A","1","p1","Same Name",1),sample("J13A","1","p2","Same Name",2),sample("J14A","2","p3","Same Name",3)],[],[]).length,3);
 assert.equal(groupPlayers([sample("J13A","1","a","Other Lastname",2)],roster,[{reg:"J13A",player:"a",athlete:"A"}]).find(x=>x.key==="A").rows.length,1);
 const rivals=[...rows,sample("J13A","1","r","Other Player",4),sample("J14A","2","s","Another Player",7),sample("J13B","3","p3","Example Player",0)];
-const winners=(reg="")=>seasonGoldBalls(groupPlayers(rivals,roster,[]).flatMap(p=>uniqueGames(p.rows.filter(r=>!reg||r.reg===reg)).rows.map(r=>({...r,player:p.key,match_id:r.fixtureKey}))));
+const winners=(reg="")=>seasonGoldBalls(groupPlayers(rivals,roster,links).flatMap(p=>uniqueGames(p.rows.filter(r=>!reg||r.reg===reg)).rows.map(r=>({...r,player:p.key,match_id:r.fixtureKey}))));
 assert.deepEqual(winners().get("A"),["1"]);assert.deepEqual(winners("J14A").get("A"),undefined);assert.deepEqual(winners("J13A").get("name:other player"),["1"]);assert.deepEqual(winners("J13B").get("A"),["1"]);
 console.log("PASS: registered players, separate levels, cross-level deduplication, missing/conflicting goals, aliases and namesakes.");
