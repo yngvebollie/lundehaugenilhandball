@@ -7,8 +7,8 @@ export const tabs={
 } as const;
 export type Tab=keyof typeof tabs;
 export type Column=(typeof tabs)[Tab][number];
-export const labels:Record<Column,string>={games:"Kamper",goals:"Mål",average:"Målsnitt",homeGoals:"Mål hjemme",awayGoals:"Mål borte",warnings:"Gule kort",
-  suspensions:"2-min.",minutes:"Utvisningsmin.",disqualifications:"Diskval.",field_goals:"Spillemål",penalty:"7 m-mål",missed:"Bomskudd",accuracy:"Treff %",errors:"Tekniske feil",saves:"Redninger",rating:"Vurdering",awards:"Banens beste"};
+export const labels:Record<Column,string>={games:"Kamper",goals:"Mål",average:"Målsnitt",homeGoals:"Mål hjemme",awayGoals:"Mål borte",warnings:"Gultkort",
+  suspensions:"2m",minutes:"Utvisningsmin.",disqualifications:"Rødtkort",field_goals:"Spillemål",penalty:"7m",missed:"Bomskudd",accuracy:"Treff %",errors:"Tekniske feil",saves:"Redninger",rating:"Vurdering",awards:"Banens beste"};
 function sum(xs:(number|null)[]){const nums=xs.filter((x):x is number=>x!=null);return nums.length?nums.reduce((a,b)=>a+b,0):null;}
 export function metrics(rows:StatLine[]):Record<Column,number|null>{
   const played=rows.filter(x=>x.played),known=played.filter(x=>x.goals!=null),shots=played.filter(x=>x.missed!=null&&x.goals!=null);

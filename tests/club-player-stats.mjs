@@ -18,3 +18,7 @@ const rivals=[...rows,sample("J13A","1","r","Other Player",4),sample("J14A","2",
 const winners=(reg="")=>seasonGoldBalls(groupPlayers(rivals,roster,links).flatMap(p=>uniqueGames(p.rows.filter(r=>!reg||r.reg===reg)).rows.map(r=>({...r,player:p.key,match_id:r.fixtureKey}))));
 assert.deepEqual(winners().get("A"),["1"]);assert.deepEqual(winners("J14A").get("A"),undefined);assert.deepEqual(winners("J13A").get("name:other player"),["1"]);assert.deepEqual(winners("J13B").get("A"),["1"]);
 console.log("PASS: registered players, separate levels, cross-level deduplication, missing/conflicting goals, aliases and namesakes.");
+const report={...rows[0],goals:5,field_goals:3,penalty:2,warnings:1,suspensions:2,disqualifications:1};
+const once=metrics(uniqueGames([report,{...report,reg:"B"}]).rows);
+assert.deepEqual([once.goals,once.penalty,once.warnings,once.suspensions,once.disqualifications],[5,2,1,2,1]);
+assert.equal(metrics([rows[0]]).penalty,null);

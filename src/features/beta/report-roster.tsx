@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import {Link2} from "lucide-react";
 import type {Member,Snapshot} from "@/lib/beta";
-import {reportQueue,suggestions,type QueuePacket,type QueueRow} from "@/lib/report-roster";
+import {reportQueue,suggestions,type QueuePacket,type QueueRow,type ReportLink} from "@/lib/report-roster";
 import {reportGroups,reportKey} from "@/lib/report-groups";
 
 type Group=ReturnType<typeof reportGroups>[number];
@@ -23,15 +23,24 @@ function PlayerGroup({group,people,packet,busy,confirm}:{group:Group;people:Memb
 }
 export function ReportRoster({data}:{data:Snapshot}){
  const [packet,setPacket]=useState<QueuePacket>(),[busy,B]=useState(false),[note,N]=useState(""),[error,E]=useState(""),[retry,R]=useState(0),[search,S]=useState("");
+ const [mode,M]=useState<"open"|"linked">("open"),[reg,F]=useState(""),[pending,P]=useState<ReportLink>();
  const t=data.me.squad;
  useEffect(()=>{let live=true;E("");reportQueue(data).then(p=>{if(live)setPacket(p);}).catch(e=>{if(live)E(e.message);});return()=>{live=false;};},[t,retry]);
  const people=data.roster.filter(p=>p.role==="athlete"&&p.squad===t).sort((a,b)=>a.name.localeCompare(b.name,"nb"));
  async function confirm(rows:QueueRow[],athlete:Member){B(true);N("");E("");try{setPacket(await reportQueue(data,{athlete:athlete.id,rows}));N("Koblet til "+athlete.name+": "+rows.map(r=>r.squad).join(", ")+".");}
  catch(e){E((e as Error).message);}finally{B(false);}}
- const groups=reportGroups(packet?.rows||[]),needle=search.trim().toLocaleLowerCase("nb");
+ const teams=new Map([...(packet?.rows||[]),...(packet?.links||[])].map(r=>[r.reg,r.squad]));
+ const groups=reportGroups((packet?.rows||[]).filter(r=>!reg||r.reg===reg)),needle=search.trim().toLocaleLowerCase("nb");
  const visible=groups.filter(g=>g.rows.some(r=>[r.name,r.squad,...r.shirts].join(" ").toLocaleLowerCase("nb").includes(needle)));
- return <section className="grid report-queue"><header><h2>Ukoblede rapportspillere{packet&&" ("+groups.length+")"}</h2><small>Eget lag · aktiv sesong</small></header>
+ const linked=people.map(m=>({m,rows:(packet?.links||[]).filter(l=>l.athlete===m.id&&(!reg||l.reg===reg))})).filter(g=>g.rows.length>0);
+ async function undo(l:ReportLink){B(true);N("");E("");try{setPacket(await reportQueue(data,undefined,l));P(undefined);N("Koblingen til "+l.squad+" er fjernet. De andre lagene er uendret.");}catch(e){E((e as Error).message);}finally{B(false);}}
+ const found=linked.filter(({m,rows})=>[m.name,m.shirt_number,...rows.flatMap(r=>[r.name,r.squad])].join(" ").toLocaleLowerCase("nb").includes(needle));
+ return <section className="report-layout"><nav className="report-team-nav" aria-label="Filtrer på spillelag"><button className="btn" aria-pressed={!reg} onClick={()=>{F("");P(undefined);}}>ALLE LAG</button>{[...teams].sort((a,b)=>a[1].localeCompare(b[1],"nb")).map(([id,label])=><button key={id} className="btn" aria-pressed={reg===id} onClick={()=>{F(id);P(undefined);}}>{label}</button>)}</nav>
+ <div className="grid report-queue"><nav aria-label="Koblingsstatus" className="workspace-tabs">{([["open","Ukoblede"],["linked","Koblede"]] as const).map(([k,label])=><button key={k} className={mode===k?"current":""} aria-pressed={mode===k} onClick={()=>{M(k);P(undefined);S("");N("");}}>{label}</button>)}</nav>
+ <header><h2>{mode==="open"?"Ukoblede rapportspillere":"Koblede spillere"}{packet&&" ("+(mode==="open"?groups.length:linked.length)+")"}</h2><small>Eget lag · aktiv sesong</small></header>
  {note&&<p role="status">{note}</p>}{error&&<p role="alert">{error} <button className="btn" disabled={busy} onClick={()=>{setPacket(undefined);R(retry+1);}}>Oppdater listen</button></p>}
- {!packet?!error&&<p>Henter rapportspillere …</p>:!groups.length?<p>Ingen ukoblede spillere i lagets kamprapporter.</p>:<><label>Søk i rapportspillere<input type="search" placeholder="Navn, draktnummer eller spillelag" value={search} onChange={e=>S(e.target.value)}/></label>
- {groups.map(g=><div key={g.key} hidden={!visible.includes(g)}><PlayerGroup group={g} people={people} packet={packet} busy={busy} confirm={confirm}/></div>)}{!visible.length&&<p>Ingen treff i søket.</p>}</>}</section>;
+ {!packet?!error&&<p>Henter rapportspillere …</p>:mode==="linked"?<><label>Søk i koblede spillere<input type="search" value={search} onChange={e=>S(e.target.value)} placeholder="Navn, draktnummer eller spillelag"/></label>
+ {found.map(({m,rows})=><article className="report-row" key={m.id}><h3><a href={"/spillere?athlete="+m.id}>{m.shirt_number?"#"+m.shirt_number+" ":""}{m.name}</a></h3>{rows.map(l=><div className="linked-entry" key={l.reg}><div><strong>{l.squad}</strong><small>{l.name} · {l.origin==="roster"?"Automatisk treff":"Trenerkobling"}</small></div>{pending===l?<div><button className="btn" disabled={busy} onClick={()=>P(undefined)}>Avbryt</button> <button className="btn" disabled={busy} onClick={()=>undo(l)}>Fjern kobling</button></div>:<button className="btn" aria-label={"Angre kobling til "+l.squad+" for "+m.name} onClick={()=>P(l)}>Angre kobling</button>}</div>)}</article>)}
+ {!found.length&&<p>{linked.length?"Ingen treff i søket.":"Ingen koblede spillere i dette utvalget."}</p>}</>:!groups.length?<p>Ingen ukoblede spillere i lagets kamprapporter.</p>:<><label>Søk i rapportspillere<input type="search" placeholder="Navn, draktnummer eller spillelag" value={search} onChange={e=>S(e.target.value)}/></label>
+ {groups.map(g=><div key={g.key} hidden={!visible.includes(g)}><PlayerGroup group={g} people={people} packet={packet} busy={busy} confirm={confirm}/></div>)}{!visible.length&&<p>Ingen treff i søket.</p>}</>}</div></section>;
 }

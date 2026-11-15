@@ -34,6 +34,16 @@
 .agenda-entry{grid-template-columns:minmax(94px,auto) minmax(0,1fr) auto 15px;align-items:center}.agenda-entry time,.next-fixture span{font-size:.85rem}
 .next-fixture a{display:grid;justify-content:start}.profile-index{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));gap:4px 16px}.profile-index a{padding:9px 0;border-bottom:1px solid var(--border)}
 @media(max-width:760px){.agenda-columns{grid-template-columns:1fr;gap:9px}.agenda-entry{grid-template-columns:78px minmax(0,1fr) auto}.agenda-entry>svg{display:none}.coach-feed .feed-scroll{max-height:300px}}
+.roster-scroll{border:1px solid var(--border);border-radius:6px}
+.roster-grid{table-layout:fixed;border-collapse:separate;border-spacing:0;min-width:1120px;--jersey:76px}
+.roster-grid .rg-shirt{width:var(--jersey)}.roster-grid .rg-name{width:18%}.roster-grid .rg-position{width:15%}.roster-grid .rg-week{width:132px}
+.roster-grid :is(td,th){padding:10px 12px;vertical-align:middle;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.roster-grid thead th{background:var(--nav);color:white;font-size:.84rem}.roster-grid .rg-bands th{background:var(--bg-soft);color:var(--muted);font-size:.75rem;text-align:left;border-right:1px solid var(--border);padding-block:6px}
+.roster-grid tr:not(.rg-bands)>:first-child{text-align:center}.roster-grid tr:not(.rg-bands)>:is(:nth-child(2),:nth-child(3)){text-align:left}.roster-grid tr:not(.rg-bands)>:nth-child(n+4){text-align:right}
+.roster-grid tr:not(.rg-bands)>:is(:nth-child(4),:nth-child(7),:nth-child(11)){border-left:1px solid var(--border)}.roster-grid tbody tr{--row:var(--panel)}.roster-grid tbody tr:nth-child(even){--row:var(--bg-soft)}.roster-grid tbody :is(td,th){background:var(--row);overflow-wrap:anywhere}.roster-grid tbody tr:last-child>*{border-bottom:0}
+.roster-grid tbody th a{color:var(--text);font-weight:650;text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:3px}
+@media(max-width:720px){.roster-grid{min-width:970px;--jersey:66px}.roster-grid .rg-name{width:128px}.roster-grid .rg-week{width:124px}.roster-grid .rg-position{width:120px}.roster-grid :is(th,td){padding-inline:8px}.roster-grid tr:not(.rg-bands)>:is(:first-child,:nth-child(2)){position:sticky;z-index:1}.roster-grid tr:not(.rg-bands)>:first-child{left:0}.roster-grid tr:not(.rg-bands)>:nth-child(2){left:var(--jersey);border-right:1px solid var(--border)}}
+.squad-stats .aggregate-grid{min-width:1040px}.aggregate-grid tr>th:first-child,.aggregate-grid .stat-jersey{text-align:center;width:74px}.aggregate-grid thead th:nth-child(2){text-align:left}.aggregate-grid tbody th[scope=row]{min-width:200px;overflow-wrap:anywhere}.aggregate-grid th,.aggregate-grid td{border-right:1px solid var(--border)}.aggregate-grid tbody th button{vertical-align:middle}
 
 
 

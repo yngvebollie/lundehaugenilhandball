@@ -44,6 +44,7 @@ export function Kamper({data}:{data:Snapshot}){
   function add(){setOrg("");setCup("");setSquadName("");setNote("");setAdding(true);setView("teams");setId("");history.replaceState(null,"","/match?view=teams");}
   return <div className={"squad-space"+(id?" detail-mode":"")}>
     {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><FeatureInfo topic="matches"><h3>Spillelag</h3></FeatureInfo>
+      <a className="btn" href="/spillere?vis=statistikk">ALLE LAG</a>
       {regs.map(r=><button className={active?.id===r.id?"current":""} key={r.id} aria-pressed={active?.id===r.id} onClick={()=>choose(r.id)}><span><strong>{label(r)}</strong><small>NIF {r.org_id}</small></span><ChevronRight size={16}/></button>)}
       {admin&&<button className="rail-add" onClick={add}><Plus size={16}/>Legg til lag</button>}</aside>}
     <section className="grid kamper">
