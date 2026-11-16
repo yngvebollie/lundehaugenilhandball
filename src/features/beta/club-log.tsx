@@ -1,0 +1,16 @@
+import {useEffect,useState} from "react";
+import {db,demo,applications,type Member,type Snapshot} from "@/lib/beta";
+export function ClubLog({team}:{team:string}){
+ const [rows,R]=useState<{id:number;at_time:string;actor_name:string;description:string}[]>([]),[err,E]=useState("");
+ useEffect(()=>{let live=true;const read=async()=>{try{const r=demo?[]:(await db!.from("beta_club_changes").select("id,at_time,actor_name,description").eq("team",team).order("at_time",{ascending:false}).limit(40).throwOnError()).data||[];if(live){R(r);E("");}}catch(e){if(live)E((e as Error).message);}};void read();const timer=setInterval(read,30000);return()=>{live=false;clearInterval(timer);};},[team]);
+ return <section><h3>Trenerlogg</h3>{err?<p role="alert">{err}</p>:rows.length?<ol className="feed-scroll">{rows.map(r=><li key={r.id}><small>{new Date(r.at_time).toLocaleString("nb-NO")}</small> <strong>{r.actor_name}</strong> · {r.description}</li>)}</ol>:<p>Ingen registrerte endringer ennå.</p>}</section>;
+}
+export function usePending(team:string){
+ const [n,N]=useState(0);useEffect(()=>{let live=true;N(0);const load=()=>applications(team).then(list=>{if(live)N(list.filter(r=>r.status==="Pending").length);}).catch(()=>{});void load();window.addEventListener("focus",load);const timer=setInterval(load,15000);return()=>{live=false;clearInterval(timer);window.removeEventListener("focus",load);};},[team]);return n;
+}
+export function Jersey({team,player,run}:{team:string;player:Member;run:(f:()=>Promise<void>)=>Promise<boolean>}){
+ const [num,N]=useState(player.shirt_number||""),[rows,R]=useState<{previous:string|null;next_num:string|null;effective:string}[]>([]),[msg,M]=useState(""),[busy,B]=useState(false);
+ const key="jersey-log:"+team+":"+player.id;
+ useEffect(()=>{let live=true;const read=async()=>{const r=demo?JSON.parse(localStorage.getItem(key)||"[]"):(await db!.from("beta_jersey_changes").select("previous,next_num,effective").eq("team",team).eq("athlete",player.id).order("id",{ascending:false}).throwOnError()).data;if(live)R(r||[]);};void read().catch(e=>{if(live)M(e.message);});return()=>{live=false;};},[team,player.id,player.shirt_number,key]);
+ return <details><summary>Draktnummer {player.shirt_number&&"#"+player.shirt_number}</summary><form className="day-strip" onSubmit={async e=>{e.preventDefault();B(true);try{if(await run(async()=>{if(!demo)await db!.rpc("beta_set_jersey",{t:team,p:player.id,n:num||null}).throwOnError();else{localStorage.setItem("nhf-beta-v1:member:"+player.id,JSON.stringify({...player,shirt_number:num||null}));localStorage.setItem(key,JSON.stringify([{previous:player.shirt_number,next_num:num,effective:new Date().toLocaleDateString("sv-SE")},...rows]));}}))M("Draktnummer lagret. Tidligere kamper beholdes.");}finally{B(false);}}}><label>Nytt nummer fra i dag<input value={num} pattern="[1-9][0-9]{0,2}" inputMode="numeric" placeholder="Uten nummer" onChange={e=>N(e.target.value)}/></label><button className="btn" disabled={busy||num===(player.shirt_number||"")}>Lagre draktbytte</button></form>{rows.map((r,i)=><p key={i}>{r.effective}: {r.previous||"Uten nummer"} → {r.next_num||"Uten nummer"}</p>)}{msg&&<small role="status">{msg}</small>}</details>;
+}

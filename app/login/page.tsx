@@ -24,13 +24,14 @@ export default function Login(){
   const [signup,setSignup]=useState(false);
   const [join,setJoin]=useState(false),[link,setLink]=useState("");
   const [role,setRole]=useState<"coach"|"athlete">("coach");
-  const parts=role==="athlete"&&(join||!!invite),name=parts?joinName(given,family):full;
+  const [signed,setSigned]=useState("");
+  const collecting=join||!!invite&&(signup||!!signed||demo);
+  const parts=role==="athlete"&&collecting,name=parts?joinName(given,family):full;
   const [selected,setSelected]=useState(false);
   const [busy,setBusy]=useState(false);
   const [mail,setMail]=useState<"created"|"sent"|"">("");
   const [message,setMessage]=useState("");
   const [account,setAccount]=useState("coach");
-  const [signed,setSigned]=useState("");
   const [accounts,setAccounts]=useState<{id:string;name:string;role:string}[]>([]);
   useEffect(()=>{
     setInvite(new URLSearchParams(location.search).get("invite")||"");
@@ -49,7 +50,7 @@ export default function Login(){
       const registering=signup||(join&&role==="athlete");
       if(parts&&(!given.trim()||!family.trim()||name.length>100))throw Error("Oppgi fornavn og etternavn, maksimalt 100 tegn til sammen.");
       const joinPath="/join"+(teamCode?"?team_code="+encodeURIComponent(teamCode):"");
-      if((registering&&!signed||!demo&&signed&&invite)&&!validPhone(phone))throw Error("Enter a valid phone number.");
+      if(registering&&!signed&&!validPhone(phone))throw Error("Enter a valid phone number.");
       if(teamCode&&!validTeamCode(teamCode))throw Error("Enter the six-character team code.");
       if(!demo&&!signed&&magic){
         const path=invite?"/login?new=1&invite="+encodeURIComponent(invite):registering?joinPath:"/login?role="+role+onward;
@@ -78,21 +79,25 @@ export default function Login(){
           if(!member.data){if(role==="athlete"){location.assign(joinPath);return;}throw Error("Accept a coach invitation to open the coach dashboard.");}
         }
         if(invite){
-          if(signed){const {error}=await db.auth.updateUser({data:{full_name:name.trim(),given_name:given.trim(),family_name:family.trim(),contact_phone:phone.trim()}});if(error)throw error;}
+          const user=(await db.auth.getUser()).data.user;if(!user)throw Error("Logg inn på nytt for å bruke invitasjonen.");
+          const display=name.trim()||String(user.user_metadata?.full_name||"").trim()||(await db.from("beta_members").select("name").eq("id",user.id).maybeSingle()).data?.name;
           const previous=(await db.rpc("beta_signup_result",{cred:invite}).throwOnError()).data;
-          const team=previous?.id||(await db.rpc("beta_join",{code:invite,display_name:name.trim()}).throwOnError()).data;
-          const {data}=await db.auth.getUser();if(data.user)selectTeam(data.user.id,String(team));
+          if(!previous&&!display)throw Error("Oppgi navnet ditt og trykk på Godta invitasjonen.");
+          const team=previous?.id||(await db.rpc("beta_join",{code:invite,display_name:display}).throwOnError()).data;
+          selectTeam(user.id,String(team));
+          const actual=previous?.role||(await db.from("beta_members").select("role").eq("id",user.id).single().throwOnError()).data?.role;
+          location.assign(actual==="athlete"?"/athlete":"/");return;
         }
       }
       if(demo&&!invite&&role==="athlete"&&!demoAccounts().find(m=>m.id===account)?.squad){location.assign("/join");return;}
-      location.assign(invite?"/":destination||(role==="athlete"?"/athlete":"/"));
+      location.assign(invite?(demoAccounts().find(p=>p.id===sessionStorage.getItem("nhf-persona"))?.role==="athlete"?"/athlete":"/"):destination||(role==="athlete"?"/athlete":"/"));
     }catch(error){setMessage((error as Error).message||"Could not sign in.");}finally{setBusy(false);}
   }
   if(mail&&!signed)return <PublicShell><div className="entry-content"><SignupSuccess name={name} email={email} known={mail==="created"}/><button className="btn" onClick={()=>{setMail("");setJoin(false);setSignup(false);}}>Til innlogging</button></div></PublicShell>;
   const choice=!selected&&!invite;
   return <PublicShell><div className="entry-content">
     {!choice&&!invite&&<a className="entry-back" href={next?"/login?next="+next:"/login"}><ArrowLeft size={16}/>Choose another role</a>}
-    <FeatureInfo topic="entry"><h1>{choice?"Team sign-in":invite?"Join your team":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1></FeatureInfo>
+    <FeatureInfo topic="entry"><h1>{choice?"Team sign-in":invite?"Bli med på laget":join?"Create an account":role==="coach"?"Coach login":"Athlete login"}</h1></FeatureInfo>
     {choice?<><p className="entry-lead">Choose your role to continue.</p><nav className="entry-roles" aria-label="Account role">
       <a className="entry-role athlete" href={"/login?role=athlete"+onward} aria-label="Athlete login"><span className="role-icon"><Activity/></span><span><strong>Athlete login</strong><small>My sessions, progress and feedback</small></span><ArrowRight size={19}/></a>
       <a className="entry-role coach" href={"/login?role=coach"+onward} aria-label="Coach login"><span className="role-icon"><ClipboardList/></span><span><strong>Coach login</strong><small>Team planning, workload and match day</small></span><ArrowRight size={19}/></a>
@@ -100,15 +105,15 @@ export default function Login(){
     {join&&!invite&&role==="coach"?<form className="grid" onSubmit={e=>{e.preventDefault();try{if(validTeamCode(link.trim().toUpperCase())){location.assign("/apply?coach_code="+encodeURIComponent(link.trim().toUpperCase()));return;}const url=new URL(link.trim(),location.origin);const short=url.searchParams.get("coach_code");if(short&&validTeamCode(short)){location.assign("/apply?coach_code="+encodeURIComponent(short));return;}const shared=url.searchParams.get("link");const code=shared||url.searchParams.get("invite")||link.trim();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(code))throw Error();location.assign((shared?"/apply?link=":"/login?new=1&invite=")+encodeURIComponent(code));}catch{setMessage("Enter the invitation link from your team administrator.");}}}><label>Team invitation link or code<input required value={link} onChange={e=>setLink(e.target.value)}/></label><p className="muted">Coach accounts require an invitation from a team admin.</p><button className="btn primary">Continue with invitation</button></form>:<>
     <form className="grid" onSubmit={enter}>
     {demo&&!invite&&!join?<label>Demo account<select value={account} onChange={e=>setAccount(e.target.value)}>{accounts.filter(m=>m.role===role).map(m=><option value={m.id} key={m.id}>{m.name} · {m.role}</option>)}</select></label>:<>
-      {parts?<AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/>:(invite||join)&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
-      {(!signed&&(signup||join)||signed&&invite)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
-      {(invite||join&&role==="athlete")&&<label>Draktnummer (utøver, valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label>}
+      {parts?<AthleteName given={given} family={family} setGiven={setGiven} setFamily={setFamily}/>:collecting&&<label>Your name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>}
+      {!signed&&(signup||join)&&<label>Phone number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label>}
+      {role==="athlete"&&collecting&&!signed&&<label>Draktnummer (utøver, valgfritt)<input type="text" inputMode="numeric" pattern="[1-9][0-9]{0,2}" maxLength={3} value={shirt} onChange={e=>setShirt(e.target.value.trim())}/></label>}
       {join&&role==="athlete"&&!invite&&<label>Team code (optional)<input maxLength={6} minLength={6} autoCapitalize="characters" value={teamCode} onChange={e=>setTeamCode(e.target.value.toUpperCase().trim())}/></label>}
-      {signed?<p>Signed in as {signed}</p>:<><label>{role==="athlete"?(signup||join?"E-post (valgfritt)":"Telefonnummer eller e-post"):"Email"}<input required={!(role==="athlete"&&(signup||join))} type={role==="athlete"&&!signup&&!join?"text":"email"} autoComplete={signup||join?"email":"username"} value={email} onChange={e=>setEmail(e.target.value)}/></label>{role==="athlete"&&(signup||join)&&<small>Hopper du over e-post, logger du inn med telefonnummer og passord.</small>}{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
+      {signed?<p>Signed in as {signed}</p>:<><label>{role==="athlete"?(signup||join?"E-post (valgfritt)":"Telefonnummer eller e-post"):"Email"}<input required={!(role==="athlete"&&(signup||join))} type={role==="athlete"&&!signup&&!join?"text":"email"} autoComplete={signup||join?"email":"username"} value={email} onChange={e=>setEmail(e.target.value)}/></label>{role==="athlete"&&(signup||join)&&<small>{invite?"Du trenger ikke skrive inn adressen invitasjonen ble sendt til. Uten e-post logger du inn med telefonnummer og passord.":"Hopper du over e-post, logger du inn med telefonnummer og passord."}</small>}{!demo&&!magic&&<label>Password<input required type="password" minLength={signup||join?8:1} autoComplete={signup||join?"new-password":"current-password"} value={password} onChange={e=>setPassword(e.target.value)}/></label>}</>}
     </>}
-    <button className="btn primary" disabled={busy}>{magic&&!signed?"Email me a sign-in link":invite?(signup&&!signed?"Create account and join":"Accept invitation"):join?"Continue to team selection":"Sign in"}</button></form>
+    <button className="btn primary" disabled={busy}>{magic&&!signed?"Email me a sign-in link":invite?(signup&&!signed?"Opprett konto og bli med":"Godta invitasjonen"):join?"Continue to team selection":"Sign in"}</button></form>
     {role!=="athlete"&&!invite&&!demo&&!signed&&<button className="btn" onClick={()=>{setMagic(!magic);setMessage("");}}>{magic?"Use a password":"Sign in with a magic link"}</button>}
-    {!demo&&invite&&!signed&&<button className="btn" onClick={()=>setSignup(!signup)}>{signup?"Use existing account":"Create invited account"}</button>}</>}
+    {!demo&&invite&&!signed&&<button className="btn" onClick={()=>setSignup(!signup)}>{signup?"Jeg har allerede en konto":"Opprett ny konto"}</button>}</>}
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
     {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}
     </>}

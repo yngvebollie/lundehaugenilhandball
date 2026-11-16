@@ -28,7 +28,7 @@ export async function reportQueue(data:Snapshot,batch?:{athlete:string;rows:Queu
    }
   }
  }
- if(batch){if(!batch.rows.length)throw Error("Velg minst ett spillelag.");for(const {reg,player} of batch.rows){const link={reg,player,athlete:batch.athlete};if(!rows.has(link.reg+":"+link.player)||links.some(l=>l.reg===link.reg&&(l.player===link.player||l.athlete===link.athlete))||!data.roster.some(m=>m.id===link.athlete&&m.role==="athlete"&&m.squad===t))throw Error("Koblingen er ikke tilgjengelig.");
+ if(batch){if(!batch.rows.length)throw Error("Velg minst ett lag.");for(const {reg,player} of batch.rows){const link={reg,player,athlete:batch.athlete};if(!rows.has(link.reg+":"+link.player)||links.some(l=>l.reg===link.reg&&(l.player===link.player||l.athlete===link.athlete))||!data.roster.some(m=>m.id===link.athlete&&m.role==="athlete"&&m.squad===t))throw Error("Koblingen er ikke tilgjengelig.");
  links.push(link);}sessionStorage.setItem("report-roster:"+t,JSON.stringify(links));}
  if(undo){const i=links.findIndex(l=>l.reg===undo.reg&&l.athlete===undo.athlete&&l.player===undo.player);if(i<0)throw Error("Koblingen er endret.");links.splice(i,1);sessionStorage.setItem("report-roster:"+t,JSON.stringify(links));}
  return {links:links.filter(l=>regs.some(r=>r.id===l.reg)).map(l=>({...l,squad:regs.find(r=>r.id===l.reg)?.display_name||l.reg,name:rows.get(l.reg+":"+l.player)?.name||l.player,origin:"manual"})),rows:[...rows.values()].filter(row=>!links.some(l=>l.reg===row.reg&&l.player===row.player))};

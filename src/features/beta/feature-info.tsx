@@ -6,7 +6,7 @@ import styles from "./feature-info.module.css";
 const topics = {
   "agenda": [
     "Dagens oversikt",
-    "Se dagens trening og neste kamp for hvert spillelag. Åpne en spiller for å følge opp individuelt.",
+    "Se dagens trening og neste kamp for hvert lag. Åpne en spiller for å følge opp individuelt.",
     "Oversikten samler aktiviteter fra andre deler av appen. Å åpne en rad endrer ikke planen."
   ],
   "feed": [
@@ -100,9 +100,9 @@ const topics = {
     "Å logge flere øvinger er ikke en automatisk godkjenning av neste ferdighetsnivå."
   ],
   "matches": [
-    "Spillelag og sesong",
-    "Velg sesong og riktig spillelag før du henter terminlisten. Hvert NIF-lag har egen ID.",
-    "Spillelag i samme treningsgruppe beholder egne kamper, resultater og rapporter."
+    "Lag og sesong",
+    "Velg sesong og riktig lag før du henter terminlisten. Hvert NIF-lag har egen ID.",
+    "Lag i samme treningsgruppe beholder egne kamper, resultater og rapporter."
   ],
   "report": [
     "Kamprapport",

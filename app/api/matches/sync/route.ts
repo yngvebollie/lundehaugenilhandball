@@ -22,8 +22,8 @@ export async function POST(req:Request){
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!env.supabaseUrl)return reply(503,"Innlogging er ikke konfigurert.");
   if(!cron&&(!serviceKey||!process.env.NIF_CLIENT_ID||!process.env.NIF_CLIENT_SECRET)){
-    let id;try{id=(await req.json()).id;}catch{return reply(400,"Velg et spillelag.");}
-    if(typeof id!=="string"||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return reply(400,"Velg et spillelag.");
+    let id;try{id=(await req.json()).id;}catch{return reply(400,"Velg et lag.");}
+    if(typeof id!=="string"||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return reply(400,"Velg et lag.");
     try{const result=await fetch(env.supabaseUrl+"/functions/v1/nhf-public-schedule",{method:"POST",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(40000),
       headers:{Authorization:"Bearer "+token,apikey:env.supabaseAnonKey,"Content-Type":"application/json"},body:JSON.stringify({id})});
       const body=await result.json();return reply(result.status,body.message||"Kunne ikke hente NHFs offentlige terminliste.");

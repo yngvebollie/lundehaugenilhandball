@@ -195,7 +195,7 @@
     "key": "goal_machine",
     "title": "Målscorer",
     "icon": "Goal",
-    "description": "Score mål i aktiv sesong. Hvert mål i en bekreftet kamprapport teller, på tvers av spillelag og nivå.",
+    "description": "Score mål i aktiv sesong. Hvert mål i en bekreftet kamprapport teller, på tvers av lag og nivå.",
     "category": "Kamp",
     "levels": [
       10,

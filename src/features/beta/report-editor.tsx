@@ -8,8 +8,13 @@ import {canReviewTeamLabels,importDraft,parsePaste,reportTeamMatches,validateRep
 type Saved={digest:string;original:Report;reviewed:Report;revision:number};
 const digestText=async(text:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,"0")).join("");
 const numbers=["goals","penalty","total","suspensions"] as const;
-const props={goals:"Spillemål",penalty:"7 m",total:"Totalt",suspensions:"2 min"};
+const props={goals:"Spillemål",penalty:"7 m (straffemål)",total:"Totalt",suspensions:"2 min"};
 const marks={played:"Deltatt",disqualification:"Diskvalifikasjon"};
+function scoringEdit(p:ReportPlayer,k:typeof numbers[number],value:number|null):Partial<ReportPlayer>{
+ if(value!==null&&k==="penalty"&&p.total!==null&&value<=p.total)return {penalty:value,goals:p.total-value};
+ if(value!==null&&k==="goals"&&p.penalty!==null)return {goals:value,total:value+p.penalty};
+ return {[k]:value};
+}
 function privatePath(g:Fixture,digest:string){return g.team+"/"+g.id+"/"+digest+".pdf";}
 export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;onSaved:()=>Promise<void>}){
   const [text,setText]=useState(""),[draft,setDraft]=useState<Report>(),[orig,setOrig]=useState<Report>(),[saved,setSaved]=useState<Saved|null>(null);
@@ -67,10 +72,10 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
       <input readOnly={!editing||k==="nif_id"} value={report.match[k]??""} onChange={e=>{const v=e.target.value;setDraft({...report,match:{...report.match,[k]:["home_score","away_score","half_home","half_away"].includes(k)?v===""?null:Number(v):v}});}}/></label>)}</div></details>
     <div className="day-strip">{(["A","B"] as const).map(s=><button className={"btn "+(s===side?"selected":"")} key={s} onClick={()=>setSide(s)}>{s==="A"?report.match.home:report.match.away} · {report.players.filter(p=>p.side===s).length} spillere</button>)}</div>
     <div className="review-layout"><div className="review-rows"><h3>{side==="A"?report.match.home:report.match.away} · Spillerlinjer</h3><div className="review-scroll"><table className="table"><thead><tr>{["Nr.","Deltatt","Spillemål","7 m","Totalt"].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{report.players.map((p,i)=>p.side!==side?null:<tr key={i} className={i===index?"highlight":""} onClick={()=>pick(i)}><th><button type="button" aria-label={"Velg spiller "+p.shirt+" "+p.name} onClick={()=>pick(i)}>#{p.shirt} <small>{p.name}</small></button></th><td>{p.played===true?"✓":p.played===false?"Nei":"?"}</td><td>{p.goals??"?"}</td><td>{p.penalty??"?"}</td><td>{p.total??"?"}</td></tr>)}</tbody></table></div></div>
-    {player&&<aside className="review-player"><h3>Spiller #{player.shirt}</h3><label>Navn<input readOnly={!editing} value={player.name} onChange={e=>change(index,{name:e.target.value})}/></label><label>Nr.<input readOnly={!editing} value={player.shirt} onChange={e=>change(index,{shirt:e.target.value})}/></label>
+    {player&&<aside className="review-player"><h3>Spiller #{player.shirt}</h3>{saved&&!editing&&<button type="button" className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);setSide(side);pick(index);}}>Korriger spillerlinje</button>}{editing&&<small>7 m er inkludert i totalt antall mål. Endrer du fordelingen, beholdes totalen. Originalrapporten blir ikke endret.</small>}<label>Navn<input readOnly={!editing} value={player.name} onChange={e=>change(index,{name:e.target.value})}/></label><label>Nr.<input readOnly={!editing} value={player.shirt} onChange={e=>change(index,{shirt:e.target.value})}/></label>
       {(Object.keys(marks) as (keyof typeof marks)[]).map(k=><label key={k}>{marks[k]}<select disabled={!editing} value={String(player[k])} onChange={e=>change(index,{[k]:e.target.value==="null"?null:e.target.value==="true"})}><option value="null">Ukjent</option><option value="false">Nei</option><option value="true">Ja</option></select></label>)}
       <label>Advarsler<select value={player.warning==null?"":String(Number(player.warning))} disabled={!editing} onChange={e=>change(index,{warning:e.target.value===""?null:Number(e.target.value)})}><option value="">Ukjent</option>{[0,1,2,3].map(n=><option key={n}>{n}</option>)}</select></label>
-      {numbers.map(k=><label key={k}>{props[k]}<input type="number" readOnly={!editing} min={0} max={999} value={player[k]??""} onChange={e=>change(index,{[k]:e.target.value===""?null:Number(e.target.value)})}/></label>)}</aside>}
+      {numbers.map(k=><label key={k}>{props[k]}<input type="number" readOnly={!editing} min={0} max={999} value={player[k]??""} onChange={e=>change(index,scoringEdit(player,k,e.target.value===""?null:Number(e.target.value)))}/></label>)}</aside>}
     </div><div className="report-totals">{(["A","B"] as const).map(s=><span key={s}>Lag {s}: <strong>{report.players.filter(p=>p.side===s).reduce((n,p)=>n+(p.total??0),0)} mål</strong></span>)}</div>
     {editing&&<>{[...report.issues,...issues].map((msg,i)=><small key={i}>{msg}</small>)}<div className="day-strip">
       <button disabled={!ready||busy||!!issues.length||orig?.match.nif_id!==g.nif_id} className="btn primary" onClick={()=>act(save)}><Save size={16}/>{saved?"Lagre rapportendringer":"Importer rapport"}</button>

@@ -16,10 +16,10 @@ export function LiveAnalysis({data}:{data:Snapshot}){
  const pool=games.filter(g=>g.registration===reg).sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||""));
  const selected=pool.find(g=>g.id===game)||pool.find(g=>!g.completed&&g.day>=today())||pool.at(-1);
  useEffect(()=>{if(loaded&&reg){const q=new URLSearchParams({reg});if(selected)q.set("game",selected.id);history.replaceState(null,"","/liveanalyse?"+q.toString());}},[loaded,reg,selected?.id]);
- return <section className="live-analysis"><header className="live-select"><label>Spillelag<select value={reg} onChange={e=>{R(e.target.value);G("");}}>{regs.map(r=><option value={r.id} key={r.id}>{r.display_name||r.org_id}</option>)}</select></label>
+ return <section className="live-analysis"><header className="live-select"><label>Lag<select value={reg} onChange={e=>{R(e.target.value);G("");}}>{regs.map(r=><option value={r.id} key={r.id}>{r.display_name||r.org_id}</option>)}</select></label>
  <label>Kamp<select value={selected?.id||""} onChange={e=>{G(e.target.value);M("Kamp");}}>{pool.map(g=><option key={g.id} value={g.id}>{g.day} · {g.home||"Eget lag"} – {g.away||g.opponent}</option>)}</select></label></header>
  <nav className="workspace-tabs" aria-label="Analyseperiode">{["Kamp","Sesonganalyse"].map(m=><button className={mode===m?"current":""} aria-pressed={mode===m} key={m} onClick={()=>M(m)}>{m}</button>)}</nav>
- {note?<p role="alert">{note}</p>:!loaded?<p>Laster terminlisten …</p>:!selected?<p>Ingen kamper i valgt spillelag og sesong.</p>:mode==="Kamp"?<Recorder key={selected.id} g={selected} data={data}/>:<Season key={reg} team={team} reg={reg} games={pool}/>}</section>;
+ {note?<p role="alert">{note}</p>:!loaded?<p>Laster terminlisten …</p>:!selected?<p>Ingen kamper i valgt lag og sesong.</p>:mode==="Kamp"?<Recorder key={selected.id} g={selected} data={data}/>:<Season key={reg} team={team} reg={reg} games={pool}/>}</section>;
 }
 function Season({team,reg,games}:{team:string;reg:string;games:Fixture[]}){
  const [logs,set]=useState<GameLog[]>(),[error,E]=useState(""),[opponent,OP]=useState("");

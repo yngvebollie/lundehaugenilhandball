@@ -44,6 +44,8 @@
 .roster-grid tbody th a{color:var(--text);font-weight:650;text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:3px}
 @media(max-width:720px){.roster-grid{min-width:970px;--jersey:66px}.roster-grid .rg-name{width:128px}.roster-grid .rg-week{width:124px}.roster-grid .rg-position{width:120px}.roster-grid :is(th,td){padding-inline:8px}.roster-grid tr:not(.rg-bands)>:is(:first-child,:nth-child(2)){position:sticky;z-index:1}.roster-grid tr:not(.rg-bands)>:first-child{left:0}.roster-grid tr:not(.rg-bands)>:nth-child(2){left:var(--jersey);border-right:1px solid var(--border)}}
 .squad-stats .aggregate-grid{min-width:1040px}.aggregate-grid tr>th:first-child,.aggregate-grid .stat-jersey{text-align:center;width:74px}.aggregate-grid thead th:nth-child(2){text-align:left}.aggregate-grid tbody th[scope=row]{min-width:200px;overflow-wrap:anywhere}.aggregate-grid th,.aggregate-grid td{border-right:1px solid var(--border)}.aggregate-grid tbody th button{vertical-align:middle}
+.metric-order{display:inline-flex;align-items:center;gap:.2em;padding:3px 0;background:transparent;color:inherit;font:inherit;border:0;cursor:pointer}.metric-order:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.coach-admin-nav{grid-column:1/-1;margin-top:auto;padding-top:12px;border-top:1px solid #788398;display:grid;gap:4px}.coach-admin-nav>small{font-size:.75rem;font-weight:650;padding:0 12px;color:inherit}.pending-count{display:inline-grid;place-items:center;min-width:1.35em;height:1.35em;background:#a91c42;color:white;border-radius:50%;margin-left:.35em;font-size:.85em}
 
 
 

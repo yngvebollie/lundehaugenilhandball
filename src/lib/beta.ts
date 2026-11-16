@@ -169,24 +169,24 @@ export async function emailInvites(team:string,input:string,role:Member["role"])
   const res=await fetch("/api/invitations",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({team,addresses,role})});
   const payload=await res.json();
   if(!res.ok)throw Error(payload.error||"Could not send invitations.");
-  return payload as {links:{email:string;url:string}[];accepted:boolean};
+  return payload as {links:{email:string;url:string}[];accepted:boolean;reason?:string};
 }
 export async function inviteBatch(team:string,input:string,role:Member["role"]){
   const addresses=inviteAddresses(input);
   if(demo)return Promise.all(addresses.map(async email=>({email,url:await inviteMember(team,email,role)})));
   const records=(await db!.rpc("beta_bulk_invite",{team_id:team,addresses,member_role:role}).throwOnError()).data as {email:string;token:string}[];
-  return records.map(r=>({email:r.email,url:clubLink("/login?new=1&invite="+encodeURIComponent(r.token),demo?location.origin:undefined)}));
+  return records.map(r=>({email:r.email,url:clubLink("/login?new=1&role="+role+"&invite="+encodeURIComponent(r.token),demo?location.origin:undefined)}));
 }
 export async function inviteMember(team:string,email:string,role:Member["role"]){
   let token:string=crypto.randomUUID();
   if(demo&&role==="coach"&&!demoAdmins(team).includes(sessionStorage.getItem("nhf-persona")||"coach"))throw Error("Admin coach required.");
   if(demo)localStorage.setItem(prefix+"invite:"+token,JSON.stringify({team,email,role,expires:Date.now()+7*86400000}));
   else token=(await db!.rpc("beta_invite",{team_id:team,address:email,member_role:role}).throwOnError()).data as string;
-  return clubLink("/login?new=1&invite="+encodeURIComponent(token),demo?location.origin:undefined);
+  return clubLink("/login?new=1&role="+role+"&invite="+encodeURIComponent(token),demo?location.origin:undefined);
 }
 export function joinDemo(token:string,email:string,name:string){
   const invite=JSON.parse(localStorage.getItem(prefix+"invite:"+token)||"null");
-  if(!invite||invite.expires<Date.now()||invite.email!==email)throw Error("This invitation needs its original email and browser, and expires after seven days.");
+  if(!invite||invite.expires<Date.now()||(invite.email!==email&&!(invite.role==="athlete"&&/^\+?[\d ().-]{7,30}$/.test(email))))throw Error("This invitation needs its original email and browser, and expires after seven days.");
   const existing=demoMembers().find(m=>m.email===email);
   if(existing&&(existing.role!==invite.role||(existing.role==="athlete"&&existing.squad&&existing.squad!==invite.team)))throw Error("This account already has a different role or athlete team.");
   const member:Member=existing?{...existing,squad:existing.squad||invite.team}:{id:crypto.randomUUID(),email,name,role:invite.role,squad:invite.team};

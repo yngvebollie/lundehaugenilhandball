@@ -1,4 +1,5 @@
 import {FeatureInfo} from "./feature-info";
+import {Jersey} from "./club-log";
 import {PasswordHelp} from "./password-help";
 import {clubLink} from "@/lib/club-url";
 import {useEffect,useState} from "react";
@@ -9,19 +10,19 @@ type Props={data:Snapshot;busy:boolean;run:Run};
 export function TeamStaff({data,busy,run}:Props){
   const admin=data.admins.includes(data.me.id);
   const [note,setNote]=useState("");
-  return <details className="library-tools"><summary><ShieldCheck size={16}/> Staff &amp; roster permissions</summary><div className="grid">
-    {data.roster.map(m=>{const elevated=data.admins.includes(m.id),last=elevated&&data.admins.length===1;
+  return <div className="grid">{(["coach","athlete"] as const).map(role=><section key={role}><h3>{role==="coach"?"Trenere":"Utøvere"} · {data.roster.filter(m=>m.role===role).length}</h3>
+    {data.roster.filter(m=>m.role===role).sort((a,b)=>a.name.localeCompare(b.name,"nb")).map(m=>{const elevated=data.admins.includes(m.id),last=elevated&&data.admins.length===1;
       async function change(action:"promote"|"demote"|"remove"){
         if(action==="remove"&&!window.confirm("Remove "+m.name+" from this team? Their account and training history are kept."+(m.role==="athlete"?" The team's six-character join code will expire.":"")))return;
         if(await run(()=>changeStaff(data,m,action)))setNote(action==="remove"?"Member removed from this team.":"Coach permissions saved.");
       }
       return <div className="result" key={m.id}><div><strong>{m.role==="athlete"?<a href={"/spillerstats?athlete="+m.id}>{m.name}</a>:m.name}</strong><p>{elevated?"Admin coach":m.role==="coach"?"Coach":"Athlete"}</p></div><div className="day-strip">
         {admin&&m.role==="coach"&&<button className="btn" disabled={busy||last} title={last?"Promote a second admin first":undefined} onClick={()=>change(elevated?"demote":"promote")}>{elevated?"Make coach":"Make admin coach"}</button>}
-        {m.role==="athlete"&&<PasswordHelp team={data.me.squad} player={m}/>}
+        {m.role==="athlete"&&<Jersey team={data.me.squad} player={m} run={run}/>}{m.role==="athlete"&&<PasswordHelp team={data.me.squad} player={m}/>}
         {(admin||m.role==="athlete")&&<button aria-label={"Remove "+m.name} title={last?"Promote a second admin first":"Remove from this team"} disabled={busy||last} className="btn" onClick={()=>change("remove")}><UserMinus size={16}/></button>}
       </div></div>;
-    })}{note&&<p role="status">{note}</p>}
-  </div></details>;
+    })}</section>)}{note&&<p role="status">{note}</p>}
+  </div>;
 }
 export function ShareLink({data,busy,run,role}:Props&{role:Member["role"]}){
   const [record,setRecord]=useState<{token:string;expires:string;direct?:boolean}|null>(null),[note,setNote]=useState("");

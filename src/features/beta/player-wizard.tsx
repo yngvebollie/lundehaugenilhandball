@@ -8,10 +8,25 @@ import "./player-wizard.css";
 
 function Kit({number}:{number:string}){return <svg className="pw-kit" viewBox="0 0 140 192" role="img" aria-label={"Hotpink drakt "+number+" med svart shorts"}><path fill="#ff1493" d="M41 12 56 7q14 13 28 0l15 5 30 20-14 29-16-9 3 62q-32 7-64 0l3-62-16 9-14-29z"/><path fill="none" stroke="white" strokeWidth="4" d="M56 9q14 18 28 0M14 51l11 5M115 56l11-5"/><text x="70" y="83" textAnchor="middle" fontSize={number.length>2?34:43} fontWeight="800" fill="white">{number||"–"}</text><path fill="#171719" d="M39 121h62l9 56-35 5-5-28-5 28-35-5z"/><path stroke="#ddd" fill="none" strokeWidth="2" d="M42 129l-7 43m64-43 7 43"/></svg>;}
 function Court({render}:{render:(id:string,label:string)=>ReactNode}){return <div className="pw-court"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="currentColor" strokeWidth=".65" fill="none"><path d="M17 100C17 72 30 65 42 65H58C70 65 83 72 83 100"/><path strokeDasharray="2 2" d="M3 100C3 56 22 49 40 49H60C78 49 97 56 97 100"/><path d="M42 100V97H58V100"/></g></svg>{Object.entries(positions).map(([id,label])=><div className={"pw-zone "+id} key={id}>{render(id,label)}</div>)}</div>;}
+const courtRoles=[
+ {title:"Back",spots:[["lb","VB",23,36],["rb","HB",77,36]]},
+ {title:"Midtback",spots:[["cb","MB",50,22]]},
+ {title:"Strek",spots:[["pivot","S",57,58]]},
+ {title:"Kant",spots:[["lw","VK",9,78],["rw","HK",91,78]]},
+ {title:"Keeper",spots:[["gk","K",50,88]]}
+] as const;
+function PositionRoster({rows}:{rows:BoardPlayer[]}){
+ const ordered=[...rows].sort((a,b)=>a.name.localeCompare(b.name,"nb"));
+ const members=(list:BoardPlayer[])=>list.length?<ul>{list.map(p=><li key={p.id}>{p.shirt&&<b>#{p.shirt}</b>}{p.name}</li>)}</ul>:<small>Ingen spillere</small>;
+ return <div className="position-roster"><figure><svg viewBox="0 0 320 300" role="img" aria-label="Håndballbane med backene øverst, kantene i hjørnene og keeper i mål">
+ <rect x="2" y="2" width="316" height="286" rx="3" fill="#fff5f9" stroke="#a56984"/><g fill="none" stroke="#a56984" strokeWidth="1.6"><path d="M39 288 Q39 182 136 182 H184 Q281 182 281 288"/><path strokeDasharray="6 5" d="M5 235 Q31 122 136 122 H184 Q289 122 315 235"/><path d="M139 288v9h42v-9"/></g>
+ {courtRoles.flatMap(g=>g.spots.map(([id,abbr,x,y])=><g key={id} transform={`translate(${x*3.2} ${y*3})`}><title>{positions[id]}</title><circle r="17" fill={id==="gk"?"#172442":"#af0050"}/><text textAnchor="middle" dy=".35em" fontSize="13" fontWeight="700" fill="white">{abbr}</text></g>))}</svg></figure>
+ <div className="position-groups">{courtRoles.map(g=><section key={g.title}><h3>{g.title}</h3>{g.spots.map(([id,abbr])=><div key={id} className="position-line" data-position={id}><span><b>{abbr}</b> {positions[id]}</span>{members(ordered.filter(p=>p.positions.includes(id)))}</div>)}</section>)}{ordered.some(p=>!p.positions.length)&&<section><h3>Uten posisjon</h3>{members(ordered.filter(p=>!p.positions.length))}</section>}</div></div>;
+}
 export function CoachPositions({data}:{data:Snapshot}){
  const [rows,S]=useState<BoardPlayer[]>(),[err,E]=useState(""),[retry,R]=useState(0);
- useEffect(()=>{let alive=true;positionBoard(data).then(x=>{if(alive){S(x);E("");}}).catch(e=>{if(alive)E(e.message);});return()=>{alive=false;};},[data,retry]);
- return <section className="panel panel-pad grid" id="posisjoner"><header><h2>Posisjonsønsker</h2><small>Spillernes egne ønsker, ikke et laguttak.</small></header>{err?<p role="alert">{err} <button className="btn" onClick={()=>R(retry+1)}>Prøv igjen</button></p>:!rows?<p role="status">Henter spillere …</p>:<><Court render={(id,label)=><><strong>{label}</strong>{rows.filter(p=>p.positions.includes(id)).map(p=><span key={p.id}>{p.shirt&&"#"+p.shirt+" "}{p.name}</span>)}</>}/>{rows.some(p=>!p.positions.length)&&<small>Uten posisjonsønske: {rows.filter(p=>!p.positions.length).map(p=>p.name).join(", ")}</small>}</>}</section>;
+ useEffect(()=>{let alive=true;S(undefined);E("");positionBoard(data).then(x=>{if(alive){S(x);E("");}}).catch(e=>{if(alive)E(e.message);});return()=>{alive=false;};},[data,retry]);
+ return <section className="panel panel-pad grid" id="posisjoner"><header><h2>Posisjoner</h2></header>{err?<p role="alert">{err} <button className="btn" onClick={()=>R(retry+1)}>Prøv igjen</button></p>:!rows?<p role="status">Henter spillere …</p>:<PositionRoster rows={rows}/>}</section>;
 }
 const titles=["Din spillerprofil","Når har du skolegym?","Hva vil du bli bedre på?","Hva vil du utvikle fysisk?","Hvor spiller du?"];
 const toggle=<T,>(list:T[],item:T)=>list.includes(item)?list.filter(x=>x!==item):[...list,item];

@@ -8,9 +8,9 @@ const fail = (status:number,error:string) => Response.json({error},{status,heade
 export async function POST(req:Request) {
   const token=req.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
   if (!token) return fail(401,"Sign in as a coach.");
-  const key=process.env.RESEND_API_KEY, from=process.env.INVITE_FROM;
+  const key=process.env.RESEND_API_KEY, from=process.env.INVITE_FROM||"noreply@lundehaugenil.no";
   let origin:URL;
-  try {origin=new URL(process.env.APP_ORIGIN||""); if(origin.protocol!=="https:"||origin.origin!==origin.href.replace(/\/$/,""))throw Error();}
+  try {origin=new URL(process.env.APP_ORIGIN||"https://app.lundehaugenil.no"); if(origin.protocol!=="https:"||origin.origin!==origin.href.replace(/\/$/,""))throw Error();}
   catch {return fail(503,"Public invitation URL is not configured. No emails sent.");}
   if(!env.supabaseUrl||!env.supabaseAnonKey) return fail(503,"Invitation email is not configured. Use Create links only.");
   const db=createClient(env.supabaseUrl,env.supabaseAnonKey,{global:{headers:{Authorization:"Bearer "+token}},auth:{persistSession:false,autoRefreshToken:false}});
@@ -45,8 +45,8 @@ export async function POST(req:Request) {
   let accepted=false;
   try {
     const result=await fetch("https://api.resend.com/emails/batch",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},signal:AbortSignal.timeout(15000),
-      body:JSON.stringify(links.map(r=>({from,to:[r.email],subject:"Your handball team invitation",text:"Your coach has invited you to join as "+body.role+". Open this private link within seven days and use this email address:\n\n"+r.url})))});
+      body:JSON.stringify(links.map(r=>({from,to:[r.email],subject:"Lundehaugen IL: Invitasjon til laget",text:"Hei! Du er invitert som "+(body.role==="athlete"?"utøver":"trener")+". Åpne den personlige lenken innen sju dager:\n\n"+r.url+"\n\n"+(body.role==="athlete"?"Velg passord eller bruk eksisterende konto. E-postfeltet er valgfritt ved ny utøverregistrering.":"Bruk e-postadressen invitasjonen ble sendt til.")})))});
     accepted=result.ok;
   }catch { /* A timeout cannot confirm provider acceptance. Keep the original links available. */ }
-  return Response.json({links,accepted},{headers:{"Cache-Control":"no-store"}});
+  return Response.json({links,accepted,reason:accepted?undefined:"E-postlevering er ikke bekreftet. Kopier og del lenken med riktig mottaker."},{headers:{"Cache-Control":"no-store"}});
 }

@@ -97,17 +97,27 @@ export async function seasonMatches(team:string,regs:Registration[]):Promise<Fix
 }
 export async function register(team:string,org_id:number,season:number,leagues:number[],display_name=""){
   if(!Number.isSafeInteger(org_id)||org_id<1||leagues.some(x=>!Number.isSafeInteger(x)||x<1))throw Error("Ugyldig NIF-ID.");
-  if((await seasonSettings(team)).active!==season||!season)throw Error("Lagre sesong først.");
+  if((await seasonSettings(team)).active!==season||!season)throw Error("Velg en aktiv sesong først.");
   const rows=await registrations(team);const existing=rows.find(x=>x.org_id===org_id);if(existing)throw Error("NIF "+org_id+" er allerede registrert som "+(existing.display_name||"Lag "+org_id)+".");
   const row={team,org_id,season,display_name:display_name.trim().slice(0,100),tournament:leagues[0]||null,leagues};
   if(!demo)return (await db!.from("beta_team_seasons").insert(row).select("*").single().throwOnError()).data as Registration;
   const next={...row,active:true,id:crypto.randomUUID()};put("reg:"+team,[...read<Registration[]>("reg:"+team,[]),next]);return next;
 }
-export async function editProfile(r:Registration,leagues:number[],profile_note:string){
+export async function editProfile(r:Registration,leagues:number[],profile_note:string,display_name=r.display_name){
   if(leagues.some(x=>!Number.isSafeInteger(x)||x<=0))throw Error("Ugyldig liga-ID.");
-  const patch={leagues,tournament:leagues[0]||null,profile_note};
+  const patch={leagues,tournament:leagues[0]||null,profile_note,display_name};
   if(demo)put("reg:"+r.team,read<Registration[]>("reg:"+r.team,[]).map(x=>x.id===r.id?{...x,...patch}:x));
   else await db!.from("beta_team_seasons").update(patch).eq("id",r.id).eq("team",r.team).select("id").single().throwOnError();
+}
+export async function renameRegistration(r:Registration,name:string){
+  const display_name=name.trim();if(!display_name||display_name.length>100)throw Error("Oppgi et lagnavn på 1 til 100 tegn.");
+  if(demo)put("reg:"+r.team,read<Registration[]>("reg:"+r.team,[]).map(x=>x.id===r.id?{...x,display_name}:x));
+  else await db!.from("beta_team_seasons").update({display_name}).eq("id",r.id).eq("team",r.team).is("ended_at",null).select("id").single().throwOnError();
+}
+export async function archiveRegistration(r:Registration){
+ const patch={active:false,ended_at:new Date().toISOString()};
+ if(demo)put("reg:"+r.team,read<Registration[]>("reg:"+r.team,[]).map(x=>x.id===r.id?{...x,...patch}:x));
+ else await db!.from("beta_team_seasons").update(patch).eq("id",r.id).eq("team",r.team).select("id").single().throwOnError();
 }
 export async function toggleRegistration(r:Registration){
   if(demo)put("reg:"+r.team,read<Registration[]>("reg:"+r.team,[]).map(x=>x.id===r.id?{...x,active:!r.active}:x));

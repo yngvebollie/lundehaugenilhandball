@@ -3,7 +3,7 @@ import {plusDay,type Rule} from "./regular";
 import {contactAddress} from "./player-access";
 export const skills={passing:"Kast og mottak",teamwork:"Lag og samspill",shooting:"Skudd",attack:"Angrep",defence:"Forsvar",keeper:"Keeper",counter:"Kontringer",duel:"Duellspill",feint:"Finter",decisions:"Gode valg / spilleforståelse"};
 export const physical={strength:"Bli sterkere",speed:"Løpe raskere",footwork:"Raskere bein",jump:"Bedre spenst",shotpower:"Hardere skudd"};
-export const positions={lb:"Venstre back",cb:"Midtback",rb:"Høyre back",pivot:"Linjespiller",lw:"Venstre kant",gk:"Keeper",rw:"Høyre kant"};
+export const positions={lb:"Venstre back",cb:"Midtback",rb:"Høyre back",pivot:"Strek",lw:"Venstre kant",gk:"Keeper",rw:"Høyre kant"};
 export type Wishes={completed:boolean;name:string;given:string;family:string;shirt:string;email:string;days:number[];minutes:number;skills:string[];physical:string[];positions:string[]};
 export type BoardPlayer={id:string;name:string;shirt:string|null;positions:string[]};
 const key=(t:string,id:string)=>"player-wizard:"+t+":"+id;
