@@ -274,6 +274,9 @@ try {
   await login(7);await assert.rejects(badge("event",7,measurement));await assert.rejects(badge("read",3));await assert.rejects(badge("recognize",7,{match:m,recipient:uuid(7),key:"fan_favorite"}));
   await login(1);
   await pg.exec("reset role");await pg.exec(await readFile(new URL("../supabase/migrations/20261116211000_repeat_match_scoring.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261116193000_cup_rosters.sql",import.meta.url),"utf8"));
+  await pg.exec("alter table public.beta_cup_games add column declined uuid[] default '{}'"); 
+  for(const file of ["20261116200000_cup_participation","20261116210000_athlete_results_and_sets","20261116212000_merit_match_links","20261116213000_match_ballots","20261116230000_historical_award_match","20261116230100_quick_sets_grants","20261116232000_vote_award_fixture"])await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
   await checkPeers(pg,login,uuid,team,rid);
   const squadLines=async()=>(await pg.query("select beta_squad_stat_lines($1) v",[rid])).rows[0].v;
   const lines=(await squadLines()).filter(r=>r.name==="Test home");

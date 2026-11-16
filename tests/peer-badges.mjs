@@ -46,4 +46,16 @@ export async function checkPeers(pg,login,uuid,team,reg){
  await pg.query("select beta_season_settings('save',$1,98,'Earlier')",[team]);
  const earlier=await rpc("read",301);assert.equal(earlier.counts.goal_machine,7);assert.equal(earlier.earned.filter(x=>x.key==="goal_machine").length,0);
  await pg.query("select beta_season_settings('save',$1,99,'2024/25')",[team]);assert.equal((await rpc("read",301)).counts.goal_machine,10);
+
+ const vote=(recipient,cat="vote_best")=>pg.query("select beta_match_ballot($1,$2,$3) p",[mid,cat,recipient==null?null:uuid(recipient)]);
+ await login(301);await assert.rejects(vote(301));await assert.rejects(vote(303));await vote(302);await vote(302);
+ await login(304);await vote(302);await login(305);await vote(302);await login(302);
+ const medal=await rpc("read",302);assert.equal(medal.counts.vote_best,3);assert.equal(medal.earned.find(e=>e.key==="vote_best").match,mid);assert.equal(medal.earned.filter(x=>x.key==="vote_best").length,1);
+ await login(305);await vote(301);await login(302);assert.equal((await rpc("read",302)).counts.vote_best,2);
+ await login(5);await assert.rejects(vote(302));assert.deepEqual((await pg.query("select beta_my_fixture_log() as v")).rows[0].v,[]);
+ await login(301);const mine=(await pg.query("select beta_my_fixture_log() as v")).rows[0].v;assert.ok(mine.some(g=>g.id===mid&&g.goals===4));assert.ok(mine.every(g=>!("lineup" in g)));
+ const entries=JSON.stringify([{id:"strength:push-up",name:"Push-up",unit:"rep",sets:[12,12,10]}]);
+ const save=()=>pg.query("select beta_quick_training_sets($1,$2,'Workout','2026-01-01 12:00Z',30,$3)",[team,uuid(895),entries]);
+ await save();await save();assert.equal((await pg.query("select exercises from beta_assignments where id=$1",[uuid(895)])).rows[0].exercises[0],"Push-up · 12 / 12 / 10 rep");
+ await login(1);
 }

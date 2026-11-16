@@ -27,4 +27,10 @@
 .match-tiers{display:flex;flex-wrap:wrap;gap:.4rem}.match-tiers small{background:#f5edf2;color:#4d2540;padding:4px 7px;border-radius:4px}
 .award-history a,.merit-feed article{display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;padding:.65rem 0;border-bottom:1px solid #dddfea}
 .merit-feed{position:relative;overflow:hidden}.merit-feed h2,.award-history h4{margin:0}.merit-feed article p{margin:.3rem 0}.merit-feed footer{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+#merke-hat_trick_hero>button{grid-template-columns:40px 1fr}
+#merke-hat_trick_hero .match-tiers{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#merke-hat_trick_hero .match-tiers small{display:grid;text-align:left;gap:2px;background:#faf7f4;border-top:3px solid #b17a51;padding:7px 8px;color:#272e40}
+#merke-hat_trick_hero .match-tiers [data-level="2"]{border-color:#94a2b2;background:#f3f5f8}
+#merke-hat_trick_hero .match-tiers [data-level="3"]{border-color:#d4a829;background:#fff9e9}
+#merke-hat_trick_hero .match-tiers span{font-size:.75rem}
 
