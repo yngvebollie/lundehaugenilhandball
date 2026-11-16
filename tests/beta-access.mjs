@@ -273,6 +273,7 @@ try {
   assert.equal((await badge("event",7,{...measurement,key:"kmt",quantity:110})).earned.filter(b=>b.key==="kmt").length,13);
   await login(7);await assert.rejects(badge("event",7,measurement));await assert.rejects(badge("read",3));await assert.rejects(badge("recognize",7,{match:m,recipient:uuid(7),key:"fan_favorite"}));
   await login(1);
+  await pg.exec("reset role");await pg.exec(await readFile(new URL("../supabase/migrations/20261116211000_repeat_match_scoring.sql",import.meta.url),"utf8"));
   await checkPeers(pg,login,uuid,team,rid);
   const squadLines=async()=>(await pg.query("select beta_squad_stat_lines($1) v",[rid])).rows[0].v;
   const lines=(await squadLines()).filter(r=>r.name==="Test home");

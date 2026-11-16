@@ -36,6 +36,12 @@ export async function checkPeers(pg,login,uuid,team,reg){
    await pg.query("insert into nhf_private.badge_links(reg,player,athlete) values($1,$2,$3) on conflict do nothing",[regId,uuid(321),uuid(301)]);
  }
  await pg.exec("set role authenticated");await login(1);
+ const repeats=async()=>{const r=await rpc("read",301);return [1,2,3].map(t=>r.earned.filter(e=>e.key==="hat_trick_hero"&&e.level===t).length);};
+ assert.deepEqual(await repeats(),[3,2,0]);assert.deepEqual(await repeats(),[3,2,0]);
+ await pg.exec("reset role");await pg.query("update nhf_private.match_participants set report_goals=10 where match_id=$1 and player_id=$2",[uuid(332),uuid(321)]);
+ await pg.exec("set role authenticated");await login(1);assert.deepEqual(await repeats(),[3,2,1]);
+ await pg.exec("reset role");await pg.query("update nhf_private.match_participants set report_goals=7 where match_id=$1 and player_id=$2",[uuid(332),uuid(321)]);
+ await pg.exec("set role authenticated");await login(1);assert.deepEqual(await repeats(),[3,2,0]);
  const current=await rpc("read",301);assert.equal(current.counts.goal_machine,10);assert.equal(current.earned.filter(x=>x.key==="goal_machine").length,1);
  await pg.query("select beta_season_settings('save',$1,98,'Earlier')",[team]);
  const earlier=await rpc("read",301);assert.equal(earlier.counts.goal_machine,7);assert.equal(earlier.earned.filter(x=>x.key==="goal_machine").length,0);

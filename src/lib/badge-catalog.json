@@ -253,21 +253,45 @@
   },
   {
     "key": "hat_trick_hero",
-    "title": "Tre på rad",
+    "title": "Mange på rad",
     "icon": "ListOrdered",
-    "description": "Score minst tre mål i én kamp.",
+    "description": "Score 1, 5 eller 10 mål i samme kamp. Alle nådde nivåer deles ut på nytt i hver kamp.",
     "category": "Kamp",
     "levels": [
-      3,
-      15,
-      40
+      1,
+      5,
+      10
     ]
   },
   {
     "key": "defensive_guardian",
-    "title": "Forsvarsinnsats",
+    "title": "Forsvarer",
     "icon": "ShieldCheck",
-    "description": "Få bekreftet en særlig god forsvarsinnsats.",
+    "description": "Motta stemmer for Forsvarskjempe fra spillere du har deltatt i kamp med. Tidligere bekreftet forsvarsinnsats beholdes.",
+    "category": "Kamp",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "vote_teammate",
+    "title": "Lagspiller",
+    "icon": "Handshake",
+    "description": "Motta Lagspiller-stemmer fra lagkamerater etter kamp.",
+    "category": "Kamp",
+    "levels": [
+      3,
+      10,
+      25
+    ]
+  },
+  {
+    "key": "vote_best",
+    "title": "Banens beste",
+    "icon": "Star",
+    "description": "Motta Banens beste-stemmer fra lagkamerater etter kamp.",
     "category": "Kamp",
     "levels": [
       3,

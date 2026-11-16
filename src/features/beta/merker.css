@@ -24,4 +24,7 @@
 .merke-criteria small{font-variant-numeric:tabular-nums}.criterion-0{color:#75421c}.criterion-1{color:#48576c}.criterion-2{color:#725700}
 .merke-preview{border-left:3px solid var(--teal);background:var(--teal-soft);padding:12px}.merke-preview small{display:block}
 @media(max-width:640px){.merke-catalog-row{grid-template-columns:38px minmax(0,1fr);gap:5px 10px}.merke-criteria{grid-column:2}}
+.match-tiers{display:flex;flex-wrap:wrap;gap:.4rem}.match-tiers small{background:#f5edf2;color:#4d2540;padding:4px 7px;border-radius:4px}
+.award-history a,.merit-feed article{display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;padding:.65rem 0;border-bottom:1px solid #dddfea}
+.merit-feed{position:relative;overflow:hidden}.merit-feed h2,.award-history h4{margin:0}.merit-feed article p{margin:.3rem 0}.merit-feed footer{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
 
