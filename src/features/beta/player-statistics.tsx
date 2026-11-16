@@ -37,12 +37,14 @@ export function PlayerStatistics({data,overview=false}:{data:Snapshot;overview?:
    const results=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
    const mappings:LinkId[]=demo?demoLinks(data.me.squad):(await db!.rpc("beta_roster_ids",{t:data.me.squad}).throwOnError()).data;
    const rejected=(await declines(data.me.squad)).flatMap(d=>{const g=byId.get(d.match_id);return g?[{athlete:d.athlete,reg:g.registration||"",fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id}]:[]});
-   for(const {reg,game} of await cupAttendance(data.me.squad,regs.map(r=>r.id))){
+   const cupRows=await cupAttendance(data.me.squad,regs.map(r=>r.id));
+   const playedCups=cupRows.filter(({game})=>game.played?.length||(game.scored!=null&&game.conceded!=null));
+   for(const {reg,game} of cupRows){
     for(const athlete of game.declined||[])rejected.push({athlete,reg,fixtureKey:"cup:"+game.id});
     for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
    }
-   if(ok){setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
-    setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size);setError("");}
+   if(ok){setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.filter(c=>c.reg===reg.id).length};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
+    setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.length);setError("");}
  };void run().catch(e=>{if(ok)setError(e.message);});return()=>{ok=false;};},[data.me.squad,data]);
  const groups=useMemo(()=>groupPlayers(lines||[],data.roster.filter(p=>p.squad===data.me.squad),aliases),[lines,data.roster,data.me.squad,aliases]);
  const active=levels.find(l=>l.id===level);
