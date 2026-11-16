@@ -33,6 +33,20 @@ export function Kamper({data}:{data:Snapshot}){
   const game=all.find(x=>x.id===id),active=shown.find(r=>r.id===(game?.registration||profile))||shown[0];
   const load=useCallback(async()=>{const settings=await seasonSettings(squad),rs=await registrations(squad,past?{...settings,active:past}:settings);const fixtures=await seasonMatches(squad,rs),overview=await reportOverview(squad,fixtures);setSeasons(settings);setRegs(rs);setAll(fixtures);setReports(overview);},[squad,past]);
   useEffect(()=>{void load().catch(e=>setNote(e.message));const url=new URLSearchParams(location.search),key="kamper-profile:"+data.me.id+":"+squad;const pointed=url.get("reg");const hist=Number(url.get("history"));if(hist>0)setPast(hist);setProfile(pointed||sessionStorage.getItem(key)||"");if(pointed)sessionStorage.setItem(key,pointed);setView(url.get("view")||"");setId(url.get("game")||"");if(url.get("view")==="teams"&&url.get("add")==="1"){setAdding(true);setOrg(url.get("lagid")||"");setCup(url.get("turnid")||"");setSquadName((url.get("name")||"").slice(0,100));}},[load]);
+  // A badge can point to a fixture from an archived season or a cup.
+  useEffect(()=>{if(!id||game||demo||!seasons.active)return;let live=true;
+    const locate=async()=>{
+      const league=(await db!.from("beta_matches").select("registration").eq("team",squad).eq("id",id).maybeSingle().throwOnError()).data;
+      let reg=league?.registration;let cup=false;
+      if(!league){const g=(await db!.from("beta_cup_games").select("cup").eq("team",squad).eq("id",id).maybeSingle().throwOnError()).data;
+        if(!g)return;reg=(await db!.from("beta_cups").select("registration").eq("team",squad).eq("id",g.cup).maybeSingle().throwOnError()).data?.registration;cup=true;}
+      if(!reg)return;
+      const r=(await db!.from("beta_team_seasons").select("season").eq("team",squad).eq("id",reg).maybeSingle().throwOnError()).data;
+      if(!live||!r)return;const q=new URLSearchParams({reg,history:String(r.season)});
+      if(cup){q.set("view","cups");q.set("cupGame",id);}else if(past!==r.season)q.set("game",id);else return;
+      location.replace("/match?"+q);
+    };void locate().catch(e=>{if(live)setNote(e.message);});return()=>{live=false;};
+  },[id,game,seasons.active,past,squad]);
   function choose(value:string){setProfile(value);sessionStorage.setItem("kamper-profile:"+data.me.id+":"+squad,value);setLeague("");setWhen("Spilte");setId("");setNote("");setAdding(false);history.replaceState(null,"","/match?"+new URLSearchParams({...view?{view}:{},...past?{history:String(past)}:{}}));}
   async function run(fn:()=>Promise<void>){setNote("");setBusy(true);try{await fn();await load();}catch(e){setNote((e as Error).message);}finally{setBusy(false);}}
   async function sync(r:Registration,prefix=""){try{setNote(prefix+r.org_id+": "+await refreshSeason(r));}catch(e){setNote(prefix+"Kamper ikke hentet: "+(e as Error).message);}}

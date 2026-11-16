@@ -7,7 +7,7 @@ import type { FocusMember } from "./focus";
 
 export type Team = {id:string;name:string;discoverable?:boolean;logo?:string};
 export type Member = { id: string; squad: string; name: string; role: "coach" | "athlete";position?:string;bio?:string;photo?:string;email?:string;given_name?:string|null;family_name?:string|null;shirt_number?:string|null };
-export type Assignment = { id: string; athlete: string; squad: string; title: string; day: string; exercises: string[]; program_name?:string|null; kind?:EventKind; minutes?:number|null; start_time?:string|null;personal?:boolean };
+export type Assignment = { logged_sets?:LoggedExercise[]|null; id: string; athlete: string; squad: string; title: string; day: string; exercises: string[]; program_name?:string|null; kind?:EventKind; minutes?:number|null; start_time?:string|null;personal?:boolean };
 export type Check = { assignment: string; step: number };
 export type WorkoutReview={assignment:string;stars:number;exercise_stars:number[];comment:string};
 export type Notice={id:string;batch:string;squad:string;coach:string;athlete:string;cadence:"Daily"|"Weekly";starts_on:string;body:string;posted_at:string;read_at:string|null};
@@ -341,7 +341,7 @@ export async function quickTraining(me:Member,id:string,title:string,local:strin
  if(!demo&&entries.length){await db!.rpc("beta_quick_training_sets",{t:me.squad,k:id,label:title.trim(),at_time:instant,minutes_done:minutes,entries}).throwOnError();return;}
  if(!demo){await db!.rpc("beta_quick_training",{t:me.squad,k:id,label:title.trim(),at_time:instant,minutes_done:minutes}).throwOnError();return;}
  const lines=entries.length?entries.map(e=>e.name+" · "+e.sets.join(" / ")+" "+e.unit):["Gjennomført trening"];
- await publish([{id,squad:me.squad,athlete:me.id,title:title.trim(),day:local.slice(0,10),start_time:local.slice(11,16),minutes,kind:"Session",personal:true,exercises:lines}]);
+ await publish([{id,squad:me.squad,athlete:me.id,title:title.trim(),day:local.slice(0,10),start_time:local.slice(11,16),minutes,kind:"Session",personal:true,logged_sets:entries,exercises:lines}]);
  for(let i=0;i<lines.length;i++)await checkExercise(id,i);
 }
 export type PlayerLog={id:number|string;at_time:string;action:string;actor:string;detail:string};

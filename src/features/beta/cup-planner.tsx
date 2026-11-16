@@ -15,7 +15,7 @@ export function CupPlanner({data,reg}:{data:Snapshot;reg:string}){
   const games=cups.length?(await db!.from("beta_cup_games").select("id,cup,day,opponent,stage,bracket,lineup,declined,played,scored,conceded").eq("team",team).in("cup",cups.map(c=>c.id)).order("day").throwOnError()).data||[]:[];
   return {cups,games};
  }
- useEffect(()=>{let live=true;read().then(p=>{if(live){P(p);C(p.cups[0]?.id||"");}}).catch(e=>{if(live)M(e.message)});return()=>{live=false};},[reg,team]);
+ useEffect(()=>{let live=true;read().then(p=>{if(live){P(p);const target=p.games.find(g=>g.id===new URLSearchParams(location.search).get("cupGame"));C(target?.cup||p.cups[0]?.id||"");if(target)D({...target,played:target.played||[],declined:target.declined||[]});}}).catch(e=>{if(live)M(e.message)});return()=>{live=false};},[reg,team]);
  async function save(e:FormEvent,game?:Game){
   e.preventDefault();if(!packet||busy)return;B(true);M("");
   try{let next=await read();

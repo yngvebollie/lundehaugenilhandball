@@ -1,3 +1,4 @@
+import {MeritFeed} from "./merit-feed";
 import {PlayerStatistics} from "./player-statistics";
 import {ProfilePlan} from "./profile-plan";
 import {CoachRatings} from "./coach-ratings";
@@ -10,17 +11,18 @@ import {today,type Member,type Snapshot} from "@/lib/beta";
 import {profileInfo,type ProfileInfo} from "@/lib/coach-activity";
 import {ActivityFeed} from "./activity-feed";
 export function AthleteProfileView({data,player}:{data:Snapshot;player:Member}){
- const [tab,T]=useState("plan");
- useEffect(()=>{const sync=()=>{const value=location.hash.slice(1);T(["vurderinger","logg","kampkobling","aktivitet"].includes(value)?value:"plan");};sync();window.addEventListener("hashchange",sync);return()=>window.removeEventListener("hashchange",sync);},[]);
+ const [tab,T]=useState("feed");
+ useEffect(()=>{const sync=()=>{const value=location.hash.slice(1);T(["plan","vurderinger","logg","kampkobling","aktivitet"].includes(value)?value:"feed");};sync();window.addEventListener("hashchange",sync);return()=>window.removeEventListener("hashchange",sync);},[]);
  const [info,setInfo]=useState<ProfileInfo>(),[note,setNote]=useState(""),[busy,setBusy]=useState(false);
  useEffect(()=>{let ok=true;profileInfo(data,player.id).then(x=>{if(ok)setInfo(x);}).catch(e=>{if(ok)setNote(e.message);});return()=>{ok=false;};},[data.me.squad,player.id,data]);
  const plans=data.plans.filter(p=>p.athlete===player.id).sort((a,b)=>b.day.localeCompare(a.day)),done=(id:string)=>data.checks.filter(c=>c.assignment===id).length;
  const history=plans.filter(p=>p.day<=today()||done(p.id)>0);
  return <section className="grid player-profile"><header className="feature-heading">{developmentVisible&&<a href={"/utvikling?athlete="+encodeURIComponent(player.id)}>Min utvikling</a>}<div>{player.photo&&<img src={player.photo} width={54} height={54} alt=""/>}<h2>{player.shirt_number&&"#"+player.shirt_number+" "}{player.name}</h2><small>{player.position}</small></div>
  <a className="btn" href={"/merker?athlete="+player.id}><Medal size={16}/> Merker</a></header>{player.bio&&<p>{player.bio}</p>}
+
+ <nav className="workspace-tabs" aria-label="Spillerprofil">{[["feed","Spillerfeed"],["plan","Plan og gjennomføring"],["vurderinger","Vurderinger"],["logg","Trenerlogg"],["kampkobling","Kamper og kobling"],["aktivitet","Aktivitetslogg"]].map(([id,label])=><a key={id} href={"#"+id} aria-current={tab===id?"page":undefined} className={tab===id?"current":""}>{label}</a>)}</nav>
+ {tab==="feed"?<MeritFeed key={data.me.squad+player.id} data={data} athlete={player.id}/>:tab==="plan"?<ProfilePlan data={data} player={player.id}/>:tab==="vurderinger"?<CoachRatings data={data} athlete={player.id}/>:tab==="logg"?<Audit data={data} player={player.id}/>:tab==="kampkobling"?<>
  <PlayerStatistics data={data} athleteId={player.id}/>
- <nav className="workspace-tabs" aria-label="Spillerprofil">{[["plan","Plan og gjennomføring"],["vurderinger","Vurderinger"],["logg","Trenerlogg"],["kampkobling","Kamper og kobling"],["aktivitet","Aktivitetslogg"]].map(([id,label])=><a key={id} href={"#"+id} aria-current={tab===id?"page":undefined} className={tab===id?"current":""}>{label}</a>)}</nav>
- {tab==="plan"?<ProfilePlan data={data} player={player.id}/>:tab==="vurderinger"?<CoachRatings data={data} athlete={player.id}/>:tab==="logg"?<Audit data={data} player={player.id}/>:tab==="kampkobling"?<>
  <div className="merke-summary"><div><strong>{history.filter(p=>done(p.id)===p.exercises.length).length}</strong><span>Fullførte aktiviteter</span></div><div><strong>{history.reduce((n,p)=>n+done(p.id),0)}</strong><span>Avkrysninger</span></div><div><strong>{info?.games.filter(g=>g.played).length??"–"}</strong><span>Koblede kampdeltakelser</span></div></div>
  <section className="grid"><FeatureInfo topic="profile"><h3><LinkIcon size={16}/> Kobling til kamprapporter</h3></FeatureInfo><small>Treff på fornavn og draktnummer i dette lagets aktive sesong.</small>
  {!player.shirt_number?<p>Utøveren har ikke oppgitt draktnummer.</p>:<>{info?.candidates.map((c,i)=><div className="result" key={c.reg+i}><strong>#{c.shirt} {c.name}</strong><span>{c.team} · {c.linked?"Koblet":c.safe?"Entydig treff":"Krever manuell kontroll"}</span></div>)}
