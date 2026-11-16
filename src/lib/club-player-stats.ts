@@ -1,6 +1,6 @@
 import type {Member} from "./beta";
 import type {StatLine} from "./match-journal";
-export type ClubLine=StatLine&{reg:string;fixtureKey:string;level:string};
+export type ClubLine=StatLine&{reg:string;fixtureKey:string;level:string;opponent?:string;score?:string|null;fixtureTitle?:string};
 export type LinkId={reg:string;player:string;athlete:string};
 type Group={key:string;name:string;athlete?:string;shirt?:string|null;rows:ClubLine[]};
 const normalized=(s:string)=>s.trim().replace(/\s+/g," ").toLocaleLowerCase("nb");

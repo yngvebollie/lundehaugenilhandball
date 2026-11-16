@@ -1,4 +1,5 @@
 import {cupOutcome,fixtureOutcome,type Wld} from "@/lib/match-result";
+import {PlayerMatchTrend} from "./player-match-trend";
 import {FeatureInfo} from "./feature-info";
 import {useEffect,useMemo,useState} from "react";
 import {ArrowDownUp,ChevronUp,ChevronDown,ChevronRight,Volleyball} from "lucide-react";
@@ -41,14 +42,14 @@ export function PlayerStatistics({data,overview=false,athleteId}:{data:Snapshot;
  useEffect(()=>{let live=true;if(overview)positionBoard(data).then(r=>{if(live)B(r);}).catch(()=>{if(live)B([]);});return()=>{live=false;};},[overview,data]);
  useEffect(()=>{let ok=true;const run=async()=>{
    const ss=await seasonSettings(data.me.squad),regs=await registrations(data.me.squad,ss),fixtures=await seasonMatches(data.me.squad,regs),byId=new Map(fixtures.map(g=>[g.id,g]));
-   const results:ClubLine[]=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
+   const results:ClubLine[]=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,opponent:g?.opponent,score:g?.score,fixtureTitle:g?.home&&g.away?g.home+" – "+g.away:undefined,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
    const mappings:LinkId[]=demo?demoLinks(data.me.squad):(await db!.rpc("beta_roster_ids",{t:data.me.squad}).throwOnError()).data;
    const rejected=(await declines(data.me.squad)).flatMap(d=>{const g=byId.get(d.match_id);return g?[{athlete:d.athlete,reg:g.registration||"",fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id}]:[]});
    const cupRows=await cupAttendance(data.me.squad,regs.map(r=>r.id));
    const playedCups=cupRows.filter(({game})=>game.played?.length||(game.scored!=null&&game.conceded!=null));
    for(const {reg,game} of cupRows){
     for(const athlete of game.declined||[])rejected.push({athlete,reg,fixtureKey:"cup:"+game.id});
-    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,outcome:cupOutcome(game.scored,game.conceded),fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
+    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,opponent:game.opponent,score:game.scored!=null&&game.conceded!=null?game.scored+"-"+game.conceded:null,fixtureTitle:"Turneringskamp · egne mål først",outcome:cupOutcome(game.scored,game.conceded),fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
    }
    if(ok){setDecisions([...fixtures.filter(g=>g.completed).map(g=>({fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id,reg:g.registration||"",outcome:fixtureOutcome(g)})),...playedCups.map(({reg,game})=>({fixtureKey:"cup:"+game.id,reg,outcome:cupOutcome(game.scored,game.conceded)}))]);setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.filter(c=>c.reg===reg.id).length};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
     setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.length);setError("");}
@@ -61,11 +62,7 @@ export function PlayerStatistics({data,overview=false,athleteId}:{data:Snapshot;
  const players=visible.map(g=>{const u=uniqueGames(g.filtered);return {...g,balls:awards.get(g.key)?.length||0,conflicts:u.conflicts,m:metrics(u.rows)};})
    .filter(p=>p.name.toLocaleLowerCase("nb").includes(search.toLocaleLowerCase("nb").trim())&&(!active||p.filtered.length>0||noCount(p.athlete,p.filtered)>0))
    .sort((a,b)=>{const val=(p:typeof a)=>sort.key==="shirt"?Number(p.shirt)||null:sort.key==="name"?p.name:sort.key==="balls"?p.balls:p.m[sort.key];return order(val(a),val(b))||a.name.localeCompare(b.name,"nb");});
- if(athleteId){
-  const rows=uniqueGames(groups.find(g=>g.athlete===athleteId)?.rows||[]).rows.filter(r=>r.played).sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||"")||a.fixtureKey.localeCompare(b.fixtureKey));
-  const totals=countOutcomes(rows);
-  return <section aria-label="Spillerens kamptrend"><h3>Kampform · {season}</h3>{error?<p role="alert">{error}</p>:!lines?<small>Henter kampresultater …</small>:rows.length?<><div className="league-trend"><small>Siste {Math.min(rows.length,10)} · nyeste til høyre</small>{rows.slice(-10).map(r=><abbr key={r.fixtureKey} className={"trend-"+({W:"win",L:"loss",D:"draw"}[r.outcome!]||"unknown")} title={r.day+" · "+r.level+" · "+({W:"Seier",L:"Tap",D:"Uavgjort"}[r.outcome!]||"Resultat ukjent")}>{r.outcome||"–"}</abbr>)}</div><p>{totals.W} seire · {totals.L} tap · {totals.D} uavgjorte</p></>:<small>Ingen koblede, spilte kamper i denne sesongen.</small>}</section>;
- }
+ if(athleteId)return <PlayerMatchTrend key={data.me.squad+":"+athleteId+":"+season} season={season} levels={levels} rows={groups.find(g=>g.athlete===athleteId)?.rows||[]} loading={!lines} error={error}/>;
  const summary=<details open className="season-wld"><summary>Lagresultater · {season}</summary><table className="table"><thead><tr><th>Lag / nivå</th><th>W</th><th>L</th><th>D</th></tr></thead><tbody>{[...levels.filter(l=>!active||active.id===l.id),{id:"",label:"Alle lag samlet"}].map(l=>{const counts=record(decisions.filter(d=>!l.id||d.reg===l.id));return <tr key={l.id}><th scope="row">{l.label}</th><td>{counts.W}</td><td>{counts.L}</td><td>{counts.D}</td></tr>;})}</tbody></table><small>W = seier, L = tap, D = uavgjort. Bare kjente resultater telles.</small></details>;
  if(overview){
   const from=monday(today()),until=plusDay(from,7),people=data.roster.filter(a=>a.squad===data.me.squad&&a.role==="athlete").sort((a,b)=>Number(a.shirt_number||999)-Number(b.shirt_number||999)||a.name.localeCompare(b.name,"nb"));

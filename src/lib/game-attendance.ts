@@ -13,10 +13,10 @@ export async function recordDecline(team:string,match_id:string,athlete:string,a
  else await db!.from("beta_game_declines").delete().match({team,match_id,athlete}).throwOnError();
 }
 export async function cupAttendance(team:string,regs:string[]){
- type G={id:string;day:string;cup:string;scored?:number|null;conceded?:number|null;played?:string[];declined?:string[]};
+ type G={id:string;day:string;cup:string;opponent?:string;scored?:number|null;conceded?:number|null;played?:string[];declined?:string[]};
  const list:{reg:string;game:G}[]=[];
  if(demo){for(const reg of regs){const p=JSON.parse(localStorage.getItem("club-cups:"+team+":"+reg)||"{}");for(const game of p.games||[])list.push({reg,game});}}
  else if(regs.length){const cups=(await db!.from("beta_cups").select("id,registration").eq("team",team).in("registration",regs).throwOnError()).data||[];
- const ids=new Map(cups.map(c=>[c.id,c.registration]));if(ids.size){for(let i=0;;i+=500){const rows=(await db!.from("beta_cup_games").select("id,day,cup,played,declined,scored,conceded").eq("team",team).in("cup",[...ids.keys()]).order("id").range(i,i+499).throwOnError()).data||[];for(const game of rows)list.push({reg:ids.get(game.cup)!,game});if(rows.length<500)break;}}}
+ const ids=new Map(cups.map(c=>[c.id,c.registration]));if(ids.size){for(let i=0;;i+=500){const rows=(await db!.from("beta_cup_games").select("id,day,cup,opponent,played,declined,scored,conceded").eq("team",team).in("cup",[...ids.keys()]).order("id").range(i,i+499).throwOnError()).data||[];for(const game of rows)list.push({reg:ids.get(game.cup)!,game});if(rows.length<500)break;}}}
  return list;
 }

@@ -47,6 +47,17 @@
 .metric-order{display:inline-flex;align-items:center;gap:.2em;padding:3px 0;background:transparent;color:inherit;font:inherit;border:0;cursor:pointer}.metric-order:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .coach-admin-nav{grid-column:1/-1;margin-top:auto;padding-top:12px;border-top:1px solid #788398;display:grid;gap:4px}.coach-admin-nav>small{font-size:.75rem;font-weight:650;padding:0 12px;color:inherit}.pending-count{display:inline-grid;place-items:center;min-width:1.35em;height:1.35em;background:#a91c42;color:white;border-radius:50%;margin-left:.35em;font-size:.85em}
 .season-wld{max-width:44rem}.season-wld summary{font-weight:650;cursor:pointer;margin-bottom:.4rem}.season-wld .table :is(th,td):not(:first-child){text-align:right;font-variant-numeric:tabular-nums}.season-wld tbody tr:last-child{font-weight:bold;border-top:2px solid var(--border)}.trend-unknown{background:var(--bg-soft)}
+.player-match-trend label{display:grid;gap:4px;width:fit-content}
+.player-match-trend .form-results{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.form-results button{width:44px;height:44px;border:1px solid currentColor;border-radius:5px;background:#eef0f4;color:#394152;font-weight:700;cursor:pointer}
+.form-results [data-outcome=W]{color:#185b3c;background:#e3f4e9}
+.form-results [data-outcome=L]{color:#912438;background:#fce8eb}
+.form-results [data-outcome=D]{color:#684900;background:#fff2bf}
+.form-results button[aria-pressed=true]{outline:2px solid #171d36;outline-offset:1px}
+.player-match-trend [role=region]{border-left:3px solid #c90060;padding:8px 12px}
+.player-match-trend dl{display:flex;flex-wrap:wrap;gap:10px 28px;margin:.4em 0}
+.player-match-trend dt{font-size:.85em}
+.player-match-trend dd{font-weight:600;margin:0}
 
 
 
