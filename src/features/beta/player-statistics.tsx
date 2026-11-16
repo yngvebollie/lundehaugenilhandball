@@ -1,3 +1,4 @@
+import {cupOutcome,fixtureOutcome,type Wld} from "@/lib/match-result";
 import {FeatureInfo} from "./feature-info";
 import {useEffect,useMemo,useState} from "react";
 import {ArrowDownUp,ChevronUp,ChevronDown,ChevronRight,Volleyball} from "lucide-react";
@@ -7,12 +8,17 @@ import {demoLinks} from "@/lib/report-roster";
 import {groupPlayers,uniqueGames,type ClubLine,type LinkId} from "@/lib/club-player-stats";
 import {seasonGoldBalls} from "@/lib/opponent-stats";
 import {declines,cupAttendance} from "@/lib/game-attendance";
-import {metrics,labels,tabs,type Column} from "@/lib/stat-metrics";
+import {countOutcomes,metrics,labels,tabs,type Column} from "@/lib/stat-metrics";
 import {positionBoard,positions,type BoardPlayer} from "@/lib/athlete-wizard";
 import {today} from "@/lib/beta";
 import {monday} from "@/lib/workload";
 import {plusDay} from "@/lib/regular";
 import "./squad-stats.css";
+type Decision={fixtureKey:string;reg:string;outcome:Wld|null};
+function record(rows:Decision[]){
+ const games=new Map<string,Set<Wld>>();for(const r of rows){const set=games.get(r.fixtureKey)||new Set<Wld>();if(r.outcome)set.add(r.outcome);games.set(r.fixtureKey,set);}
+ return countOutcomes([...games.values()].map(s=>({outcome:s.size===1?[...s][0]:null})));
+}
 function levelName(name:string,competition?:string){
  const age=competition?.match(/(?:jenter|j)\s*(\d+)/i)?.[1],series=competition?.match(/\b(A-serie|Breddeserie)/i)?.[1];
  return age&&series?"J"+age+" "+(series.toLowerCase()==="a-serie"?"A-serie":"Bredde"):name;
@@ -20,11 +26,12 @@ function levelName(name:string,competition?:string){
 type Level={id:string;label:string;games:number};
 const discipline=["warnings","disqualifications","suspensions","penalty"] as const;
 const metricHint:Partial<Record<Column,string>>={warnings:"Antall advarsler",disqualifications:"Antall diskvalifikasjoner",suspensions:"Antall tominuttersutvisninger",penalty:"Straffemål fra 7 meter, inkludert i Mål"};
-const views={Samlet:["games","goals","average","homeGoals","awayGoals",...discipline],Nivåfordeling:["games","goals","average",...discipline],Angrep:tabs.Angrep,Disiplin:tabs.Disiplin,Trenerdata:tabs.Trenerdata} as const;
+const views={Samlet:["games","W","L","D","goals","average","homeGoals","awayGoals",...discipline],Nivåfordeling:["games","W","L","D","goals","average",...discipline],Angrep:tabs.Angrep,Disiplin:tabs.Disiplin,Trenerdata:tabs.Trenerdata} as const;
 const fmt=(n:number|null)=>n==null?"–":n.toLocaleString("nb-NO",{maximumFractionDigits:1});
-export function PlayerStatistics({data,overview=false}:{data:Snapshot;overview?:boolean}){
+export function PlayerStatistics({data,overview=false,athleteId}:{data:Snapshot;overview?:boolean;athleteId?:string}){
  const [lines,setLines]=useState<ClubLine[]>(),[aliases,setAliases]=useState<LinkId[]>([]),[season,setSeason]=useState(""),[games,setGames]=useState(0),[levels,setLevels]=useState<Level[]>([]);
  const [view,setView]=useState<keyof typeof views>("Samlet"),[search,setSearch]=useState(""),[level,setLevel]=useState(""),[expand,setExpand]=useState(""),[error,setError]=useState("");
+ const [decisions,setDecisions]=useState<Decision[]>([]);
  type Key=Column|"shirt"|"name"|"balls";
  const [sort,setSort]=useState<{key:Key;asc:boolean}>({key:overview?"shirt":"goals",asc:overview});
  function order(a:number|string|null,b:number|string|null){if(a==null||b==null)return a==null?(b==null?0:1):-1;return (sort.asc?1:-1)*(typeof a==="number"&&typeof b==="number"?a-b:String(a).localeCompare(String(b),"nb",{numeric:true}));}
@@ -34,16 +41,16 @@ export function PlayerStatistics({data,overview=false}:{data:Snapshot;overview?:
  useEffect(()=>{let live=true;if(overview)positionBoard(data).then(r=>{if(live)B(r);}).catch(()=>{if(live)B([]);});return()=>{live=false;};},[overview,data]);
  useEffect(()=>{let ok=true;const run=async()=>{
    const ss=await seasonSettings(data.me.squad),regs=await registrations(data.me.squad,ss),fixtures=await seasonMatches(data.me.squad,regs),byId=new Map(fixtures.map(g=>[g.id,g]));
-   const results=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
+   const results:ClubLine[]=(await Promise.all(regs.map(async reg=>(await squadStatLines(reg.id,fixtures)).map(row=>{const g=byId.get(row.match_id);return {...row,reg:reg.id,fixtureKey:g?.nif_id?"nif:"+g.nif_id:"local:"+row.match_id,level:reg.display_name||"Lag "+reg.org_id};})))).flat();
    const mappings:LinkId[]=demo?demoLinks(data.me.squad):(await db!.rpc("beta_roster_ids",{t:data.me.squad}).throwOnError()).data;
    const rejected=(await declines(data.me.squad)).flatMap(d=>{const g=byId.get(d.match_id);return g?[{athlete:d.athlete,reg:g.registration||"",fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id}]:[]});
    const cupRows=await cupAttendance(data.me.squad,regs.map(r=>r.id));
    const playedCups=cupRows.filter(({game})=>game.played?.length||(game.scored!=null&&game.conceded!=null));
    for(const {reg,game} of cupRows){
     for(const athlete of game.declined||[])rejected.push({athlete,reg,fixtureKey:"cup:"+game.id});
-    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
+    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,outcome:cupOutcome(game.scored,game.conceded),fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
    }
-   if(ok){setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.filter(c=>c.reg===reg.id).length};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
+   if(ok){setDecisions([...fixtures.filter(g=>g.completed).map(g=>({fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id,reg:g.registration||"",outcome:fixtureOutcome(g)})),...playedCups.map(({reg,game})=>({fixtureKey:"cup:"+game.id,reg,outcome:cupOutcome(game.scored,game.conceded)}))]);setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.filter(c=>c.reg===reg.id).length};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
     setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.length);setError("");}
  };void run().catch(e=>{if(ok)setError(e.message);});return()=>{ok=false;};},[data.me.squad,data]);
  const groups=useMemo(()=>groupPlayers(lines||[],data.roster.filter(p=>p.squad===data.me.squad),aliases),[lines,data.roster,data.me.squad,aliases]);
@@ -54,24 +61,30 @@ export function PlayerStatistics({data,overview=false}:{data:Snapshot;overview?:
  const players=visible.map(g=>{const u=uniqueGames(g.filtered);return {...g,balls:awards.get(g.key)?.length||0,conflicts:u.conflicts,m:metrics(u.rows)};})
    .filter(p=>p.name.toLocaleLowerCase("nb").includes(search.toLocaleLowerCase("nb").trim())&&(!active||p.filtered.length>0||noCount(p.athlete,p.filtered)>0))
    .sort((a,b)=>{const val=(p:typeof a)=>sort.key==="shirt"?Number(p.shirt)||null:sort.key==="name"?p.name:sort.key==="balls"?p.balls:p.m[sort.key];return order(val(a),val(b))||a.name.localeCompare(b.name,"nb");});
+ if(athleteId){
+  const rows=uniqueGames(groups.find(g=>g.athlete===athleteId)?.rows||[]).rows.filter(r=>r.played).sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||"")||a.fixtureKey.localeCompare(b.fixtureKey));
+  const totals=countOutcomes(rows);
+  return <section aria-label="Spillerens kamptrend"><h3>Kampform · {season}</h3>{error?<p role="alert">{error}</p>:!lines?<small>Henter kampresultater …</small>:rows.length?<><div className="league-trend"><small>Siste {Math.min(rows.length,10)} · nyeste til høyre</small>{rows.slice(-10).map(r=><abbr key={r.fixtureKey} className={"trend-"+({W:"win",L:"loss",D:"draw"}[r.outcome!]||"unknown")} title={r.day+" · "+r.level+" · "+({W:"Seier",L:"Tap",D:"Uavgjort"}[r.outcome!]||"Resultat ukjent")}>{r.outcome||"–"}</abbr>)}</div><p>{totals.W} seire · {totals.L} tap · {totals.D} uavgjorte</p></>:<small>Ingen koblede, spilte kamper i denne sesongen.</small>}</section>;
+ }
+ const summary=<details open className="season-wld"><summary>Lagresultater · {season}</summary><table className="table"><thead><tr><th>Lag / nivå</th><th>W</th><th>L</th><th>D</th></tr></thead><tbody>{[...levels.filter(l=>!active||active.id===l.id),{id:"",label:"Alle lag samlet"}].map(l=>{const counts=record(decisions.filter(d=>!l.id||d.reg===l.id));return <tr key={l.id}><th scope="row">{l.label}</th><td>{counts.W}</td><td>{counts.L}</td><td>{counts.D}</td></tr>;})}</tbody></table><small>W = seier, L = tap, D = uavgjort. Bare kjente resultater telles.</small></details>;
  if(overview){
   const from=monday(today()),until=plusDay(from,7),people=data.roster.filter(a=>a.squad===data.me.squad&&a.role==="athlete").sort((a,b)=>Number(a.shirt_number||999)-Number(b.shirt_number||999)||a.name.localeCompare(b.name,"nb"));
   const byAthlete=new Map(visible.filter(g=>g.athlete).map(g=>[g.athlete,g.filtered]));
   const metricMap=new Map(Array.from(byAthlete,([id,rows])=>[id,metrics(uniqueGames(rows).rows)]));
   const filtered=people.filter(p=>!active||byAthlete.get(p.id)?.length||noCount(p.id,byAthlete.get(p.id)||[])>0).filter(p=>(p.name+" "+(p.shirt_number||"")).toLocaleLowerCase("nb").includes(search.trim().toLocaleLowerCase("nb"))).sort((a,b)=>{const val=(p:typeof a)=>sort.key==="shirt"?Number(p.shirt_number)||null:sort.key==="name"?p.name:sort.key==="balls"?null:byAthlete.get(p.id)?.length?metricMap.get(p.id)?.[sort.key]??null:null;return order(val(a),val(b))||a.name.localeCompare(b.name,"nb");});
   return <section className="grid squad-stats"><header className="competition-heading"><div><h2>Spilleroversikt</h2><small>{data.teams.find(t=>t.id===data.me.squad)?.name} · {people.length} registrerte spillere · Sesong {season||"…"}</small></div><label>Lag<select value={level} onChange={e=>setLevel(e.target.value)}><option value="">Alle lag</option>{levels.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select></label><label>Søk etter spiller<input type="search" value={search} placeholder="Navn eller draktnummer" onChange={e=>setSearch(e.target.value)}/></label></header>
-  {error&&<p role="alert">Kampstatistikken kunne ikke hentes: {error}</p>}<div className="player-list-scroll roster-scroll" role="region" aria-label="Spillertabell" tabIndex={0}><table className="table roster-grid" aria-label="Spilleroversikt"><colgroup><col className="rg-shirt"/><col className="rg-name"/><col className="rg-position"/></colgroup><colgroup span={8}/><colgroup><col className="rg-week"/></colgroup>
-  <thead><tr className="rg-bands"><th scope="colgroup" colSpan={3}>Spillerinformasjon</th><th scope="colgroup" colSpan={8}>Sesongstatistikk</th><th scope="colgroup">Denne uken</th></tr><tr>{heading("shirt","Draktnr.")}{heading("name","Spiller")}<th scope="col">Posisjon</th>{(["games","goals","average",...discipline] as const).map(k=>heading(k,k==="average"?"Mål/kamp":labels[k]))}<th scope="col">Takket nei</th><th scope="col">Fullført / tildelt</th></tr></thead><tbody>{filtered.map(p=>{
+  {lines&&!error&&summary}{error&&<p role="alert">Kampstatistikken kunne ikke hentes: {error}</p>}<div className="player-list-scroll roster-scroll" role="region" aria-label="Spillertabell" tabIndex={0}><table className="table roster-grid" aria-label="Spilleroversikt"><colgroup><col className="rg-shirt"/><col className="rg-name"/><col className="rg-position"/></colgroup><colgroup span={11}/><colgroup><col className="rg-week"/></colgroup>
+  <thead><tr className="rg-bands"><th scope="colgroup" colSpan={3}>Spillerinformasjon</th><th scope="colgroup" colSpan={11}>Sesongstatistikk</th><th scope="colgroup">Denne uken</th></tr><tr>{heading("shirt","Draktnr.")}{heading("name","Spiller")}<th scope="col">Posisjon</th>{(["games","W","L","D","goals","average",...discipline] as const).map(k=>heading(k,k==="average"?"Mål/kamp":labels[k]))}<th scope="col">Takket nei</th><th scope="col">Fullført / tildelt</th></tr></thead><tbody>{filtered.map(p=>{
    const b=board.find(x=>x.id===p.id),pos=p.position||b?.positions.map(k=>positions[k as keyof typeof positions]).filter(Boolean).join(", ");
    const own=byAthlete.get(p.id)||[],stats=metrics(uniqueGames(own).rows);
    const plans=data.plans.filter(a=>a.athlete===p.id&&!a.personal&&a.day>=from&&a.day<until),done=plans.filter(a=>a.exercises.length&&a.exercises.every((_,i)=>data.checks.some(c=>c.assignment===a.id&&c.step===i))).length;
-   return <tr key={p.id}><td>{p.shirt_number||"–"}</td><th scope="row"><a href={"/spillere?athlete="+p.id}>{p.name}</a></th><td>{pos||"Ikke oppgitt"}</td>{(["games","goals","average",...discipline] as const).map(k=><td key={k}>{lines&&!error&&own.length?fmt(stats[k]):"–"}</td>)}<td>{noCount(p.id,own)}</td><td>{done} / {plans.length}</td></tr>;})}</tbody></table></div>
+   return <tr key={p.id}><td>{p.shirt_number||"–"}</td><th scope="row"><a href={"/spillere?athlete="+p.id}>{p.name}</a></th><td>{pos||"Ikke oppgitt"}</td>{(["games","W","L","D","goals","average",...discipline] as const).map(k=><td key={k}>{lines&&!error&&own.length?fmt(stats[k]):"–"}</td>)}<td>{noCount(p.id,own)}</td><td>{done} / {plans.length}</td></tr>;})}</tbody></table></div>
   {!filtered.length&&<p>{people.length?"Ingen treff.":"Ingen registrerte spillere på laget ennå."}</p>}<small>Kampene telles én gang på tvers av lag i aktiv sesong. En strek betyr at koblede kampdata mangler.</small></section>;
  }
  const cols=views[view] as readonly Column[];
  return <section className="grid squad-stats"><header className="competition-heading"><div><FeatureInfo topic="stats"><h2>Spillerstats · {season}</h2></FeatureInfo><small>{active?.games??games} unike spilte kamper · {new Set(visible.flatMap(p=>p.filtered.map(r=>r.fixtureKey))).size} med spillerdata</small></div>
  {view!=="Nivåfordeling"&&<label>Lag og nivå<select value={level} onChange={e=>setLevel(e.target.value)}><option value="">Alle nivåer</option>{levels.map(n=><option key={n.id} value={n.id}>{n.label}</option>)}</select></label>}</header>
- <nav className="workspace-tabs" aria-label="Samlet spillerstatistikk">{(Object.keys(views) as (keyof typeof views)[]).map(v=><button key={v} aria-pressed={view===v} className={view===v?"current":""} onClick={()=>{if(view==="Nivåfordeling"&&v!==view)setLevel("");setExpand("");setView(v);}}>{v}</button>)}</nav>
+ {lines&&!error&&summary}<nav className="workspace-tabs" aria-label="Samlet spillerstatistikk">{(Object.keys(views) as (keyof typeof views)[]).map(v=><button key={v} aria-pressed={view===v} className={view===v?"current":""} onClick={()=>{if(view==="Nivåfordeling"&&v!==view)setLevel("");setExpand("");setView(v);}}>{v}</button>)}</nav>
  {view==="Nivåfordeling"&&<nav className="workspace-tabs" aria-label="Velg lag"><button aria-pressed={!active} className={!active?"current":""} onClick={()=>{setLevel("");setExpand("");}}>Alle</button>{levels.map(n=><button key={n.id} aria-pressed={active?.id===n.id} className={active?.id===n.id?"current":""} onClick={()=>{setLevel(n.id);setExpand("");}}>{n.label}</button>)}</nav>}
  <label>Søk etter spiller<input type="search" placeholder="Spillernavn" value={search} onChange={e=>setSearch(e.target.value)}/></label>
  {error?<p role="alert">{error}</p>:!lines?<p>Laster sesongstatistikk …</p>:<div className="player-list-scroll"><table className="table stat-table aggregate-grid"><thead><tr>{heading("shirt","Draktnr.")}{heading("name","Spiller")}{view==="Nivåfordeling"&&<th>Nivå / serie</th>}{cols.map(c=>heading(c,labels[c]))}<th scope="col">Takket nei</th><th title="Flest registrerte mål på laget i en kamp. Ved likt antall får begge gullball.">Gullballer</th></tr></thead>

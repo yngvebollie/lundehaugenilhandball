@@ -1,3 +1,4 @@
+import {PlayerStatistics} from "./player-statistics";
 import {ProfilePlan} from "./profile-plan";
 import {CoachRatings} from "./coach-ratings";
 import {Audit} from "./player-desk";
@@ -17,6 +18,7 @@ export function AthleteProfileView({data,player}:{data:Snapshot;player:Member}){
  const history=plans.filter(p=>p.day<=today()||done(p.id)>0);
  return <section className="grid player-profile"><header className="feature-heading">{developmentVisible&&<a href={"/utvikling?athlete="+encodeURIComponent(player.id)}>Min utvikling</a>}<div>{player.photo&&<img src={player.photo} width={54} height={54} alt=""/>}<h2>{player.shirt_number&&"#"+player.shirt_number+" "}{player.name}</h2><small>{player.position}</small></div>
  <a className="btn" href={"/merker?athlete="+player.id}><Medal size={16}/> Merker</a></header>{player.bio&&<p>{player.bio}</p>}
+ <PlayerStatistics data={data} athleteId={player.id}/>
  <nav className="workspace-tabs" aria-label="Spillerprofil">{[["plan","Plan og gjennomføring"],["vurderinger","Vurderinger"],["logg","Trenerlogg"],["kampkobling","Kamper og kobling"],["aktivitet","Aktivitetslogg"]].map(([id,label])=><a key={id} href={"#"+id} aria-current={tab===id?"page":undefined} className={tab===id?"current":""}>{label}</a>)}</nav>
  {tab==="plan"?<ProfilePlan data={data} player={player.id}/>:tab==="vurderinger"?<CoachRatings data={data} athlete={player.id}/>:tab==="logg"?<Audit data={data} player={player.id}/>:tab==="kampkobling"?<>
  <div className="merke-summary"><div><strong>{history.filter(p=>done(p.id)===p.exercises.length).length}</strong><span>Fullførte aktiviteter</span></div><div><strong>{history.reduce((n,p)=>n+done(p.id),0)}</strong><span>Avkrysninger</span></div><div><strong>{info?.games.filter(g=>g.played).length??"–"}</strong><span>Koblede kampdeltakelser</span></div></div>

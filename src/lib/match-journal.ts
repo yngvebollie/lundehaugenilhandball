@@ -1,9 +1,11 @@
 import {db,demo,type Snapshot} from "./beta";
+import {fixtureOutcome,type Wld} from "./match-result";
 import {matches,createMatch,type Match} from "./matches";
 import type {Registration} from "./nif";
 import type {Report} from "./report-text";
 import {hundvag,publishedFixtures} from "./hundvag-profile";
-export type Fixture=Match&{registration?:string;nif_id?:number;home?:string;away?:string;start_time?:string;competition?:string;age_class?:string;venue?:string;score?:string;status?:string;completed?:boolean};
+type FixtureFields={day:string;venue?:string;start_time?:string;score?:string;completed?:boolean;status?:string};
+export type Fixture=Match&{fixture_override?:Partial<FixtureFields>|null;fixture_source?:FixtureFields|null;registration?:string;nif_id?:number;home?:string;away?:string;start_time?:string;competition?:string;age_class?:string;venue?:string;score?:string;status?:string;completed?:boolean};
 export const metrics={shots_hit:"Mål",shots_missed:"Bomskudd",technical_errors:"Tekniske feil",goalkeeper_saves:"Redninger"} as const;
 export type Stats=Record<keyof typeof metrics,number>&{rating:number|null;notes:string;is_best_player:boolean};
 export const blank:Stats={shots_hit:0,shots_missed:0,technical_errors:0,goalkeeper_saves:0,rating:null,notes:"",is_best_player:false};
@@ -58,10 +60,11 @@ export async function playerForm(g:Fixture):Promise<Record<string,PlayerForm>>{
       if(!confirmed(p))continue;a.games++;if(goals!=null){a.scored_games++;a.goals=(a.goals??0)+goals;if(m.id!==g.id){a.prior_games++;a.prior_goals=(a.prior_goals??0)+goals;}}}
   }return Object.fromEntries(demoPlayers(g).filter(p=>totals[key(p)]).map(p=>[p.player_id,totals[key(p)]]));
 }
-export type StatLine={match_id:string;day:string;home:boolean|null;player:string;name:string;shirt:string|null;played:boolean;
+export type StatLine={outcome?:Wld|null;start_time?:string;match_id:string;day:string;home:boolean|null;player:string;name:string;shirt:string|null;played:boolean;
   goals:number|null;field_goals:number|null;penalty:number|null;warnings:number|null;suspensions:number|null;disqualifications:number|null;missed:number|null;errors:number|null;saves:number|null;rating:number|null;awards:number|null};
 export async function squadStatLines(reg:string,fixtures:Fixture[]):Promise<StatLine[]>{
-  if(!demo)return (await db!.rpc("beta_squad_stat_lines",{reg}).throwOnError()).data;
+  if(!demo){const games=new Map(fixtures.filter(g=>g.registration===reg).map(g=>[g.id,g]));const rows:StatLine[]=(await db!.rpc("beta_squad_stat_lines",{reg}).throwOnError()).data;
+    return rows.map(r=>{const g=games.get(r.match_id);return {...r,outcome:g?fixtureOutcome(g):null,start_time:g?.start_time};});}
   const season=fixtures.filter(g=>g.registration===reg&&g.completed);
   const ambiguous=new Set<string>(),norm=(p:Player)=>p.name.trim().toLowerCase().replace(/\s+/g," ");
   for(const g of season){const seen=new Set<string>();for(const p of demoPlayers(g)){if(seen.has(norm(p))||!p.player_id.startsWith("report:"))ambiguous.add(norm(p));seen.add(norm(p));}}
@@ -69,7 +72,7 @@ export async function squadStatLines(reg:string,fixtures:Fixture[]):Promise<Stat
     const doc:Report|undefined=JSON.parse(sessionStorage.getItem("kamper-private-report:"+g.team+":"+g.id)||"null")?.reviewed;
     const home=g.opponent===g.away,side=home?"A":"B";
     return demoPlayers(g).map(p=>{const r=doc?.players.find(x=>x.side===side&&x.shirt===p.shirt_number&&x.name===p.name);
-      return {match_id:g.id,day:g.day,home,player:ambiguous.has(norm(p))?p.player_id:norm(p),name:p.name,shirt:p.shirt_number??null,played:confirmed(p),
+      return {outcome:fixtureOutcome(g),start_time:g.start_time,match_id:g.id,day:g.day,home,player:ambiguous.has(norm(p))?p.player_id:norm(p),name:p.name,shirt:p.shirt_number??null,played:confirmed(p),
         goals:p.report_goals??p.stats?.shots_hit??null,field_goals:r?.goals??null,penalty:r?.penalty??null,warnings:p.report_warnings??null,suspensions:r?.suspensions??null,
         disqualifications:r?.disqualification==null?null:Number(r.disqualification),missed:p.stats?.shots_missed??null,errors:p.stats?.technical_errors??null,saves:p.stats?.goalkeeper_saves??null,
         rating:p.stats?.rating??null,awards:p.stats==null?null:Number(p.stats.is_best_player)};
@@ -154,4 +157,11 @@ export async function matchAction(data:Snapshot,action:string,m:string|null=null
     row.stats=s;
   }else throw Error("Bekreft deltakelsen først.");
   put("rows:"+m,rows);
+}
+export async function correctFixture(g:Fixture,patch:Record<string,string>|null){
+ if(!demo){await db!.rpc("beta_edit_fixture",{t:g.team,m:g.id,patch,expected:g.fixture_override??null}).throwOnError();return;}
+ const source=g.fixture_source??{day:g.day,start_time:g.start_time,score:g.score,venue:g.venue,status:g.status,completed:g.completed};
+ const change=patch?{...patch,...(patch.score?{completed:true,status:"Ferdig"}:{})}:null;
+ const updated:Fixture={...g,...source,...change,fixture_source:change?source:null,fixture_override:change};
+ await createMatch(updated);
 }

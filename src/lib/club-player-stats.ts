@@ -27,6 +27,7 @@ export function uniqueGames(rows:ClubLine[]){
  const perGame=new Map<string,ClubLine[]>();for(const row of rows){if(!perGame.has(row.fixtureKey))perGame.set(row.fixtureKey,[]);perGame.get(row.fixtureKey)!.push(row);}
  let conflicts=0;
  const merged=[...perGame.values()].map(all=>{const played=all.filter(r=>r.played),source=played.length?played:all,row={...source[0]},venues=new Set(source.map(x=>x.home));let bad=false;
+   const outcomes=[...new Set(source.flatMap(r=>r.outcome?[r.outcome]:[]))];row.outcome=outcomes.length===1?outcomes[0]:null;if(outcomes.length>1)bad=true;
    row.home=venues.size===1?row.home:null;for(const c of counts){const v=[...new Set(source.flatMap(x=>x[c]==null?[]:[x[c]!]))];row[c]=v.length===1?v[0]:null;if(v.length>1)bad=true;}if(bad)conflicts++;return row;});
  return {rows:merged,conflicts};
 }

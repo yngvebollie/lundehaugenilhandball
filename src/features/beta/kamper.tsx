@@ -1,3 +1,4 @@
+import {FixtureEdit} from "./fixture-edit";
 import {TeamSeasonActions,shortSeason} from "./team-season-actions";
 import {FeatureInfo} from "./feature-info";
 import {useCallback,useEffect,useState} from "react";
@@ -138,10 +139,10 @@ function MatchDetail({data,game:g,back,reload,profileOf}:{back:string;profileOf:
   const sel=d?.rows.find(p=>p.player_id===selected);
   return <section className="grid"><a href={back}><ArrowLeft size={15}/> Kampoversikt</a><header><small>{g.day} {g.start_time?.slice(0,5)} · <span className={"badge result-"+matchResult(g).kind}>{matchResult(g).label}</span></small><h2>{g.home||data.teams.find(x=>x.id===g.team)?.name} – {g.away||g.opponent} {g.score}</h2><p>{[g.venue,g.competition,g.age_class].filter(Boolean).join(" · ")}</p>
     {g.nif_id&&<a href={"https://www.handball.no/system/kamper/kamp/?matchid="+g.nif_id} target="_blank" rel="noreferrer">Kamp på handball.no <ExternalLink size={14}/></a>}</header>
-    <nav className="workspace-tabs" aria-label="Kampdetaljer">{["Kampinformasjon","Spillere","Kamprapport"].map(v=><button key={v} className={v===section?"current":""} onClick={()=>setSection(v)}>{v}</button>)}<small className="private-mark">Kun trenere</small></nav>
+    <FixtureEdit game={g} reload={reload}/><nav className="workspace-tabs" aria-label="Kampdetaljer">{["Kampinformasjon","Spillere","Kamprapport"].map(v=><button key={v} className={v===section?"current":""} onClick={()=>setSection(v)}>{v}</button>)}<small className="private-mark">Kun trenere</small></nav>
     {section==="Kampinformasjon"&&<div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div>}
     {!g.registration&&!g.completed&&g.day<=today()&&<form className="day-strip" onSubmit={e=>{e.preventDefault();void mutate("finished",null,{score},"Sluttresultat lagret.");}}><label>Sluttresultat<input required pattern="[0-9]+ *[-:] *[0-9]+" maxLength={20} placeholder="24-21" value={score} onChange={e=>setScore(e.target.value)}/></label><button disabled={busy} className="btn">Marker ferdig</button></form>}
-    <div hidden={section!=="Kamprapport"}><ReportEditor game={g} data={data} onSaved={read}/></div><div hidden={section!=="Spillere"}><div className="grid">
+    <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={read}/></div><div hidden={section!=="Spillere"}><div className="grid">
     <div className="feature-heading"><FeatureInfo topic="stats"><h3>Spillerstatistikk</h3></FeatureInfo>{g.completed&&<a href={"/merker?game="+g.id}>Koble utøver til kampmerker</a>}</div>
     {d&&<Attendance data={data} match={g.id} names={d.rows.filter(confirmed).map(p=>p.name)} played={new Set(d.rows.filter(confirmed).map(p=>profileOf(p.player_id)?.split("athlete=")[1]||p.player_id))}/>}
     {d&&<PlayerList profileOf={profileOf} rows={d.rows} form={form} selected={selected} pick={pick} day={g.day}/>}

@@ -22,3 +22,6 @@ const report={...rows[0],goals:5,field_goals:3,penalty:2,warnings:1,suspensions:
 const once=metrics(uniqueGames([report,{...report,reg:"B"}]).rows);
 assert.deepEqual([once.goals,once.penalty,once.warnings,once.suspensions,once.disqualifications],[5,2,1,2,1]);
 assert.equal(metrics([rows[0]]).penalty,null);
+const wld=metrics(uniqueGames([{...rows[0],outcome:"W"},{...rows[2],outcome:"W"},{...rows[1],outcome:"L"},
+{...rows[0],fixtureKey:"draw",outcome:"D"},{...rows[0],fixtureKey:"invited",played:false,outcome:"W"},{...rows[0],fixtureKey:"unknown"}]).rows);
+assert.deepEqual([wld.games,wld.W,wld.L,wld.D],[4,1,1,1]);
