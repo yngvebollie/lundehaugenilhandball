@@ -17,7 +17,7 @@ produktet og innforer ingen automatisk publisering eller helsevurdering.
    Ingen falsk nullstatus dersom en datakilde ikke kan lastes.
 4. [x] Spillerflyt: neste planlagte aktivitet og siste registrering pa profilen,
    med direkte vei til plan, vurderinger og logg. Verifiser mobil og desktop.
-5. [ ] Publisering: bygg, regresjonstester, Git-commit og produksjonskontroll.
+5. [x] Publisering: bygg, regresjonstester, Git-commit og produksjonskontroll.
 
 ## Akseptansekriterier
 
@@ -55,4 +55,9 @@ Bestatt lokalt 17.11.2026:
 - Produksjonsbygg med typekontroll bestatt.
 
 Faktisk ny e-postlevering er ikke testet i denne leveransen.
-Publisering og siste regresjonsrunde pagaende.
+Publisert 17.11.2026 pa https://app.lundehaugenil.no/.
+Git: 0f3ce8f570715495e8fa1508852112fec45620aa.
+Vercel rapporterer success. Offentlig app returnerer HTTP 200 og leverer
+ny meny og spilleroppsummering. Siste regresjonsrunde bestatt.
+Nettlesertestene er kjort mot lokalt produksjonsbygg med isolerte demodata,
+ikke ved a endre virkelige spillerkontoer.
