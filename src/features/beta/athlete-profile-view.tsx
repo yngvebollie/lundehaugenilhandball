@@ -1,3 +1,4 @@
+import {PlayerNow} from "./player-now";
 import {MeritFeed} from "./merit-feed";
 import {PlayerStatistics} from "./player-statistics";
 import {ProfilePlan} from "./profile-plan";
@@ -20,6 +21,7 @@ export function AthleteProfileView({data,player}:{data:Snapshot;player:Member}){
  return <section className="grid player-profile"><header className="feature-heading">{developmentVisible&&<a href={"/utvikling?athlete="+encodeURIComponent(player.id)}>Min utvikling</a>}<div>{player.photo&&<img src={player.photo} width={54} height={54} alt=""/>}<h2>{player.shirt_number&&"#"+player.shirt_number+" "}{player.name}</h2><small>{player.position}</small></div>
  <a className="btn" href={"/merker?athlete="+player.id}><Medal size={16}/> Merker</a></header>{player.bio&&<p>{player.bio}</p>}
 
+ <PlayerNow data={data} player={player.id}/>
  <nav className="workspace-tabs" aria-label="Spillerprofil">{[["feed","Spillerfeed"],["plan","Plan og gjennomføring"],["vurderinger","Vurderinger"],["logg","Trenerlogg"],["kampkobling","Kamper og kobling"],["aktivitet","Aktivitetslogg"]].map(([id,label])=><a key={id} href={"#"+id} aria-current={tab===id?"page":undefined} className={tab===id?"current":""}>{label}</a>)}</nav>
  {tab==="feed"?<MeritFeed key={data.me.squad+player.id} data={data} athlete={player.id}/>:tab==="plan"?<ProfilePlan data={data} player={player.id}/>:tab==="vurderinger"?<CoachRatings data={data} athlete={player.id}/>:tab==="logg"?<Audit data={data} player={player.id}/>:tab==="kampkobling"?<>
  <PlayerStatistics data={data} athleteId={player.id}/>

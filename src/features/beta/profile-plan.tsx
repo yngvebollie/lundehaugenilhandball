@@ -16,7 +16,7 @@ async function comparison(data:Snapshot,player:string,from:string){
   const a=e.source==="assignment"?data.plans.find(a=>a.id===e.event):undefined;
   const checked=new Set(data.checks.filter(c=>c.assignment===a?.id).map(c=>c.step));
   const lines=a?.exercises.map((name,i)=>({name,done:checked.has(i)}));
-  const quick=a?.personal&&a.exercises.length===1&&a.exercises[0]==="Gjennomført trening";
+  const quick=a?.personal&&(!!a.logged_sets?.length||a.exercises.length===1&&a.exercises[0]==="Gjennomført trening");
   const key=[e.source,e.event,e.day].join(":"),record=own.find(l=>[l.source,l.event,l.day].join(":")===key);
   used.add(key);
   const complete=!!lines?.length&&lines.every(x=>x.done),actual=record?.minutes??(quick&&complete?e.minutes:null);

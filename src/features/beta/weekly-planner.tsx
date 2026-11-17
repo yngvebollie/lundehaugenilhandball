@@ -23,8 +23,9 @@ function dayLabel(day:string){
 }
 export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapshot;busy:boolean;run:Run;onDraft?:(draft:QuickProgram)=>void;renderBuilder?:(show:(day:string,recipient:string)=>void)=>React.ReactNode}){
   const coach=data.me.role==="coach";
-  const [week,setWeek]=useState(()=>monday(today()));
-  const [date,setDate]=useState(today);
+  const initialDay=()=>{const value=new URLSearchParams(location.search).get("dag");return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+"T12:00:00Z"))?value:today();};
+  const [week,setWeek]=useState(()=>monday(initialDay()));
+  const [date,setDate]=useState(initialDay);
   const [kind,setKind]=useState<EventKind>("Session");
   const [target,setTarget]=useState(coach?"":data.me.id);
   const [template,setTemplate]=useState("");

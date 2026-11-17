@@ -1,18 +1,32 @@
 import {House,Activity,BookOpen,CalendarDays,ChartNoAxesColumnIncreasing,ChevronDown,ClipboardList,ContactRound,Dumbbell,Medal,ScanLine,Trophy,Users,Volleyball,type LucideIcon} from "lucide-react";
 import {courtEnabled} from "@/lib/court/client";
 import {developmentVisible} from "@/lib/development/flags";
+import "./coach-experience.css";
 export const playerMenu=[["oversikt","Oversikt"],["plan","Plan"],["rapportkoblinger","Koble spiller"],["statistikk","Statistikk"]] as const;
 export const playerUrl=(key:string)=>key==="oversikt"?"/spillere":"/spillere?vis="+key;
+export function coachPageTitle(view:string,hash:string,search=""){
+ if(view==="court")return new URLSearchParams(search).get("vis")==="bank"?"Øvelsesbank":"Øktplanlegger";
+ return ({roster:"Spillere",players:"Spillere",team:"Lagadministrasjon",match:"Kamper",challenges:"Utfordringer",directory:"Brukeroversikt",badges:"Merker",live:"Liveanalyse",development:"Min utvikling"} as Record<string,string>)[view]
+  ||({"#builder":"Styrkeprogram","#weekly":"Kalender","#monitor":"Belastning","#ratings":"Øvelsesvurderinger","#messages":"Meldinger","#spillerplan":"Spillerplan"} as Record<string,string>)[hash]||"Oversikt";
+}
 type Item=[string,string,LucideIcon,boolean,boolean?];
 export function CoachMenu({view,hash}:{view:string;hash:string}){
- const at=(v:string)=>view===v,isHash=(h:string)=>at("dashboard")&&hash==="#"+h;
- const items:Item[]=[
- ["Oversikt","/#overview",House,at("dashboard")&&(!hash||isHash("overview"))],["Spillere","/spillere",ContactRound,at("roster")||at("players")||isHash("spillerplan")],
- ["Workout builder","/#builder",Dumbbell,isHash("builder")],["Weekly planner","/#weekly",CalendarDays,isHash("weekly")],["Health monitor","/#monitor",Activity,isHash("monitor")],
- ["Øvelsesvurderinger","/#ratings",ClipboardList,isHash("ratings")],["Team management","/team",Users,at("team")],["Kamper","/match",Volleyball,at("match")],
- ["Liveanalyse","/liveanalyse",ScanLine,at("live")],["Utfordringer","/challenges",Trophy,at("challenges")],["Øktplanlegger","/okter",ClipboardList,at("court")&&new URLSearchParams(location.search).get("vis")!=="bank",courtEnabled],
- ["Øvelsesbank","/okter?vis=bank",BookOpen,at("court")&&new URLSearchParams(location.search).get("vis")==="bank",courtEnabled],["Min utvikling","/utvikling",ChartNoAxesColumnIncreasing,at("development"),developmentVisible],
- ["Merker","/merker",Medal,at("badges")],["Meldinger","/#messages",Users,isHash("messages")],["Brukeroversikt","/directory",ContactRound,at("directory")]];
- const adminUrl=(url:string)=>url==="/team"||url==="/directory";
- return <>{items.filter(i=>!adminUrl(i[1])).filter(i=>i[4]!==false).sort((a,b)=>Number(b[1]==="/#overview")-Number(a[1]==="/#overview")||a[0].localeCompare(b[0],"nb")).map(([name,url,Icon,current])=>name==="Spillere"?<details key={url} className="player-submenu" open={current||undefined}><summary className={"nav-item "+(current?"active":"")}><Icon/>{name}<ChevronDown size={14}/></summary><div>{playerMenu.map(([k,label])=><a key={k} href={playerUrl(k)}>{label}</a>)}</div></details>:<a key={url} href={url} className={"nav-item "+(current?"active":"")}><Icon/>{name}</a>)}<div className="coach-admin-nav" role="group" aria-label="Administrasjon"><small>Administrasjon</small>{items.filter(i=>adminUrl(i[1])).map(([name,url,Icon,current])=><a key={url} href={url} aria-current={current?"page":undefined} className={"nav-item "+(current?"active":"")}><Icon/>{name}</a>)}</div></>;
+ const at=(v:string)=>view===v,isHash=(h:string)=>at("dashboard")&&hash==="#"+h,query=new URLSearchParams(location.search);
+ const link=([name,url,Icon,current]:Item)=><a key={url} href={url} className={"nav-item "+(current?"active":"")} aria-current={current?"page":undefined}><Icon size={18}/>{name}</a>;
+ const group=(name:string,Icon:LucideIcon,items:Item[])=>{
+  const visible=items.filter(i=>i[4]!==false);if(!visible.length)return null;
+  const current=visible.some(i=>i[3]);
+  return <details key={name} className="player-submenu coach-menu-group" open={current||undefined}><summary className={"nav-item "+(current?"active":"")}><Icon size={18}/>{name}<ChevronDown size={14}/></summary><div>{visible.map(link)}</div></details>;
+ };
+ const players=at("roster")||at("players")||isHash("spillerplan"),playerTab=query.get("vis")||(at("players")?"statistikk":isHash("spillerplan")?"plan":"oversikt");
+ return <>
+ {link(["Oversikt","/#overview",House,at("dashboard")&&(!hash||isHash("overview"))])}
+ {link(["Kalender","/#weekly",CalendarDays,isHash("weekly")])}
+ {group("Kamper",Volleyball,[["Kampoversikt","/match",Volleyball,at("match")],["Liveanalyse","/liveanalyse",ScanLine,at("live")]])}
+ {link(["Meldinger","/#messages",Users,isHash("messages")])}
+ {group("Spillere",ContactRound,[...playerMenu.map(([k,label]):Item=>[label,playerUrl(k),ContactRound,players&&playerTab===k]),["Belastning","/#monitor",Activity,isHash("monitor")],["Øvelsesvurderinger","/#ratings",ClipboardList,isHash("ratings")]])}
+ {group("Trening",Dumbbell,[["Styrkeprogram","/#builder",Dumbbell,isHash("builder")],["Øktplanlegger","/okter",ClipboardList,at("court")&&query.get("vis")!=="bank",courtEnabled],["Øvelsesbank","/okter?vis=bank",BookOpen,at("court")&&query.get("vis")==="bank",courtEnabled]])}
+ {group("Utvikling",ChartNoAxesColumnIncreasing,[["Merker","/merker",Medal,at("badges")],["Min utvikling","/utvikling",ChartNoAxesColumnIncreasing,at("development"),developmentVisible],["Utfordringer","/challenges",Trophy,at("challenges")]])}
+ <div className="coach-admin-nav" role="group" aria-label="Administrasjon"><small>Administrasjon</small>{link(["Brukeroversikt","/directory",ContactRound,at("directory")])}{link(["Lagadministrasjon","/team",Users,at("team")])}</div>
+ </>;
 }

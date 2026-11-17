@@ -1,0 +1,26 @@
+.coach-menu-group>div{padding:4px 0 8px 20px;gap:2px}
+.coach-menu-group>div .nav-item{font-size:.85rem;min-height:38px;padding:8px;line-height:1.35}
+.coach-menu-group>div .nav-item svg{flex:0 0 16px;width:16px;height:16px}
+.coach-menu-group summary{min-height:44px}
+.coach-followup{border-block:1px solid var(--border);padding:16px 0;margin:16px 0}
+.coach-followup h3,.player-now h3{margin:0 0 10px}
+.followup-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
+.followup-list li{min-width:0;border-bottom:1px solid var(--border)}
+.followup-list a{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:10px;padding:12px 0;color:inherit;text-decoration:none;min-height:56px}
+.followup-list a:hover strong{text-decoration:underline}
+.followup-list a>b{font-size:20px;color:var(--accent);text-align:center}
+.followup-list small,.player-now small{display:block;color:var(--muted);margin-top:3px}
+.coach-start{padding:14px 0;border-bottom:1px solid var(--border)}
+.coach-start summary{cursor:pointer;font-weight:650}
+.coach-start ol{display:grid;gap:12px;padding-left:24px}
+.coach-start li>a{display:inline-flex;gap:8px;align-items:center;min-height:38px}
+.coach-start p{margin:2px 0}
+.player-now{border-block:1px solid var(--border);padding:14px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}
+.player-now>div{min-width:0;overflow-wrap:anywhere}
+.player-now a{display:inline-block;min-height:36px;padding:6px 0}
+.player-now h3{font-size:14px;color:var(--muted);font-weight:500}
+.player-now strong{display:block;font-size:16px}
+.followup-list a:focus-visible,.coach-menu-group a:focus-visible,.player-now a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:600px){.followup-list,.player-now{grid-template-columns:1fr}.coach-menu-group{grid-column:1/-1}.coach-followup{padding:12px 0}.coach-start ol{padding-left:20px}}
+@media(min-width:981px){.beta>.sidebar{overflow-y:auto;scrollbar-width:thin}.beta>.sidebar>*{flex-shrink:0}}
+@media(max-width:600px){.coach-agenda .agenda-heading{align-items:flex-start}.coach-agenda .agenda-heading h2{font-size:22px;line-height:1.25}.coach-agenda .agenda-heading>.btn{width:auto;flex:none}.coach-agenda .agenda-heading>div{min-width:0}}
