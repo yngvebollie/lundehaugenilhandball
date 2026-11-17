@@ -1,3 +1,4 @@
+import {CalendarBoard} from "./calendar-board";
 import {FeatureInfo} from "./feature-info";
 import {court,courtEnabled,type Doc} from "@/lib/court/client";
 import {regular} from "@/lib/coach-feedback";
@@ -21,7 +22,7 @@ import "./planning.css";
 function dayLabel(day:string){
   return new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(day+"T12:00Z"));
 }
-export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapshot;busy:boolean;run:Run;onDraft?:(draft:QuickProgram)=>void;renderBuilder?:(show:(day:string,recipient:string)=>void)=>React.ReactNode}){
+export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder,section="calendar"}:{section?:"calendar"|"builder"|"monitor";data:Snapshot;busy:boolean;run:Run;onDraft?:(draft:QuickProgram)=>void;renderBuilder?:(show:(day:string,recipient:string)=>void)=>React.ReactNode}){
   const coach=data.me.role==="coach";
   const initialDay=()=>{const value=new URLSearchParams(location.search).get("dag");return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+"T12:00:00Z"))?value:today();};
   const [week,setWeek]=useState(()=>monday(initialDay()));
@@ -35,7 +36,7 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
   const [minutes,setMinutes]=useState(60);
   const [weeks,setWeeks]=useState(1);
   const [note,setNote]=useState("");
-  const [view,setView]=useState<"Week"|"Agenda"|"Compare">("Week");
+  const [view,setView]=useState<"Week"|"Month"|"Agenda"|"Compare">("Week");
   const players=data.roster.filter(m=>m.role==="athlete");
   const [courtDocs,CD]=useState<Doc[]>([]),[courtError,CE]=useState("");
   useEffect(()=>{let alive=true;if(courtEnabled)court(data).then(p=>{if(alive){CD(p.sessions.filter(d=>!d.archived&&d.plan.origin!=="template"&&(coach||d.published)));CE("");}}).catch(()=>{if(alive){CD([]);CE("Håndballøktene kunne ikke hentes.");}});return()=>{alive=false};},[data]);
@@ -58,36 +59,26 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder}:{data:Snapsh
     })));
     if(await run(()=>publish(rows))){setWeek(monday(date));setNote(label+" scheduled for "+weeks+" week"+(weeks===1?"":"s")+".");}
   }
-  return <div className="grid" id="weekly"><section className="panel panel-pad grid">
+  return <div className="grid" id="weekly"><section className="panel panel-pad grid" style={section==="builder"?{display:"none"}:undefined}>
     {coach&&<PublishingTeam data={data}/>}
-    <header className="page-head"><FeatureInfo topic="week"><h2><CalendarDays/> Weekly planner</h2></FeatureInfo><div className="day-strip"><button aria-label="Previous week" className="btn" onClick={()=>navigate(trainingDay(week,-7))}><ChevronLeft size={16}/></button><button className="btn" onClick={()=>navigate(today())}>This week</button><button aria-label="Next week" className="btn" onClick={()=>navigate(trainingDay(week,7))}><ChevronRight size={16}/></button></div></header>
-    <div className="field-pair"><label>Week containing<input type="date" value={week} onChange={e=>{if(e.target.value)navigate(e.target.value);}}/></label>{coach&&<label>Planner athlete<select value={target} onChange={e=>setTarget(e.target.value)}><option value="">Entire team</option>{players.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}</div>
-    <h3 className="calendar-range">{weekLabel(week)}</h3>
-    <div className="day-strip" aria-label="Calendar view">{([["Week",Columns3],["Agenda",List],...(coach?[["Compare",ChartColumn] as const]:[])] as const).map(([label,Icon])=><button className={"btn "+(view===label?"selected":"")} key={label} aria-pressed={view===label} onClick={()=>setView(label)}><Icon size={16}/>{label}</button>)}</div>
-    {view==="Compare"?<WeekCompare data={data} week={week} target={target}/>:<div className={view==="Agenda"?"week-board agenda-board":"week-board"}>{Array.from({length:7},(_,i)=>{
-      const day=trainingDay(week,i);
-      const items=new Map<string,{p:Assignment;count:number}>();
-      for(const p of plans.filter(p=>p.day===day).sort((a,b)=>(a.start_time||"").localeCompare(b.start_time||""))){
-        const key=JSON.stringify([p.title,p.kind||"Session",p.start_time,p.minutes,p.exercises,p.personal]);
-        const group=items.get(key);if(group)group.count++;else items.set(key,{p,count:1});
-      }
-      const sessionsToday=courtDocs.filter(d=>wallTime(calendarPlan(d).start).slice(0,10)===day&&(!coach||!target||!d.audience||d.audience.includes(target)));
-      const fixed=onDate(rules,day,target);
-      return <div key={day} className={"week-day "+(day===date?"chosen":"")}><button type="button" aria-pressed={date===day} onClick={()=>setDate(day)}>{dayLabel(day)}</button>{fixed.map(r=><div className="week-item" key={r.id}><small>{!r.profile_gym&&r.clock.slice(0,5)+" · "}{r.minutes} min</small><strong>{r.title}</strong>{coach&&<small>{players.find(p=>p.id===r.athlete)?.name}</small>}</div>)}{sessionsToday.map(d=><a key={d.id} className="week-item" href={"/okter?"+(coach?"edit":"session")+"="+encodeURIComponent(d.id)}><small>{coach?(d.published?"Delt økt":"Utkast"):"Håndballøkt"} {wallTime(calendarPlan(d).start).slice(11)}</small><strong>{calendarPlan(d).title}</strong></a>)}{!items.size&&!sessionsToday.length&&!fixed.length&&<small className="muted">Rest / open</small>}{[...items.entries()].map(([key,{p,count}])=><div className="week-item" data-kind={p.kind||"Session"} key={key}><small>{p.personal?"Personal · ":""}{p.kind||"Session"}</small><strong>{p.title}</strong><small>{p.start_time?.slice(0,5)} {p.minutes? p.minutes+" min":""}{count>1?" · "+count+" athletes":""}</small>{view==="Agenda"&&<details><summary>Session details</summary><ul>{p.exercises.map((x,i)=><li key={i}>{x}</li>)}</ul></details>}</div>)}</div>;
-    })}</div>}
-    {regularError&&<p role="alert">{regularError} <button className="btn" onClick={()=>R(refresh+1)}>Prøv igjen</button></p>}{!coach&&!regularError&&<><DailyChecks data={data} rules={rules} day={date} changed={Rules}/><DaySessionLoad key={data.me.id+date} data={data} docs={publishedDocs} date={date}/><RegularEditor data={data} rules={rules} changed={Rules}/>{courtError?<p role="alert">{courtError}</p>:<LoadTotals data={data} week={week} date={date} target={target} rules={rules} docs={publishedDocs}/>}</>}
-    <details className="library-tools"><summary>{coach?"Schedule training or event":"Add to my schedule"}</summary><form className="grid" onSubmit={add}>
+    <header className="page-head"><FeatureInfo topic="week"><h2><CalendarDays/> {section==="monitor"?"Belastning og aktivitet":"Kalender"}</h2></FeatureInfo><div className="day-strip"><button aria-label="Previous week" className="btn" onClick={()=>navigate(view==="Month"?trainingDay(date.slice(0,7)+"-01",-1).slice(0,7)+"-01":trainingDay(week,-7))}><ChevronLeft size={16}/></button><button className="btn" onClick={()=>navigate(today())}>I dag</button><button aria-label="Next week" className="btn" onClick={()=>navigate(view==="Month"?trainingDay(date.slice(0,7)+"-01",32).slice(0,7)+"-01":trainingDay(week,7))}><ChevronRight size={16}/></button></div></header>
+    <div className="field-pair"><label>Dato<input aria-label="Week containing" type="date" value={view==="Month"?date:week} onChange={e=>{if(e.target.value)navigate(e.target.value);}}/></label>{coach&&<label>Spiller<select aria-label="Planner athlete" value={target} onChange={e=>setTarget(e.target.value)}><option value="">Alle spillere</option>{players.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}</div>
+    <h3 className="calendar-range">{view==="Month"?new Date(date+"T12:00:00Z").toLocaleDateString("nb-NO",{month:"long",year:"numeric",timeZone:"UTC"}):weekLabel(week)}</h3>
+    <div className="day-strip" aria-label="Calendar view" style={section!=="calendar"?{display:"none"}:undefined}>{([["Week",Columns3],["Month",CalendarDays],["Agenda",List],...(coach?[["Compare",ChartColumn] as const]:[])] as const).map(([label,Icon])=><button className={"btn "+(view===label?"selected":"")} key={label} aria-pressed={view===label} onClick={()=>setView(label)}><Icon size={16}/>{{Week:"Uke",Month:"Måned",Agenda:"Liste",Compare:"Sammenlign"}[label]}</button>)}</div>
+    {section==="calendar"&&(view==="Compare"?<WeekCompare data={data} week={week} target={target}/>:<CalendarBoard data={data} docs={courtDocs} rules={rules} week={week} date={date} target={target} view={view} selectDay={setDate} busy={busy} run={run} refreshRules={()=>R(refresh+1)}/>)}
+    {coach&&courtError&&<p role="alert">{courtError}</p>}{regularError&&<p role="alert">{regularError} <button className="btn" onClick={()=>R(refresh+1)}>Prøv igjen</button></p>}{!coach&&!regularError&&<><DailyChecks data={data} rules={rules} day={date} changed={Rules}/><DaySessionLoad key={data.me.id+date} data={data} docs={publishedDocs} date={date}/><RegularEditor data={data} rules={rules} changed={Rules}/>{courtError?<p role="alert">{courtError}</p>:<LoadTotals data={data} week={week} date={date} target={target} rules={rules} docs={publishedDocs}/>}</>}
+    <details className="library-tools" style={section!=="calendar"?{display:"none"}:undefined}><summary>{coach?"Legg til økt eller aktivitet":"Legg til i min kalender"}</summary><form className="grid" onSubmit={add}>
       <div className="field-pair"><label>Activity type<select value={kind} onChange={e=>setKind(e.target.value as EventKind)}>{["Session","Game","Practice"].map(k=><option key={k}>{k}</option>)}</select></label><label>Event date<input type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label></div>
       {coach&&kind==="Session"&&<label>Session to schedule<select value={template} onChange={e=>setTemplate(e.target.value)}><option value="">Custom session</option>{sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
       {(kind!=="Session"||!template)&&<label>Activity title<input required maxLength={100} value={title} onChange={e=>setTitle(e.target.value)}/></label>}
       {kind==="Session"&&!template&&<label>Session exercises<textarea required maxLength={6000} value={lines} onChange={e=>setLines(e.target.value)}/></label>}
-      <div className="field-pair"><label>Start time (Oslo)<input type="time" required value={time} onChange={e=>setTime(e.target.value)}/></label><label>Planned minutes<input type="number" min="1" max="600" required value={minutes||""} onChange={e=>setMinutes(e.target.valueAsNumber)}/></label><label>Number of weekly occurrences<input type="number" required min="1" max="26" value={weeks||""} onChange={e=>setWeeks(e.target.valueAsNumber)}/></label></div>
+      <div className="field-pair"><label>Start time (Oslo)<input type="time" required value={time} onChange={e=>setTime(e.target.value)}/></label><label>Planned minutes<input type="number" min="5" step="5" max="600" required value={minutes||""} onChange={e=>setMinutes(e.target.valueAsNumber)}/></label><label>Number of weekly occurrences<input type="number" required min="1" max="26" value={weeks||""} onChange={e=>setWeeks(e.target.valueAsNumber)}/></label></div>
       <button className="btn primary" disabled={busy}>Schedule {kind.toLowerCase()}{coach?" · "+(players.find(p=>p.id===target)?.name||"Entire team"):" · Personal"}</button>
       {note&&<p role="status">{note}</p>}</form></details>
-  </section>{coach&&onDraft&&<section className="panel panel-pad grid" id="plan-drafts"><h2>Plan training</h2>
+  </section>{coach&&onDraft&&<details className="panel panel-pad" id="plan-drafts" style={section!=="calendar"?{display:"none"}:undefined}><summary>Planlegg trening</summary>
     <WeekSuggestion regularRules={rules} key={week+target} data={data} run={run} week={week} target={target} busy={busy} onDraft={onDraft} onNext={()=>navigate(week<monday(today())?today():trainingDay(week,7))}/>
     <FocusGroups data={data} date={date} busy={busy} run={run} onDraft={onDraft}/>
-  </section>}{renderBuilder?.((day,recipient)=>{navigate(day);setView("Week");setTarget(players.some(p=>p.id===recipient)?recipient:"");document.getElementById("weekly")?.scrollIntoView();})}{coach&&<Monitor onTarget={setTarget} rules={rules} docs={publishedDocs} date={date} loadError={regularError||courtError} data={data} week={week} target={target} plans={plans}/>}</div>;
+  </details>}<div style={section!=="builder"?{display:"none"}:undefined}>{renderBuilder?.((day,recipient)=>{navigate(day);setView("Week");setTarget(players.some(p=>p.id===recipient)?recipient:"");location.hash="weekly";requestAnimationFrame(()=>document.getElementById("weekly")?.scrollIntoView());})}</div>{coach&&section==="monitor"&&<Monitor onTarget={setTarget} rules={rules} docs={publishedDocs} date={date} loadError={regularError||courtError} data={data} week={week} target={target} plans={plans}/>}</div>;
 }
 function Monitor({onTarget,data,week,target,plans,rules,docs,date,loadError}:{onTarget:(id:string)=>void;rules:Rule[];docs:Doc[];date:string;loadError:string;data:Snapshot;week:string;target:string;plans:Assignment[]}){
   const current=volume(data,plans);
