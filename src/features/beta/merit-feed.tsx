@@ -7,7 +7,7 @@ import "./workout-finish.css";
 function TrainingEntry({plan,data}:{plan:Assignment;data:Snapshot}){
  const steps=new Set(data.checks.filter(c=>c.assignment===plan.id).map(c=>c.step));
  return <details className="session-feed-entry"><summary><span className="feed-session-heading"><time>{plan.day}{plan.start_time&&" · "+plan.start_time.slice(0,5)}</time>{plan.title} · {steps.size===plan.exercises.length?"Fullført":"Påbegynt"}{plan.minutes?" · "+plan.minutes+" min":""}</span></summary>
- {plan.logged_sets?.length?plan.logged_sets.map(e=><div className="feed-sets" key={e.id}><ExerciseInsight data={data} id={e.id} name={e.name}/><ol aria-label={"Sett for "+e.name}>{e.sets.map((n,i)=><li key={i}><small>Sett {i+1}</small>{n} {e.unit}</li>)}</ol></div>):plan.exercises.map((line,i)=><div key={i}>{steps.has(i)?"✓ ":"– "}<ExerciseInsight data={data} name={line}/></div>)}</details>;
+ {plan.logged_sets?.length?plan.logged_sets.map(e=><div className="feed-sets" key={e.id}><ExerciseInsight athlete={plan.athlete} data={data} id={e.id} name={e.name}/><ol aria-label={"Sett for "+e.name}>{e.sets.map((n,i)=><li key={i}><small>Sett {i+1}</small>{n} {e.unit}</li>)}</ol></div>):plan.exercises.map((line,i)=><div key={i}>{steps.has(i)?"✓ ":"– "}<ExerciseInsight athlete={plan.athlete} data={data} name={line}/></div>)}</details>;
 }
 export function MeritFeed({data,athlete=data.me.id}:{data:Snapshot;athlete?:string}){
  const coach=data.me.role==="coach",badgePage="/merker"+(coach?"?athlete="+encodeURIComponent(athlete):"");
