@@ -33,7 +33,8 @@ produktet og innforer ingen automatisk publisering eller helsevurdering.
 ## Videre etter denne leveransen
 
 - Full brukertest av forste treningsuke med trener og utover.
-- Utvidet kalender med samme redigeringsflyt pa tvers av aktivitetstyper.
+- Kalender-milepaelen er publisert 18.11.2026. Se calendar-and-home-screen.md.
+  Registrerte aktiviteter beholdes som historikk; fremtidige planer kan endres.
 - Personlig oppfolging og anbefalinger basert pa verifiserte data, uten a
   likestille mer treningsvolum med bedre prestasjon.
 
