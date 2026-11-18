@@ -37,6 +37,8 @@ function ReviewQueue({data,pick}:{data:Snapshot;pick:(id:string)=>void}){
 function PlayerPage({data,person}:{data:Snapshot;person:string}){
  const [packet,U]=useState<Packet>(),[tab,T]=useState<string>("Oversikt"),[goalId,G]=useState(""),[detail,D]=useState(false),[form,F]=useState(""),[profile,P]=useState<Profile>("field"),[skill,SK]=useState(""),[exercise,X]=useState(""),[busy,B]=useState(false),[note,N]=useState(""),[error,E]=useState(""),[refresh,V]=useState(0);
  const lock=useRef(false),retry=useRef({signature:"",key:""}),alive=useRef(true);
+ const openedLink=useRef(false);
+ useEffect(()=>{if(!packet||openedLink.current)return;openedLink.current=true;const id=new URLSearchParams(location.search).get("goal");if(id&&packet.plan.goals.some(g=>g.id===id)){G(id);D(true);T("Mål");}},[packet]);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false};},[]);
  const read=useCallback(async()=>{try{const r=await development(data,person);if(alive.current){U(old=>old&&old.rev>r.rev?old:r);E("");}}catch(e){if(alive.current){U(undefined);E((e as Error).message||"Kunne ikke hente planen.");}}},[data,person]);
  useEffect(()=>{void read();const focus=()=>void read();window.addEventListener("focus",focus);return()=>window.removeEventListener("focus",focus);},[read,refresh]);

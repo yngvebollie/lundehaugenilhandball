@@ -9,6 +9,7 @@ import type {Registration} from "@/lib/nif";
 import {weekLabel} from "@/lib/workload";
 import {trainingDay} from "@/lib/programs";
 import {CoachFollowup} from "./coach-followup";
+import {CoachSuggestions} from "./coach-suggestions";
 import {ClubLog} from "./club-log";
 import {ActivityFeed} from "./activity-feed";
 import "./squad-stats.css";
@@ -30,5 +31,5 @@ export function CoachAgenda({data}:{data:Snapshot}){
   <div className="agenda-columns"><section><FeatureInfo topic="agenda"><h3>I dag</h3></FeatureInfo>{now.map(session)}{games.filter(g=>g.day===day).map(g=><a className="agenda-entry" key={g.id} href={"/match?game="+g.id}><time>{g.start_time?.slice(0,5)||"–"}</time><strong>{g.home} – {g.away}</strong><small>{g.score||g.status}</small></a>)}
  {docs!==null&&!now.length&&!games.some(g=>g.day===day)&&<p>Ingen planlagte økter eller kamper i dag.</p>}<h3>Trening de neste sju dagene</h3>{sessions.filter(p=>p.d!==day).slice(0,10).map(session)}{docs!==null&&!sessions.some(p=>p.d!==day)&&<p>Ingen kommende økter i ukeplanen.</p>}</section>
  <section><h3><Volleyball size={17}/> Neste seriekamp per lag</h3>{regs.map(r=>{const g=next.find(m=>m.registration===r.id);return <div className="next-fixture" key={r.id}><small>{r.display_name||"NIF "+r.org_id}</small>{g?<a href={"/match?reg="+r.id+"&game="+g.id}><strong>{g.home} – {g.away}</strong><span>{dateLabel(g.day)} · {g.start_time?.slice(0,5)||"Tid ikke satt"} · {g.venue||"Hall ikke satt"}</span></a>:<p>Ingen kommende kamp registrert.</p>}</div>;})}{error?<p role="alert">{error}</p>:!regs.length&&<a href="/match?view=teams">Åpne lagprofiler</a>}</section></div>
- <CoachFollowup data={data} games={games} gamesReady={gamesReady} docs={docs} docsError={docsError}/><ClubLog team={data.me.squad}/><ActivityFeed data={data}/><section><header className="feature-heading"><h3>Utøvere</h3><a href="/spillere?vis=statistikk">Alle spillerstats</a></header><div className="profile-index">{players.map(p=><a href={"/spillere?athlete="+encodeURIComponent(p.id)} key={p.id}>{p.shirt_number&&"#"+p.shirt_number+" "}{p.name}<ChevronRight size={14}/></a>)}</div>{!players.length&&<a href="/team">Inviter en utøver</a>}</section></section>;
+ <CoachSuggestions data={data}/><CoachFollowup data={data} games={games} gamesReady={gamesReady} docs={docs} docsError={docsError}/><ClubLog team={data.me.squad}/><ActivityFeed data={data}/><section><header className="feature-heading"><h3>Utøvere</h3><a href="/spillere?vis=statistikk">Alle spillerstats</a></header><div className="profile-index">{players.map(p=><a href={"/spillere?athlete="+encodeURIComponent(p.id)} key={p.id}>{p.shirt_number&&"#"+p.shirt_number+" "}{p.name}<ChevronRight size={14}/></a>)}</div>{!players.length&&<a href="/team">Inviter en utøver</a>}</section></section>;
 }

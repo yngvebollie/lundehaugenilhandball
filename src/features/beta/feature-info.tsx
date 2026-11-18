@@ -4,6 +4,11 @@ import {useId,useRef,type ReactNode} from "react";
 import styles from "./feature-info.module.css";
 
 const topics = {
+  "followup": [
+    "Oppfølgingsforslag",
+    "Forslagene bygger på avtalte aktive mål, øvelsesvurderinger på 1–2 stjerner siste 30 dager og registrert fravær eller hard intensitet siste sju dager. Åpne grunnlaget og avklar med spilleren.",
+    "Kun trenere ser forslagene. Ingen melding sendes og ingen plan, mål eller merke endres automatisk. Manglende registrering betyr ikke fravær. Stjerner er spillerens opplevelse, ikke ferdighetsnivå. Flere øvinger bekrefter ikke mestring."
+  ],
   "agenda": [
     "Dagens oversikt",
     "Se dagens trening og neste kamp for hvert lag. Åpne en spiller for å følge opp individuelt.",

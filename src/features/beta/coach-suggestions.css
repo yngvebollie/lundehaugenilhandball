@@ -1,0 +1,18 @@
+.coach-suggestions{border-block:1px solid var(--border);padding:18px 0;min-width:0}
+.coach-suggestions h3{margin:0;font-size:18px}
+.coach-suggestions .feature-heading>.btn{width:42px;height:42px;padding:10px;flex:none}
+.suggestion-filters{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0}
+.suggestion-filters .workspace-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0}
+.suggestion-filters label{min-width:160px;max-width:260px;flex:1;margin:0}
+.suggestion-filters select{width:100%}
+.suggestion-period{display:block;color:var(--muted)}
+.suggestion-list{list-style:none;margin:8px 0;padding:0}
+.suggestion-list li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:12px;border-bottom:1px solid var(--border);padding:16px 0}
+.suggestion-list li:last-child{border-bottom:0}
+.suggestion-list li>svg{color:var(--accent);margin-top:4px}
+.suggestion-list h4{font-size:16px;margin:4px 0;line-height:1.4}
+.suggestion-list p{margin:4px 0 8px;color:var(--muted);max-width:82ch;line-height:1.5}
+.suggestion-list div{min-width:0;overflow-wrap:anywhere}
+.suggestion-list a{display:inline-block;min-height:32px;padding:4px 0}
+.suggestion-player{font-size:14px}
+@media(max-width:600px){.suggestion-filters{display:block}.suggestion-filters label{display:block;margin-top:12px;max-width:none}.suggestion-filters .workspace-tabs button{min-height:42px;padding:8px}.suggestion-list{margin:0}.suggestion-list li{gap:8px}}

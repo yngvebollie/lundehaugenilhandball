@@ -9,6 +9,9 @@
 - Felles aktivitetshistorikk: trener og utover ser samme registreringer
   for handball, styrke, skolegym og annen aktivitet. Maanedsvalg, lenker,
   faktisk/planlagt tid og korrekt siste fullforte aktivitet siste 30 dager.
+- Oppfolgingsforslag pa Oversikt og spillerprofil: avtalte aktive mal,
+  ovelsesvurderinger og registrert aktivitet med grunnlag og direkte lenker.
+  Se coach-suggestions.md. Dagens stil er beholdt.
 
 ## Verifikasjon av felles historikk
 
@@ -27,13 +30,13 @@ utoverens historiske oktbeskrivelse.
 
 ## Neste prioriteringer
 
-1. Personlig oppfolging: tydelige forslag til trener basert pa spillerens
-   faktiske registreringer, vurderinger og avtalte mal. Ingen automatisk
-   endring av trening eller likestilling av mer volum med bedre utvikling.
-2. Brukertest pa fysisk iPhone og Android: hjemskjermikon, ny innlogging,
+1. Brukertest pa fysisk iPhone og Android: hjemskjermikon, ny innlogging,
    tilbakeknapp, video og registrering etter pauser i appbruken.
-3. Ny ekte e-postinvitasjon og leveringskontroll. Mock-tester bekrefter
+2. Ny ekte e-postinvitasjon og leveringskontroll. Mock-tester bekrefter
    ikke faktisk levering; dette er ikke gjentatt i siste leveranser.
+3. Videre oppfolging: vurder behov for en eksplisitt, loggfort trenerhandling
+   som markerer en samtale som fulgt opp. Forslagene i dagens leveranse
+   forsvinner nar kildegrunnlaget endres, ikke ved at treneren bare apner dem.
 
 Dette er status for de siste avtalte milepaelene, ikke en paastand om at
 samtlige historiske onsker i chatten er implementert eller retestet.
