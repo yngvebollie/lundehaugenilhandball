@@ -31,8 +31,10 @@ Server-only environment variables:
 - INVITE_FROM: defaults to noreply@lundehaugenil.no.
 - APP_ORIGIN: defaults to https://app.lundehaugenil.no.
 
-Sending stops with an explicit configuration error if durable storage cannot be
-configured. Manual invitation links still work. Supabase SMTP and WordPress
+If the service-role setting is missing, the existing Resend sending path remains
+available, with an explicit warning that delivery tracking is unavailable. A
+missing sending key still blocks sending. A configured but failed database write
+stops sending before transport. Manual invitation links still work. Supabase SMTP and WordPress
 FluentSMTP are separate and are not modified by this implementation.
 
 ## Verification

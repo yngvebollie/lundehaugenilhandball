@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {invitationUser,deliveryStore,reply} from '@/lib/invitation-server';
-import {providerFailure,type DeliveryStatus} from '@/lib/invitation-delivery';
+import {providerFailure,deliveryProblem,type DeliveryStatus} from '@/lib/invitation-delivery';
 
 export const runtime='nodejs';
 const usage=new Map<string,{until:number;count:number}>();
@@ -9,7 +9,7 @@ export async function POST(req:Request){
  if(!actor)return reply({error:'Logg inn som trener for å sende invitasjoner.'},401);
  const key=process.env.RESEND_API_KEY,from=process.env.INVITE_FROM||'noreply@lundehaugenil.no';
  const service=deliveryStore();
- if(!service||!key)return reply({error:'E-postutsending med leveringslogg er ikke konfigurert. Administrator må kontrollere RESEND_API_KEY og SUPABASE_SERVICE_ROLE_KEY. Ingen e-post er sendt. Du kan fortsatt opprette og dele lenker.'},503);
+ if(!key)return reply({error:'E-postutsending er ikke konfigurert: RESEND_API_KEY mangler på serveren. Ingen e-post er sendt. Du kan fortsatt opprette og dele lenker.'},503);
  let origin:URL;
  try{origin=new URL(process.env.APP_ORIGIN||'https://app.lundehaugenil.no');if(origin.protocol!=='https:'||origin.origin!==origin.href.replace(/\/$/,''))throw Error();}
  catch{return reply({error:'Registreringsadressen er feil konfigurert. Ingen e-post er sendt.'},503);}
@@ -26,8 +26,10 @@ export async function POST(req:Request){
  if(batch.error)return reply({error:'Invitasjonene kunne ikke opprettes. Kontroller trenertilgangen til laget.'},403);
  const links=(batch.data as {email:string;token:string}[]).map(r=>({email:r.email,url:origin.origin+'/login?new=1&role='+body.role+'&invite='+encodeURIComponent(r.token)}));
  const rows=links.map(l=>({id:randomUUID(),team:body.team,recipient:l.email,member_role:body.role,sender:from,created_by:actor.user.id,status:'pending' as DeliveryStatus,provider_id:null as string|null,error_code:null as string|null}));
- const saved=await service.from('beta_invitation_deliveries').insert(rows);
- if(saved.error)return reply({links,accepted:false,reason:'Leveringsloggen kunne ikke lagres. Ingen e-post er sendt. Del lenkene eller kontakt administrator.'});
+ if(service){
+  const saved=await service.from('beta_invitation_deliveries').insert(rows);
+  if(saved.error)return reply({links,accepted:false,reason:'Leveringsloggen kunne ikke lagres. Ingen e-post er sendt. Del lenkene eller kontakt administrator.'});
+ }
  let reason:string|undefined;
  try{
   const result=await fetch('https://api.resend.com/emails/batch',{method:'POST',cache:'no-store',redirect:'error',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','Idempotency-Key':'invitations/'+rows[0].id},signal:AbortSignal.timeout(15000),
@@ -41,7 +43,12 @@ export async function POST(req:Request){
   }
  }catch{for(const row of rows){row.status='unknown';row.error_code='timeout';}}
  // Persist the provider ID before claiming that subsequent delivery can be checked.
- const update=await service.from('beta_invitation_deliveries').upsert(rows,{onConflict:'id'});
- if(update.error)reason='Utsendingen er forsøkt, men kvitteringen kunne ikke lagres. Levering er ukjent. Ikke send på nytt før Resend-loggen er kontrollert.';
+ if(service){
+  const update=await service.from('beta_invitation_deliveries').upsert(rows,{onConflict:'id'});
+  if(update.error)reason='Utsendingen er forsøkt, men kvitteringen kunne ikke lagres. Levering er ukjent. Ikke send på nytt før Resend-loggen er kontrollert.';
+ }else{
+  const errors=[...new Set(rows.map(r=>r.error_code).filter(Boolean))].map(code=>deliveryProblem(code)).join(' ');
+  reason=(errors||'E-posten er satt i sendekø hos Resend; levering er ikke bekreftet.')+' Leveringsloggen er utilgjengelig fordi SUPABASE_SERVICE_ROLE_KEY mangler på serveren. Administrator må fullføre oppsettet før status kan spores. Ikke send en ny kopi bare fordi loggen er tom.';
+ }
  return reply({links,accepted:rows.every(r=>r.status==='queued'),reason:reason||'Se leveringsstatus per mottaker nedenfor. Sending er ikke det samme som levering.'});
 }

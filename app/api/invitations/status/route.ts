@@ -16,7 +16,8 @@ export async function GET(req:Request){
  const rows=(result.data||[]) as InvitationDelivery[];
  const service=deliveryStore(),key=process.env.RESEND_READ_API_KEY||process.env.RESEND_API_KEY;
  let warning:string|undefined;
- if(rows.length&&(!service||!key))warning='Leveringskontroll er ikke konfigurert. Viser sist lagrede status.';
+ if(!service)warning='Leveringsloggen er ikke tilkoblet: SUPABASE_SERVICE_ROLE_KEY mangler på serveren. Nye utsendinger kan ikke spores. Administrator må fullføre oppsettet.';
+ else if(!key)warning='Leveringskontroll er ikke konfigurert. Viser sist lagrede status.';
  if(service&&key){
   // Limit work and rotate by oldest check; shared timestamps also throttle multiple tabs.
   const due=rows.filter(r=>r.provider_id&&Date.now()-Date.parse(r.created_at)<30*86400000&&(!r.checked_at||Date.now()-Date.parse(r.checked_at)>60000))
