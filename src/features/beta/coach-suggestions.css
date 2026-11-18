@@ -15,4 +15,18 @@
 .suggestion-list div{min-width:0;overflow-wrap:anywhere}
 .suggestion-list a{display:inline-block;min-height:32px;padding:4px 0}
 .suggestion-player{font-size:14px}
+.followup-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px}
+.followup-note{white-space:pre-wrap}
+.followup-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--border);border-radius:8px;padding:20px;color:var(--text);background:var(--panel,#fff)}
+.followup-dialog::backdrop{background:rgba(12,22,44,.45)}
+.followup-dialog header,.followup-dialog footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.followup-dialog h3{font-size:18px;margin:0;display:flex;gap:8px;align-items:center}
+.followup-dialog header>.btn{width:40px;height:40px;min-height:40px;flex:0 0 40px;padding:8px}
+.followup-dialog header h3{min-width:0;flex:1}
+.followup-dialog header h3 svg{flex:none}
+.followup-dialog label{display:block;margin-top:16px}
+.followup-dialog textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:110px}
+.followup-dialog footer{margin-top:20px;flex-wrap:wrap}
+.followup-dialog small{display:block;color:var(--muted)}
+.followup-dialog p,.followup-dialog strong,.followup-dialog small{overflow-wrap:anywhere}
 @media(max-width:600px){.suggestion-filters{display:block}.suggestion-filters label{display:block;margin-top:12px;max-width:none}.suggestion-filters .workspace-tabs button{min-height:42px;padding:8px}.suggestion-list{margin:0}.suggestion-list li{gap:8px}}

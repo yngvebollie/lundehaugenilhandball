@@ -4,7 +4,8 @@
 
 Trenerens Oversikt og spillerprofil viser samme forslag, avgrenset til
 aktivt lag og valgt spiller. Filtre: Alle, Mal, Vurderinger, Aktivitet.
-Eksisterende rosa/morke stil viderefores. Ingen nye tabeller eller migreringer.
+Eksisterende rosa/morke stil viderefores. Oppfolgingsnotater gjenbruker
+beta_player_log med felter fra migreringen 20261118113316_coach_followup_log.
 
 Forslagene er regelbaserte, ikke en AI-vurdering av spilleren:
 - Avtalte aktive mal som venter pa vurdering, har nadd vurderingsdato,
@@ -47,3 +48,37 @@ henter nye vurderinger/mal. Ingen utholdenhets- eller helsedose anbefales.
 Nettlesertestene bruker isolerte demodata, ikke ekte utoverskriv i produksjon.
 Skjermbildet er kontrollert pa mobilbredde. Fysisk telefon og faktisk
 epostlevering er egne gjenstaende tester.
+
+## Fulgt opp og trenerlogg
+
+Marker som fulgt opp apner et notatvindu, 1-1000 tegn. Avbryt lagrer ingenting.
+Status og notat er samme append-only rad i beta_player_log. Serveren bestemmer
+aktor og tidspunkt. Trener kan bytte mellom Apne og Fulgt opp og folge lenken
+til spillerens trenerlogg. Ingen melding sendes til spilleren.
+
+En kanonisk kildeversjon og unik indeks hindrer dobbel lagring. Samtidige
+trenere far den forst lagrede raden; senere tekst overskriver aldri notatet.
+UI varsler om konflikt og beholder teksten i vinduet. Ved lagringsfeil beholdes
+ogsa teksten, og ingen optimistisk ferdigmarkering vises.
+
+Forslag regnes som fulgt opp nar dagens kildesignaler er dekket av en lagret
+oppfolging. At gamle registreringer faller ut av tidsvinduet gjenapner ikke
+forslaget. Nye registreringer/vurderinger eller endret malgrunnlag kan gi
+nytt forslag. Historikken slettes ikke.
+
+Tester: followup-log.mjs (PGlite, ekte SQL/roller) og followup-browser.cjs
+(isolerte demodata, begge roller, to trenere, mobil, feil/retry). Regresjon:
+player-desk.mjs, coach-suggestions.mjs/cjs, training-journey.cjs og
+shared-history.cjs. Produksjonsmigrering, RLS, indeks og execute-grants er
+kontrollert. Ingen ekte spillernotater er skrevet under testingen.
+
+Supabase security advisor for/etter hadde samme eksisterende funn:
+- public.beta_edit_fixture er en eksponert security-definer. Se
+  https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+- Lekkede passord er ikke blokkert i Auth. Se
+  https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Syv private tabeller med RLS uten policies (INFO), beskyttet gjennom
+  eksisterende funksjonsgrenser. Se
+  https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+
+Disse innstillingene er ikke endret som del av notatfunksjonen.

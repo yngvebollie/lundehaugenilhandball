@@ -12,6 +12,9 @@
 - Oppfolgingsforslag pa Oversikt og spillerprofil: avtalte aktive mal,
   ovelsesvurderinger og registrert aktivitet med grunnlag og direkte lenker.
   Se coach-suggestions.md. Dagens stil er beholdt.
+- Fulgt opp-status med obligatorisk kort notat i spillerens trenerlogg.
+  Delt trenerstatus, tidspunkt/aktor fra server, feil/retry og duplikatvern.
+  Nytt kildegrunnlag kan gi et nytt forslag; gamle notater beholdes.
 
 ## Verifikasjon av felles historikk
 
@@ -34,9 +37,9 @@ utoverens historiske oktbeskrivelse.
    tilbakeknapp, video og registrering etter pauser i appbruken.
 2. Ny ekte e-postinvitasjon og leveringskontroll. Mock-tester bekrefter
    ikke faktisk levering; dette er ikke gjentatt i siste leveranser.
-3. Videre oppfolging: vurder behov for en eksplisitt, loggfort trenerhandling
-   som markerer en samtale som fulgt opp. Forslagene i dagens leveranse
-   forsvinner nar kildegrunnlaget endres, ikke ved at treneren bare apner dem.
+3. Eksisterende sikkerhetsvarsler utenfor denne leveransen: vurder eksponert
+   beta_edit_fixture-definer og innstilling for lekkede passord. Ingen nye
+   advisor-funn ved innforing av oppfolgingsloggen; se coach-suggestions.md.
 
 Dette er status for de siste avtalte milepaelene, ikke en paastand om at
 samtlige historiske onsker i chatten er implementert eller retestet.
