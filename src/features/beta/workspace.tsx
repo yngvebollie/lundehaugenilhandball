@@ -1,5 +1,7 @@
 "use client";
 
+import {ConnectionNotice} from "./connection-notice";
+import {temporaryReadFailure} from "@/lib/workspace-refresh";
 import {FeatureInfo} from "./feature-info";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, BookOpen, CalendarDays, Download, Dumbbell, LogOut, Users } from "lucide-react";
@@ -48,25 +50,34 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   const [ready,setReady]=useState(false);
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
+  const [readFailed,setReadFailed]=useState(false),[refreshing,setRefreshing]=useState(false),[offline,setOffline]=useState(false);
   const sequence=useRef(0);
   const reload=useCallback(async()=>{
-    const request=++sequence.current;
+    const request=++sequence.current;setRefreshing(true);
     if(demo&&persona==="coach"&&!sessionStorage.getItem("nhf-persona")&&!location.hash){location.replace("/login");return;}
     try {
       const next=await readBeta(persona);
+      if(request!==sequence.current)return;
       if((!next&&!demo)||(next&&!next.me.squad)){location.replace(next?"/join":view==="development"?"/login?next=development":view==="court"?"/login?next="+(new URLSearchParams(location.search).get("vis")==="bank"?"bank":"court"):location.hash==="#ratings"?"/login?next=ratings":"/login");return;}
-      if(request===sequence.current){setData(next);setError("");}
-    } catch(e){if(request===sequence.current){if(message(e).startsWith("Finish joining")){location.replace("/join");return;}setData(null);setError(message(e));}}
-    finally {if(request===sequence.current)setReady(true);}
+      if(request===sequence.current){setData(next);setReadFailed(false);setError("");}
+    } catch(e){if(request===sequence.current){if(temporaryReadFailure(e)){setReadFailed(true);}else{setData(null);setReadFailed(false);if(message(e).startsWith("Finish joining")){location.replace("/join");return;}setError(message(e));}}}
+    finally {if(request===sequence.current){setReady(true);setRefreshing(false);}}
   },[persona,view]);
   useEffect(()=>{
     void reload();
-    const update=()=>{void reload();};
+    let pending:ReturnType<typeof setTimeout>|undefined;
+    const update=()=>{if(document.hidden)return;clearTimeout(pending);pending=setTimeout(()=>void reload(),150);};
+    const connection=()=>{setOffline(!navigator.onLine);if(navigator.onLine)update();};
+    setOffline(!navigator.onLine);
     window.addEventListener("focus",update);
     window.addEventListener("storage",update);
+    window.addEventListener("pageshow",update);
+    window.addEventListener("online",connection);
+    window.addEventListener("offline",connection);
+    document.addEventListener("visibilitychange",update);
     const timer=setInterval(update,30000);
-    const listener=db?.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){sequence.current++;setData(null);} });
-    return ()=>{sequence.current++;clearInterval(timer);window.removeEventListener("focus",update);window.removeEventListener("storage",update);listener?.data.subscription.unsubscribe();};
+    const listener=db?.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){sequence.current++;clearTimeout(pending);setData(null);setReadFailed(false);setRefreshing(false);setReady(true);} });
+    return ()=>{sequence.current++;clearTimeout(pending);clearInterval(timer);window.removeEventListener("focus",update);window.removeEventListener("storage",update);window.removeEventListener("pageshow",update);window.removeEventListener("online",connection);window.removeEventListener("offline",connection);document.removeEventListener("visibilitychange",update);listener?.data.subscription.unsubscribe();};
   },[reload]);
   async function run(action:()=>Promise<void>){
     setBusy(true);setError("");
@@ -76,14 +87,14 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
     e.preventDefault();const form=new FormData(e.currentTarget);
     await run(async()=>{if(!db) throw Error("Check the deployment configuration.");const {error}=await db.auth.signInWithPassword({email:String(form.get("email")).trim(),password:String(form.get("password"))});if(error)throw error;});
   }
-  const notice=error && <p className="error" role="alert">{error}</p>;
-  if(!data) return <main className="login grid"><Brand/><h1>{ready?"Team sign-in":"Opening workspace..."}</h1>{notice}{ready && !demo && <form className="grid" onSubmit={login}><label>Email<input required name="email" type="email" autoComplete="username"/></label><label>Password<input required name="password" type="password" autoComplete="current-password"/></label><button disabled={busy} className="btn primary">Sign in</button></form>}{error && <button className="btn" onClick={()=>void run(async()=>{await signedOut();})}>Return to sign-in</button>}</main>;
+  const notice=<><ConnectionNotice offline={offline} failed={readFailed} busy={refreshing} retry={()=>void reload()}/>{error&&<p className="error" role="alert">{error}</p>}</>;
+  if(!data) return <main className="login grid"><Brand/><h1>{ready?(readFailed?"Kunne ikke åpne appen":"Team sign-in"):"Opening workspace..."}</h1>{notice}{ready && !readFailed && !demo && <form className="grid" onSubmit={login}><label>Email<input required name="email" type="email" autoComplete="username"/></label><label>Password<input required name="password" type="password" autoComplete="current-password"/></label><button disabled={busy} className="btn primary">Sign in</button></form>}{error && <button className="btn" onClick={()=>void run(async()=>{await signedOut();})}>Return to sign-in</button>}</main>;
   const coach=data.me.role==="coach";
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name;
   const account=<div className="account"><strong>{data.me.name}</strong>{data.club?.eligible&&<label>Arbeidsrolle<select aria-label="Arbeidsrolle" disabled={busy} value={preview&&data.club.active?"athlete":data.club.active?"club":"coach"} onChange={e=>{const value=e.target.value;const mode=value==="athlete"?"club":value==="club"?"club":"coach";if(value==="athlete")remember(data.club?.active?"club":"coach");setPreview(value==="athlete");setMore(false);void run(async()=>{await clubRole(mode);sessionStorage.removeItem("nhf-team:"+data.me.id);setData(null);setReady(false);});}}><option value="coach">Trener</option><option value="club">Klubbadmin</option><option value="athlete">Utøvervisning</option></select></label>}{coach?<label>Aktivt lag<select id="active-team" disabled={busy} value={data.me.squad} onChange={e=>{selectTeam(data.me.id,e.target.value);setData(null);setReady(false);void reload();}}>{data.teams.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}</select></label>:<span>{teamName}</span>}
     <a className="btn" href="/installer"><Download size={16}/>Installer appen</a>{demo&&<span className="badge orange">Local demo</span>}<button className="btn" onClick={async()=>{if(db){const {error}=await db.auth.signOut();if(error){setError(error.message);return;}}sessionStorage.removeItem("nhf-persona");location.assign("/login");}}><LogOut size={16}/>{demo?"Switch account":"Sign out"}</button></div>;
-  if(!coach&&view==="court")return <main className="dev-mobile"><CourtRoom key={data.me.squad} data={data}/><nav className="dev-mobile-nav"><a href="/athlete"><House/>Hjem</a><a href="/okter" aria-current="page"><Dumbbell/>Økter</a><a href="/utvikling"><ChartNoAxesColumnIncreasing/>Min utvikling</a></nav></main>;
-  if(!coach&&view==="development")return <main className="dev-mobile"><Development data={data}/><nav className="dev-mobile-nav" aria-label="Utøvermeny"><a href="/athlete"><House/> Hjem</a><a href="/utvikling" aria-current="page"><ChartNoAxesColumnIncreasing/> Min utvikling</a><a href="/merker"><Medal/> Merker</a></nav></main>;
+  if(!coach&&view==="court")return <main className="dev-mobile">{notice}<CourtRoom key={data.me.squad} data={data}/><nav className="dev-mobile-nav"><a href="/athlete"><House/>Hjem</a><a href="/okter" aria-current="page"><Dumbbell/>Økter</a><a href="/utvikling"><ChartNoAxesColumnIncreasing/>Min utvikling</a></nav></main>;
+  if(!coach&&view==="development")return <main className="dev-mobile">{notice}<Development data={data}/><nav className="dev-mobile-nav" aria-label="Utøvermeny"><a href="/athlete"><House/> Hjem</a><a href="/utvikling" aria-current="page"><ChartNoAxesColumnIncreasing/> Min utvikling</a><a href="/merker"><Medal/> Merker</a></nav></main>;
   if(!coach) return <main className="mobile-shell"><div className="mobile-main grid"><Brand/>{account}{notice}<WizardGate key={data.me.id+data.me.squad} data={data} reload={reload}><AthleteTraining key={data.me.id} initialTab={view==="badges"?"Merker":view==="challenges"?"Utfordringer":"Today"} data={data} busy={busy} run={run}/></WizardGate></div></main>;
   const pageTitle=coachPageTitle(view,hash,location.search);
   const navigation=<CoachMenu view={view} hash={hash}/>;

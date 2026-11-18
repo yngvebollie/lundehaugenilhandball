@@ -19,6 +19,9 @@
   ny hendelse viser trener og tidspunkt. Ny oppfolging kan loggfores igjen.
   Stale faner og gjentatte klikk kan ikke overskrive nyere oppfolging.
   Testet begge roller, to trenere, feil/retry og mobilbredde.
+- Mobilstabilitet: bevar apne skjemaer ved midlertidig bakgrunnsfeil,
+  tilkoblingsstatus/retry og oppdatering nar appen blir synlig igjen.
+  Tilgangsfeil rydder fortsatt arbeidsflaten. Se mobile-reliability.md.
 
 ## Verifikasjon av felles historikk
 
@@ -37,13 +40,30 @@ utoverens historiske oktbeskrivelse.
 
 ## Neste prioriteringer
 
-1. Brukertest pa fysisk iPhone og Android: hjemskjermikon, ny innlogging,
-   tilbakeknapp, video og registrering etter pauser i appbruken.
-2. Ny ekte e-postinvitasjon og leveringskontroll. Mock-tester bekrefter
-   ikke faktisk levering; dette er ikke gjentatt i siste leveranser.
-3. Eksisterende sikkerhetsvarsler utenfor denne leveransen: vurder eksponert
-   beta_edit_fixture-definer og innstilling for lekkede passord. Ingen nye
-   advisor-funn ved innforing av oppfolgingsloggen; se coach-suggestions.md.
+M1. Mobil - fysisk akseptansetest (gjenstar).
+   Kodedelen og automatisert feil/gjenopptak er levert. Test pa ekte iPhone
+   og Android: hjemskjermikon, innlogging/utlop, tilbakeknapp, video og
+   registrering etter pauser. Krever tilgang til de fysiske telefonene.
+   Ferdig nar begge roller bestar sjekklisten i mobile-reliability.md.
+
+M2. Ekte e-postinvitasjon (neste kjorebare integrasjonstest).
+   Send til et eget testalias pa yngve@bluemint.no. Kontroller levering,
+   avsender noreply@lundehaugenil.no, mobil lenke, valgfri e-post i innmelding,
+   riktig lag og trenerens tilgang. Mock-transport er ikke leveringsbevis.
+   Krever tilgang til sending og innboks/leveringslogg. Ikke gjentatt na.
+
+M3. Sikkerhetsherding (gjenstar).
+   Vurder eksponert beta_edit_fixture-definer og lekkede passord-innstilling.
+   Behold trenernes kampredigering, test at utovere/andre lag avvises.
+   Ferdig nar endringene er verifisert og relevante advisor-varsler er lost
+   eller dokumentert med konkret begrunnelse. Se coach-suggestions.md.
+
+M4. Avstemming av eldre produktkrav (gjenstar).
+   Revider tidligere onsker mot kode og produksjon: registrering/invitasjon,
+   spillerkoblinger/draktnummer, lag/sesong, rapporter/statistikk, merker/stemmer,
+   ovelsebank/filmer, kalender/belastning, meldinger og admin-utovervisning.
+   Lag en restliste med bestatt/mangler/ikke testet, og prioriter faktiske avvik.
+   Dette er en akseptansegjennomgang, ikke et lofte om ny funksjonalitet i dag.
 
 Dette er status for de siste avtalte milepaelene, ikke en paastand om at
 samtlige historiske onsker i chatten er implementert eller retestet.

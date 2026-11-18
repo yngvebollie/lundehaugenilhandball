@@ -1,0 +1,6 @@
+.connection-notice{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-block:1px solid var(--border,#d5d9e4);color:var(--text,#101c37);text-align:left;min-width:0}
+.connection-notice>svg{flex:none;color:var(--accent,#cf0057);margin-top:3px}
+.connection-notice>div{flex:1;min-width:0;overflow-wrap:anywhere}
+.connection-notice p{margin:4px 0 0;font-size:14px;line-height:1.5}
+.connection-notice .btn{flex:none;min-height:44px;display:flex;align-items:center;gap:8px}
+@media(max-width:600px){.connection-notice{flex-wrap:wrap}.connection-notice>div{flex-basis:calc(100% - 36px)}.connection-notice>.btn{margin-left:31px}}
