@@ -1,5 +1,5 @@
 export type DeliveryStatus='pending'|'queued'|'sent'|'delivered'|'delivery_delayed'|'bounced'|'failed'|'suppressed'|'complained'|'canceled'|'unknown';
-export type InvitationDelivery={id:string;recipient:string;member_role:'athlete'|'coach';sender:string;provider_id:string|null;status:DeliveryStatus;error_code:string|null;created_at:string;checked_at:string|null;check_error:string|null};
+export type InvitationDelivery={id:string;recipient:string;member_role:'athlete'|'coach'|'guardian';sender:string;provider_id:string|null;status:DeliveryStatus;error_code:string|null;created_at:string;checked_at:string|null;check_error:string|null};
 export const deliveryLabels:Record<DeliveryStatus,string>={pending:'Sender',queued:'I sendekø',sent:'Sendt – levering avventes',delivered:'Levert til e-postserver',delivery_delayed:'Forsinket',bounced:'Avvist av mottaker',failed:'Sending feilet',suppressed:'Blokkert mottaker',complained:'Merket som søppelpost',canceled:'Kansellert',unknown:'Levering ukjent'};
 export function providerStatus(event:unknown):DeliveryStatus {
  if(event==='opened'||event==='clicked')return 'delivered';

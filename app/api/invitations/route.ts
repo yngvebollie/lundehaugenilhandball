@@ -15,16 +15,17 @@ export async function POST(req:Request){
  catch{return reply({error:'Registreringsadressen er feil konfigurert. Ingen e-post er sendt.'},503);}
  let body;
  try{const raw=await req.text();if(raw.length>30000)return reply({error:'For mange adresser.'},413);body=JSON.parse(raw);}catch{return reply({error:'Ugyldig invitasjon.'},400);}
- if(!body||!Array.isArray(body.addresses)||!body.addresses.length||body.addresses.length>100||!['athlete','coach'].includes(body.role)||typeof body.team!=='string'||
+ if(!body||!Array.isArray(body.addresses)||!body.addresses.length||body.addresses.length>100||!['athlete','coach','guardian'].includes(body.role)||typeof body.team!=='string'||
  body.addresses.some((e:unknown)=>typeof e!=='string'||e.length>254||!/^\S+@[^@\s]+\.[^@\s]+$/.test(e)))return reply({error:'Velg et lag, en rolle og opptil 100 gyldige e-postadresser.'},400);
  const addresses=[...new Set<string>(body.addresses.map((e:string)=>e.trim().toLowerCase()))];
+ if(body.role==='guardian'&&(addresses.length!==1||(body.athlete!=null&&typeof body.athlete!=='string')||typeof body.child!=='string'))return reply({error:'Velg en spiller og én foresatt.'},400);
  const now=Date.now();for(const [id,b] of usage)if(b.until<=now)usage.delete(id);
  const bucket=usage.get(actor.user.id)||{until:now+3600000,count:0};
  if(bucket.count+addresses.length>200)return reply({error:'Timegrensen for invitasjoner er nådd.'},429);
  bucket.count+=addresses.length;usage.set(actor.user.id,bucket);
- const batch=await actor.db.rpc('beta_bulk_invite',{team_id:body.team,addresses,member_role:body.role});
+ const batch=body.role==='guardian'?await actor.db.rpc('beta_guardian_invite',{t:body.team,p:body.athlete||null,address:addresses[0],child:body.child}):await actor.db.rpc('beta_bulk_invite',{team_id:body.team,addresses,member_role:body.role});
  if(batch.error)return reply({error:'Invitasjonene kunne ikke opprettes. Kontroller trenertilgangen til laget.'},403);
- const links=(batch.data as {email:string;token:string}[]).map(r=>({email:r.email,url:origin.origin+'/login?new=1&role='+body.role+'&invite='+encodeURIComponent(r.token)}));
+ const links=((body.role==='guardian'?[batch.data]:batch.data) as {email:string;token:string}[]).map(r=>({email:r.email,url:origin.origin+(body.role==='guardian'?'/foresatt?invite=':'/login?new=1&role='+body.role+'&invite=')+encodeURIComponent(r.token)}));
  const rows=links.map(l=>({id:randomUUID(),team:body.team,recipient:l.email,member_role:body.role,sender:from,created_by:actor.user.id,status:'pending' as DeliveryStatus,provider_id:null as string|null,error_code:null as string|null}));
  if(service){
   const saved=await service.from('beta_invitation_deliveries').insert(rows);
@@ -33,7 +34,7 @@ export async function POST(req:Request){
  let reason:string|undefined;
  try{
   const result=await fetch('https://api.resend.com/emails/batch',{method:'POST',cache:'no-store',redirect:'error',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','Idempotency-Key':'invitations/'+rows[0].id},signal:AbortSignal.timeout(15000),
-   body:JSON.stringify(links.map(r=>({from,to:[r.email],subject:'Lundehaugen IL: Invitasjon til laget',text:'Hei! Du er invitert som '+(body.role==='athlete'?'utøver':'trener')+'. Åpne den personlige lenken innen sju dager:\n\n'+r.url+'\n\n'+(body.role==='athlete'?'Velg passord eller bruk eksisterende konto. E-postfeltet er valgfritt ved ny utøverregistrering.':'Bruk e-postadressen invitasjonen ble sendt til.')})))});
+   body:JSON.stringify(links.map(r=>({from,to:[r.email],subject:'Lundehaugen IL: Invitasjon til laget',text:'Hei! Du er invitert som '+(body.role==='guardian'?'foresatt for '+batch.data.child:body.role==='athlete'?'utøver':'trener')+'. Åpne den personlige lenken innen sju dager:\n\n'+r.url+'\n\n'+(body.role==='athlete'?'Velg passord eller bruk eksisterende konto. E-postfeltet er valgfritt ved ny utøverregistrering.':'Bruk e-postadressen invitasjonen ble sendt til.')})))});
   const payload=await result.json().catch(()=>null);
   if(!result.ok){for(const row of rows){row.status=result.status>=500?'unknown':'failed';row.error_code=providerFailure(result.status,payload?.name);}}
   else{

@@ -34,7 +34,7 @@ export function InvitationDeliveries({team,revision}:{team:string;revision:numbe
     const failed=['bounced','failed','suppressed','complained','canceled'].includes(row.status);
     const Icon=failed?AlertCircle:row.status==='delivered'?CheckCircle2:Clock;
     return <li key={row.id} className={failed?'delivery-failed':''}>
-     <div className="delivery-recipient"><strong>{row.recipient}</strong><small>{row.member_role==='athlete'?'Utøver':'Trener'} · {new Date(row.created_at).toLocaleString('nb-NO')}</small><small>Fra: {row.sender}</small></div>
+     <div className="delivery-recipient"><strong>{row.recipient}</strong><small>{row.member_role==='guardian'?'Foresatt':row.member_role==='athlete'?'Utøver':'Trener'} · {new Date(row.created_at).toLocaleString('nb-NO')}</small><small>Fra: {row.sender}</small></div>
      <div className="delivery-state"><strong className={failed?'delivery-danger':row.status==='delivered'?'delivery-success':''}><Icon size={16}/>{deliveryLabels[row.status]||deliveryLabels.unknown}</strong>
       <p>{deliveryDetail(row)}</p>{row.check_error&&<p className="delivery-warning">{deliveryProblem(row.check_error)}</p>}
       <small>{row.checked_at?'Sist kontrollert: '+new Date(row.checked_at).toLocaleString('nb-NO'):'Levering er ikke kontrollert ennå.'}</small>

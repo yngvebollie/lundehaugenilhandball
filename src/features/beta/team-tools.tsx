@@ -12,6 +12,7 @@ import "./squad-stats.css";
 import {TeamEntry} from "./team-entry";
 import {ShareLink,TeamStaff} from "./team-staff";
 import {InvitationDeliveries} from "./invitation-deliveries";
+import {GuardianManagement} from './guardian-management';
 
 export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name||"";
@@ -21,7 +22,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [newName,setNewName]=useState(""),[status,setStatus]=useState("");
   const pending=usePending(data.me.squad);
   const [tab,setTab]=useState("Medlemmer"),[method,setMethod]=useState("Lenke");
-  useEffect(()=>{const v=new URLSearchParams(location.search).get("vis");if(v==="posisjoner")setTab("Posisjoner");if(v==="soknader")setTab("Søknader");if(v==="inviter")setTab("Inviter");},[]);
+  useEffect(()=>{const v=new URLSearchParams(location.search).get("vis");if(v==="posisjoner")setTab("Posisjoner");if(v==="soknader")setTab("Søknader");if(v==="inviter")setTab("Inviter");if(v==='foresatte')setTab('Foresatte');},[]);
   const [email,setEmail]=useState("");
   const [role,setRole]=useState<Member["role"]>("athlete");
   const [links,setLinks]=useState<{email:string;url:string}[]>([]);
@@ -36,7 +37,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
       setLinks(result.links);setStatus(result.reason||"Se leveringsstatus per mottaker nedenfor.");setDeliveryRevision(v=>v+1);
     });
   }
-  return <section className="panel panel-pad grid" id="team"><h2><Users/> {teamName}</h2><nav className="workspace-tabs" aria-label="Lagadministrasjon">{["Medlemmer","Inviter","Posisjoner","Lagprofil","Søknader","Trenerlogg"].map(v=><button className={tab===v?"current":""} key={v} aria-pressed={tab===v} onClick={()=>{setTab(v);setStatus("");}}>{v}{v==="Søknader"&&pending>0&&<span className="pending-count" aria-label={pending+" ventende søknader"}>{pending}</span>}</button>)}</nav>{tab==="Trenerlogg"&&<ClubLog team={data.me.squad}/>}
+  return <section className="panel panel-pad grid" id="team"><h2><Users/> {teamName}</h2><nav className="workspace-tabs" aria-label="Lagadministrasjon">{["Medlemmer","Inviter","Foresatte","Posisjoner","Lagprofil","Søknader","Trenerlogg"].map(v=><button className={tab===v?"current":""} key={v} aria-pressed={tab===v} onClick={()=>{setTab(v);setStatus("");}}>{v}{v==="Søknader"&&pending>0&&<span className="pending-count" aria-label={pending+" ventende søknader"}>{pending}</span>}</button>)}</nav>{tab==="Trenerlogg"&&<ClubLog team={data.me.squad}/>}{tab==='Foresatte'&&<GuardianManagement data={data}/>}
     {tab==="Lagprofil"&&<>
     <p className="muted">Coaching staff · {data.roster.filter(m=>m.role==="coach").map(m=>m.name).join(", ")}</p>
     <form className="grid" onSubmit={async e=>{e.preventDefault();const next=name.trim();if(next&&await run(()=>saveTeamDetails(data.me.squad,next,logo))){setName(next);setStatus("Team details saved.");}}}><label>Team name<input value={name} maxLength={80} required onChange={e=>{setName(e.target.value);setStatus("");}}/></label>

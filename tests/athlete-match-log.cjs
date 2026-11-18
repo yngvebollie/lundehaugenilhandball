@@ -10,6 +10,6 @@ const assert=require("node:assert/strict"),{join}=require("node:path"),{chromium
  await p.getByRole("button",{name:"Kopier siste sett"}).click();await p.getByLabel("Sett 3 · rep",{exact:true}).fill("10");await shot(form,"utover-sett");
  await p.getByRole("button",{name:"Lagre i treningsloggen"}).click();await p.getByText("Push-up er lagt til i treningsloggen.").waitFor();await p.reload();await p.getByText("Push-up · 12 / 12 / 10 rep",{exact:true}).first().waitFor();
  await p.getByRole("link",{name:"Se merket",exact:true}).first().click();await p.getByText("Kamper som ga merket").waitFor();const card=p.locator("#merke-hat_trick_hero");await shot(card,"utover-merke");await card.getByRole("link",{name:/Fjordvik/}).click();
- await p.getByRole("heading",{name:"Mine kampstemmer"}).waitFor();await p.getByLabel("Lagspiller",{exact:true}).selectOption({index:1});await p.getByText("Stemmen er lagret.").waitFor();await shot(p.getByRole("heading",{name:"Kamper og resultater"}).locator("xpath=ancestor::section[1]"),"utover-kamp");
+ await p.getByRole("heading",{name:"Mine kampstemmer"}).waitFor();await p.getByLabel("Lagspiller",{exact:true}).selectOption({index:1});await p.getByText("Stemmen er lagret.").waitFor();await shot(p.locator(".athlete-matches"),"utover-kamp");
  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));console.log("PASS: mobile search, repeat sets, completed log, badge feed, match link and voting");
  }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

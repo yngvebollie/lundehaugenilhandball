@@ -14,7 +14,7 @@ function TrainingEntry({plan,data,record}:{plan:Assignment;data:Snapshot;record?
  {record&&<small>Planlagt: {record.planned??"–"} min · Faktisk: {record.minutes} min{record.done&&" · "+intensity[record.weight]}</small>}
  {plan.logged_sets?.length?plan.logged_sets.map(e=><div className="feed-sets" key={e.id}><ExerciseInsight athlete={plan.athlete} data={data} id={e.id} name={e.name}/><ol aria-label={"Sett for "+e.name}>{e.sets.map((n,i)=><li key={i}><small>Sett {i+1}</small>{n} {e.unit}</li>)}</ol></div>):plan.exercises.map((line,i)=><div key={i}>{steps.has(i)?"✓ ":"– "}<ExerciseInsight athlete={plan.athlete} data={data} name={line}/></div>)}</details>;
 }
-export function MeritFeed({data,athlete=data.me.id}:{data:Snapshot;athlete?:string}){
+export function MeritFeed({data,athlete=data.me.id,awardsOnly=false}:{data:Snapshot;athlete?:string;awardsOnly?:boolean}){
  const coach=data.me.role==="coach",badgePage="/merker"+(coach?"?athlete="+encodeURIComponent(athlete):"");
  const [limit,more]=useState(8),[anchor,A]=useState(today);
  const [from,until]=monthBounds(anchor),history=useRecordedActivity(data,from,until,athlete);
@@ -31,7 +31,7 @@ export function MeritFeed({data,athlete=data.me.id}:{data:Snapshot;athlete?:stri
  const entries=[...items.map(e=>({at:e.at,id:["badge",e.key,e.fixture||e.at,e.level].join(":"),badge:e,plan:null,record:undefined as RecordedActivity|undefined})),
  ...ownPlans.map(p=>({at:p.day+"T"+(p.start_time||"00:00"),id:p.id,badge:null,plan:p,record:history.rows.find(r=>r.source==="assignment"&&r.event===p.id&&r.day===p.day)})),
  ...history.rows.filter(r=>r.source!=="assignment"||!ownPlans.some(p=>p.id===r.event&&p.day===r.day)).map(r=>({at:r.day+"T00:00",id:r.id,badge:null,plan:null,record:r}))]
- .filter(e=>e.at.slice(0,10)>=from&&e.at.slice(0,10)<until&&e.at.slice(0,10)<=today()).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
+ .filter(e=>(!awardsOnly||e.badge)&&e.at.slice(0,10)>=from&&e.at.slice(0,10)<until&&e.at.slice(0,10)<=today()).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
  return <section className="panel panel-pad grid merit-feed"><header><h2><Award size={20}/> {coach?"Spillerens høydepunkter":"Mine høydepunkter"}</h2></header>
  <div className="feed-period"><button className="btn" title="Forrige måned" aria-label="Forrige måned i feed" onClick={()=>{A(plusDay(from,-1));more(8);}}><ChevronLeft size={16}/></button><label>Måned i feed<input type="month" max={today().slice(0,7)} value={month} onChange={e=>{if(/^\d{4}-\d{2}$/.test(e.target.value)&&e.target.value<=today().slice(0,7)){A(e.target.value+"-01");more(8);}}}/></label><button className="btn" title="Neste måned" aria-label="Neste måned i feed" disabled={month>=today().slice(0,7)} onClick={()=>{A(until);more(8);}}><ChevronRight size={16}/></button><button className="btn" onClick={()=>{A(today());more(8);}}>Denne måneden</button></div>
  {history.error?<p role="alert">{history.error} <button className="btn" onClick={history.retry}>Prøv igjen</button></p>:!history.ready&&<p role="status">Henter aktivitetshistorikk …</p>}

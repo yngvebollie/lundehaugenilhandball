@@ -4,7 +4,8 @@ import {AthleteMatches} from "./athlete-matches";
 import {QuickTrainingLog} from "./quick-training-log";
 import {FeatureInfo} from "./feature-info";
 import { useEffect,useState } from "react";
-import { Activity, CalendarDays, CheckCheck, ClipboardCheck, Dumbbell, UserRound, Users, Mail } from "lucide-react";
+import { Activity, CalendarDays, CheckCheck, ClipboardCheck, Dumbbell, UserRound, Users, Mail, House, Ellipsis } from "lucide-react";
+import './athlete-mobile.css';
 import { WeeklyPlanner } from "./weekly-planner";
 import { AthleteTeam,Conversation } from "./athlete-team";
 import { Profile } from "./team-tools";
@@ -24,11 +25,13 @@ import { AthleteNotices } from "./team-notices";
 
 const tabs=[{name:"Today",icon:Dumbbell},{name:"Plan",icon:CalendarDays},{name:"Kamper",icon:Trophy},{name:"Progress",icon:Activity},{name:"Team",icon:Users},{name:"Messages",icon:Mail},{name:"Profile",icon:UserRound},{name:"Utfordringer",icon:Trophy},{name:"Merker",icon:Medal}] as const;
 const efforts:Effort[]=["Easy","Just right","Hard"];
+const tabLabels:Record<string,string>={Today:'Hjem',Plan:'Kalender',Kamper:'Statistikk',Progress:'Treningshistorikk',Team:'Laget',Messages:'Meldinger',Profile:'Min profil',Merker:'Merker',Utfordringer:'Utfordringer'};
 function longDate(day:string) {
   return new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(day+"T12:00:00Z"));
 }
 export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapshot;busy:boolean;run:Run;initialTab?:string}){
   const [tab,setTab]=useState<string>(initialTab);
+  const [more,M]=useState(false);
   useEffect(()=>{const q=new URLSearchParams(location.search);if(q.has("fixture"))setTab("Kamper");else if(q.get("vis")==="plan")setTab("Plan");},[]);
   const [selected,setSelected]=useState("");
   const [openChallenges,setOpenChallenges]=useState<Challenge[]>([]),[challengeStart,setChallengeStart]=useState<{id:string;exercise:string}>();
@@ -44,13 +47,15 @@ export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapsho
   const due=plans.filter(p=>p.day<=now);
   const dueFinished=due.filter(p=>completed(p.id)===p.exercises.length);
   return <><header className="athlete-title"><span className="eyeline">{longDate(now)} · Athlete workspace</span><FeatureInfo topic={tab==="Profile"?"wizard":tab==="Plan"?"week":tab==="Progress"?"progress":tab==="Utfordringer"?"challenge":tab==="Merker"?"badge":tab==="Messages"?"notice":tab==="Team"?"team":"athlete"}><h1>{tab==="Today"?"Today's training":tab==="Plan"?"My training plan":tab==="Kamper"?"Mine kamper":tab==="Profile"?"Min profil":tab==="Team"?"My team":tab==="Messages"?"My messages":tab==="Utfordringer"?"Utfordringer":tab==="Merker"?"Merker":"My progress"}</h1></FeatureInfo></header>
-    <nav className="athlete-nav" aria-label="Training views">{tabs.map(t=><button className={tab===t.name?"selected":""} aria-pressed={tab===t.name} key={t.name} onClick={()=>setTab(t.name)}><t.icon size={18}/>{t.name==="Profile"?"Min profil":t.name}</button>)}</nav>
-    {tab==="Today"&&<MeritFeed data={data}/>}
+    <nav className="athlete-home-nav" aria-label="Utøvermeny">{[{name:'Today',label:'Hjem',icon:House},{name:'Plan',label:'Kalender',icon:CalendarDays},{name:'Kamper',label:'Statistikk',icon:Trophy},{name:'Merker',label:'Merker',icon:Medal}].map(t=><button key={t.name} aria-pressed={tab===t.name&&!more} onClick={()=>{setTab(t.name);M(false);}}><t.icon size={21}/>{t.label}</button>)}<button aria-label="Flere utøvervalg" aria-expanded={more} onClick={()=>M(!more)}><Ellipsis size={21}/>Mer</button></nav>
+    {more&&<nav className="athlete-more-menu" aria-label="Flere utøvervalg">{tabs.filter(t=>!['Today','Plan','Kamper','Merker'].includes(t.name)).map(t=><button className="btn" key={t.name} onClick={()=>{setTab(t.name);M(false);}}><t.icon size={17}/>{tabLabels[t.name]}</button>)}</nav>}
+    {tab==='Today'&&<div className="athlete-welcome">{data.me.photo&&<img src={data.me.photo} alt=""/>}<div><small>Din treningshverdag</small><strong>Hei, {data.me.given_name||data.me.name.split(' ')[0]}</strong></div></div>}
+    {(tab==="Today"||tab==='Merker')&&<MeritFeed data={data} awardsOnly={tab==='Merker'}/>}
     {(tab==="Today"||tab==="Progress")&&<QuickTrainingLog key={data.me.id} data={data} run={run} busy={busy}/>}
     {courtEnabled&&(tab==="Today"||tab==="Messages")&&<CourtNotices key={data.me.squad+data.me.id} data={data}/>}
     {courtEnabled&&tab==="Today"&&<a className="challenge-shortcut" href="/okter"><Dumbbell size={17}/>Mine økter og øvelsesbank</a>}
     {developmentVisible&&(tab==="Today"||tab==="Profile")&&<a className="challenge-shortcut" href="/utvikling"><Activity size={17}/> Min utvikling</a>}
-    {tab!=="Merker"&&<AchievementBar data={data}/>}
+    {tab==="Today"&&<AchievementBar data={data}/>}
     {tab!=="Messages"&&data.notices.some(n=>!n.read_at)&&<button className="btn" onClick={()=>setTab("Messages")}><Mail size={18}/>{data.notices.filter(n=>!n.read_at).length} team notice(s) to acknowledge</button>}
     {tab==="Messages"&&<AthleteNotices data={data} busy={busy} run={run}/>}
     {tab==="Plan"&&<WeeklyPlanner data={data} busy={busy} run={run}/>}
