@@ -28,8 +28,8 @@ export function ActivityLoad({data,docs,rules,date,target:athlete,onTarget:T}:{r
  <small>Poeng = minutter × intensitet (1–5). En strek betyr at ingen faktisk belastning er registrert. Kamper gjelder spillerens planlagte kamper, ikke hele lagets terminliste.</small>{stats.sum.noDuration>0&&<small>{stats.sum.noDuration} planlagte aktiviteter mangler varighet og inngår ikke i planlagte poeng.</small>}</>}
  </section>;
 }
-export function DaySessionLoad({data,docs,date}:Props){
- const until=plusDay(date,1),events=eventsFor(data,docs,date,until,data.me.id),res=useEntries(data,date,until);
+export function DaySessionLoad({data,docs,date,onlyCourt}:Props&{onlyCourt?:string}){
+ const until=plusDay(date,1),events=eventsFor(data,docs,date,until,data.me.id).filter(e=>!onlyCourt||e.source==="court"&&e.event===onlyCourt),res=useEntries(data,date,until);
  if(!events.length||date>today())return null;
  return <section className="library-tools grid"><FeatureInfo topic="actual"><h3>Min trenings- og kampbelastning · {date}</h3></FeatureInfo>
  {res.error?<p role="alert">{res.error} <button className="btn" onClick={res.retry}>Prøv igjen</button></p>:res.rows?events.map(e=><EventEditor key={e.source+e.event+date} event={e} record={res.rows!.find(r=>r.source===e.source&&r.event===e.event)} save={async(n,w,clear)=>res.set(await sessionLoad(data,date,until,{event:e,minutes:n,weight:w,clear}))}/>):<p role="status">Henter registreringer …</p>}</section>;

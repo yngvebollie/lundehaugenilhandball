@@ -24,3 +24,10 @@
 @media(max-width:600px){.followup-list,.player-now{grid-template-columns:1fr}.coach-menu-group{grid-column:1/-1}.coach-followup{padding:12px 0}.coach-start ol{padding-left:20px}}
 @media(min-width:981px){.beta>.sidebar{overflow-y:auto;scrollbar-width:thin}.beta>.sidebar>*{flex-shrink:0}}
 @media(max-width:600px){.coach-agenda .agenda-heading{align-items:flex-start}.coach-agenda .agenda-heading h2{font-size:22px;line-height:1.25}.coach-agenda .agenda-heading>.btn{width:auto;flex:none}.coach-agenda .agenda-heading>div{min-width:0}}
+.session-followup{margin-top:18px}
+.session-followup .monitor-table{max-height:420px;overflow:auto}
+.session-followup table{min-width:720px;width:100%}
+.session-followup th{white-space:nowrap}
+.session-followup td{vertical-align:top}
+.session-followup td:nth-child(4),.session-followup td:nth-child(5){text-align:right;font-variant-numeric:tabular-nums}
+

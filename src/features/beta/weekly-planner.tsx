@@ -28,7 +28,7 @@ export function WeeklyPlanner({data,busy,run,onDraft,renderBuilder,section="cale
   const [week,setWeek]=useState(()=>monday(initialDay()));
   const [date,setDate]=useState(initialDay);
   const [kind,setKind]=useState<EventKind>("Session");
-  const [target,setTarget]=useState(coach?"":data.me.id);
+  const [target,setTarget]=useState(()=>{const requested=new URLSearchParams(location.search).get("athlete");return coach?(data.roster.some(p=>p.id===requested&&p.role==="athlete"&&p.squad===data.me.squad)?requested!:""):data.me.id;});
   const [template,setTemplate]=useState("");
   const [title,setTitle]=useState("");
   const [lines,setLines]=useState("");
