@@ -36,6 +36,8 @@ ferdig plan direkte inn i lagringen:
 - Ikke deltatt, Angre og Gjennomfort som planlagt oppdaterer samme rad.
 - Lesefeil gir retry, ikke en falsk tom registrering.
 - Ida kan ikke aapne eller registrere Livs valgte okt.
+- Udaterte og fremtidige delte okter kan leses uten krasj; faktisk
+  registrering tilbys bare for en datofestet aktivitet som har funnet sted.
 - Ingen side-overflyt ved 360 px; tabell har egen rulling.
 
 SQL-testen court-sessions.mjs tester de faktiske migreringsfunksjonene i
