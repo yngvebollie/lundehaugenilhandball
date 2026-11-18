@@ -11,6 +11,7 @@ import {useEffect} from "react";
 import "./squad-stats.css";
 import {TeamEntry} from "./team-entry";
 import {ShareLink,TeamStaff} from "./team-staff";
+import {InvitationDeliveries} from "./invitation-deliveries";
 
 export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const teamName=data.teams.find(t=>t.id===data.me.squad)?.name||"";
@@ -25,13 +26,14 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [role,setRole]=useState<Member["role"]>("athlete");
   const [links,setLinks]=useState<{email:string;url:string}[]>([]);
   const [copied,setCopied]=useState(false);
+  const [deliveryRevision,setDeliveryRevision]=useState(0);
   async function invite(e:FormEvent){
     e.preventDefault();setCopied(false);setLinks([]);setStatus("");
     const manual=demo||((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement|null)?.value==="manual";
     await run(async()=>{
       if(manual){setLinks(await inviteBatch(data.me.squad,email,role));setStatus("Lenker opprettet. Ingen e-post er sendt.");return;}
       const result=await emailInvites(data.me.squad,email,role);
-      setLinks(result.links);setStatus(result.accepted?"Godtatt for sending: "+result.links.length+" invitasjon(er).":result.reason||"Sending ikke bekreftet. Del lenkene nedenfor.");
+      setLinks(result.links);setStatus(result.reason||"Se leveringsstatus per mottaker nedenfor.");setDeliveryRevision(v=>v+1);
     });
   }
   return <section className="panel panel-pad grid" id="team"><h2><Users/> {teamName}</h2><nav className="workspace-tabs" aria-label="Lagadministrasjon">{["Medlemmer","Inviter","Posisjoner","Lagprofil","Søknader","Trenerlogg"].map(v=><button className={tab===v?"current":""} key={v} aria-pressed={tab===v} onClick={()=>{setTab(v);setStatus("");}}>{v}{v==="Søknader"&&pending>0&&<span className="pending-count" aria-label={pending+" ventende søknader"}>{pending}</span>}</button>)}</nav>{tab==="Trenerlogg"&&<ClubLog team={data.me.squad}/>}
@@ -51,6 +53,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     <h3>Inviter på e-post</h3><p className="muted">Hver mottaker får sin egen invitasjon til dette laget. Bruk Lenke hvis du vil invitere uten å kjenne adressen.</p>
     <form className="grid" onSubmit={invite}><label>E-postadresser<textarea rows={3} required value={email} maxLength={26000} placeholder="Én eller flere adresser, skilt med komma eller linjeskift" onChange={e=>setEmail(e.target.value)}/></label>{!demo&&<button className="btn primary" disabled={busy}>Send invitasjoner</button>}<button className="btn" value="manual" disabled={busy}>{demo?"Opprett invitasjonslenker":"Opprett kun lenker"}</button></form>
     {links.length>0&&<><div className="invite-results grid">{links.map(item=><div key={item.email}><label>Invitasjon · {item.email}<input value={item.url} readOnly onFocus={e=>e.target.select()}/></label><a href={"mailto:"+encodeURIComponent(item.email)+"?subject="+encodeURIComponent("Invitasjon til "+teamName)+"&body="+encodeURIComponent("Hei! Du er invitert til "+teamName+". Åpne din personlige invitasjon innen sju dager:\n\n"+item.url)}>Åpne i eget e-postprogram</a></div>)}</div><small>Personlige lenker er gyldige i sju dager. Del hver lenke kun med mottakeren.</small><button className="btn" onClick={async()=>{try{await navigator.clipboard.writeText(links.map(l=>l.email+" "+l.url).join("\n"));setCopied(true);}catch{setCopied(false);}}}>{copied?"Kopiert":"Kopier mottakerlenkene"}</button></>}
+    <InvitationDeliveries key={data.me.squad} team={data.me.squad} revision={deliveryRevision}/>
     </>}</>}{tab==="Søknader"&&<TeamEntry data={data} run={run} busy={busy}/>}
     {status&&<p role="status">{status}</p>}</section>;
 }

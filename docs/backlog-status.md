@@ -46,11 +46,25 @@ M1. Mobil - fysisk akseptansetest (gjenstar).
    registrering etter pauser. Krever tilgang til de fysiske telefonene.
    Ferdig nar begge roller bestar sjekklisten i mobile-reliability.md.
 
-M2. Ekte e-postinvitasjon (neste kjorebare integrasjonstest).
-   Send til et eget testalias pa yngve@bluemint.no. Kontroller levering,
-   avsender noreply@lundehaugenil.no, mobil lenke, valgfri e-post i innmelding,
-   riktig lag og trenerens tilgang. Mock-transport er ikke leveringsbevis.
-   Krever tilgang til sending og innboks/leveringslogg. Ikke gjentatt na.
+M2. Ekte e-postinvitasjon (delvis verifisert, levering gjenstar).
+   Leveringslogg per mottaker er implementert og automatisk testet 18.11:
+   vedvarende meldings-ID, status fra Resend, konkrete feilkategorier og retry.
+   Se invitation-delivery.md for serveroppsett og testavgrensning.
+   18.11 kl. 13.24: brukeren opprettet en utøverinvitasjon til testaliaset.
+   Personlig lenke testet direkte i produksjon ved 390 x 844 mobilvisning:
+   riktig registreringsskjema, valgfritt e-postfelt og ingen horisontal overflow.
+   Registrering fullfort kl. 13.28 uten e-postbekreftelse; videresendt til
+   /athlete. Database bekrefter rollen athlete og laget Lundehaugen IL.
+   Testkontoen Invitasjonstest November er beholdt uten draktnummer.
+   Innboksen, inkludert spam, hadde ingen matchende e-post ved kontroll.
+   Avsender, faktisk levering og klikk fra mottatt e-post er IKKE verifisert.
+   Lenken ble hentet fra invitasjonsraden, ikke fra en mottatt melding.
+   Brukeren bekrefter at UI viste godtatt for sending. Koden bruker bare
+   HTTP-suksess fra Resend som kvittering, ikke en leveringshendelse.
+   Ingen melding funnet ved ny kontroll i innboksen, inkludert spam.
+   Neste kontroll er mottaker, avsender og hendelsesstatus i Resend Emails;
+   nettleserstyringen er fortsatt blokkert av en aktiv foresporsel i helperen.
+   Trener-UI og fysisk mobil gjenstar.
 
 M3. Sikkerhetsherding (gjenstar).
    Vurder eksponert beta_edit_fixture-definer og lekkede passord-innstilling.

@@ -1,0 +1,16 @@
+.delivery-log{border-top:1px solid #d6dbe7;padding-top:20px;min-width:0}
+.delivery-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.delivery-heading h3{margin:0}
+.delivery-list{list-style:none;padding:0;margin:16px 0 0}
+.delivery-list>li{display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,2fr);gap:16px;padding:18px 8px;border-top:1px solid #d6dbe7}
+.delivery-recipient,.delivery-state{min-width:0;overflow-wrap:anywhere}
+.delivery-recipient small{display:block;margin-top:5px}
+.delivery-state>strong,.delivery-warning{display:flex;align-items:flex-start;gap:7px}
+.delivery-state svg,.delivery-warning svg{flex-shrink:0}
+.delivery-state p{margin:6px 0;font-size:14px}
+.delivery-state small{display:block}
+.delivery-state details{margin-top:8px;font-size:12px}
+.delivery-failed{border-left:3px solid #b42338}
+.delivery-danger,.delivery-warning{color:#9f1c34}
+.delivery-success{color:#176b50}
+@media(max-width:640px){.delivery-list>li{grid-template-columns:minmax(0,1fr);gap:12px}.delivery-heading .btn{min-height:42px}}
