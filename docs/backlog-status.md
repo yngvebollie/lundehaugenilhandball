@@ -15,6 +15,10 @@
 - Fulgt opp-status med obligatorisk kort notat i spillerens trenerlogg.
   Delt trenerstatus, tidspunkt/aktor fra server, feil/retry og duplikatvern.
   Nytt kildegrunnlag kan gi et nytt forslag; gamle notater beholdes.
+- Gjenapne en feilmarkert oppfolging fra Fulgt opp. Originalnotatet beholdes;
+  ny hendelse viser trener og tidspunkt. Ny oppfolging kan loggfores igjen.
+  Stale faner og gjentatte klikk kan ikke overskrive nyere oppfolging.
+  Testet begge roller, to trenere, feil/retry og mobilbredde.
 
 ## Verifikasjon av felles historikk
 

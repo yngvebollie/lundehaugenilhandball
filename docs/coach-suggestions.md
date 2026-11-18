@@ -82,3 +82,23 @@ Supabase security advisor for/etter hadde samme eksisterende funn:
   https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 
 Disse innstillingene er ikke endret som del av notatfunksjonen.
+
+## Gjenapning
+
+Fulgt opp har Gjenapne med bekreftelse. Avbryt skriver ingenting. Ved
+bekreftelse legges en ny hendelse til, med serverbestemt trener/tidspunkt
+og referanse til den opprinnelige oppfolgingen. Originalnotatet endres ikke.
+Nyeste hendelse per spiller/forslag avgjor status; eldre hendelser vises
+fortsatt i trenerloggen. Forslag med utgatt kildegrunnlag kan ogsa gjenapnes.
+
+Begge endepunkter serialiserer endringer pa spillerens medlemsrad.
+Gjenapning av samme rad er idempotent. En gammel fane kan ikke gjenapne en
+eldre fullforing etter at en annen trener har fulgt opp igjen. En ny syklus
+krever aktuell gjenapnings-ID ved fullforing og lager et nytt notat.
+Ingen tilgang gis til utovere, andre lag, anonyme eller tilbakekalte trenere.
+
+Verifikasjon: followup-log.mjs tester den faktiske SQL-en med roller i
+PGlite. reopen-followup.cjs tester avbryt, feil/retry, originalnotat,
+reload, ny fullforing, to trenere, gammel fane, utgatt grunnlag, begge roller
+og 360 px. Dialogskjermbildet er kontrollert visuelt. De eksisterende
+nettlesertestene for fullforing og trener-/utoverflyten er kjort pa nytt.

@@ -3,8 +3,10 @@ import type {RatingRow} from "./coach-feedback";
 import type {Plan} from "./development/model";
 import type {RecordedActivity} from "./recorded-activity";
 
-export type Suggestion={id:string;athlete:string;kind:"goals"|"ratings"|"activity";priority:number;day:string;title:string;evidence:string;action:string;href:string;signals:string[]};
-export function followedUp(s:Suggestion,logs:{athlete:string;followup:{key:string;signals:string[]}}[]){return logs.some(r=>r.athlete===s.athlete&&r.followup.key===s.id&&s.signals.every(k=>r.followup.signals.includes(k)));}
+export type Suggestion={id:string;athlete:string;kind:"goals"|"ratings"|"activity";priority:number;day:string;title:string;evidence:string;action:string;href:string;signals:string[];cycle?:string};
+export type FollowupState={id:number|string;athlete:string;followup:{key:string;signals:string[];state?:"completed"|"reopened";cycle?:string;reopens?:string}};
+export function latestFollowups<T extends FollowupState>(logs:T[]){const seen=new Set<string>();return logs.filter(r=>{const key=JSON.stringify([r.athlete,r.followup.key]);if(seen.has(key))return false;seen.add(key);return true;});}
+export function followedUp(s:Suggestion,logs:FollowupState[]){return latestFollowups(logs).some(r=>r.athlete===s.athlete&&r.followup.key===s.id&&r.followup.state!=="reopened"&&s.signals.every(k=>r.followup.signals.includes(k)));}
 const localDate=(value:string)=>{const d=new Date(value);return Number.isNaN(d.valueOf())?"":new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Oslo"}).format(d);};
 export function coachSuggestions(data:Snapshot,records:RecordedActivity[],ratings:RatingRow[],plans:Record<string,Plan>,day:string,from:string,recent:string,person?:string):Suggestion[]{
  if(data.me.role!=="coach")return [];

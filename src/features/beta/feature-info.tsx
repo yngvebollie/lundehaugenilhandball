@@ -7,7 +7,7 @@ const topics = {
   "followup": [
     "Oppfølgingsforslag",
     "Forslagene bygger på avtalte aktive mål, øvelsesvurderinger på 1–2 stjerner siste 30 dager og registrert fravær eller hard intensitet siste sju dager. Åpne grunnlaget og avklar med spilleren.",
-    "Kun trenere ser forslagene og notatene. Marker som fulgt opp lagrer notatet i spillerens trenerlogg. Nytt grunnlag kan gi et nytt forslag. Ingen melding sendes og ingen treningsplan eller mål endres. Manglende registrering betyr ikke fravær, og stjerner eller antall øvinger bekrefter ikke mestring."
+    "Kun trenere ser forslagene og notatene. Marker som fulgt opp lagrer notatet i spillerens trenerlogg. Under Fulgt opp kan du velge Gjenåpne. Det opprinnelige notatet beholdes, og navn og tidspunkt for gjenåpningen lagres i trenerloggen. Nytt grunnlag kan gi et nytt forslag. Ingen melding sendes og ingen treningsplan eller mål endres. Manglende registrering betyr ikke fravær, og stjerner eller antall øvinger bekrefter ikke mestring."
   ],
   "agenda": [
     "Dagens oversikt",
