@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import {registerHooks} from "node:module";
+registerHooks({resolve(s,c,next){if(s==="./court/model"&&c.parentURL?.endsWith("recorded-activity.ts")||s==="../development/model"&&c.parentURL?.endsWith("court/model.ts"))return next(s+".ts",c);return next(s,c);}});
+const {recordedActivities}=await import("../src/lib/recorded-activity.ts");
+const data={me:{id:"coach",squad:"t",role:"coach"},roster:[{id:"a",squad:"t",role:"athlete"},{id:"b",squad:"t",role:"athlete"},{id:"x",squad:"other",role:"athlete"}],plans:[{id:"s",athlete:"a",squad:"t",day:"2026-11-17",title:"Styrke",minutes:50,exercises:["Push-up"]}]};
+const shared={title:"Publisert trening",start:"2026-11-17T17:00:00Z",items:[{work:5400,setup:0}]};
+const docs=[{id:"c",published:true,archived:false,audience:["a"],sharedPlan:shared,plan:{...shared,title:"PRIVAT UTKAST",items:[{work:300,setup:0}]}}];
+const log=(event,extra={})=>({event,athlete:"a",source:"court",day:"2026-11-17",category:"team",minutes:75,weight:4,...extra});
+const logs=[log("c"),log("c"),log("s",{source:"assignment",category:"other",minutes:35}),log("removed"),log("future",{day:"2026-12-01"}),log("foreign",{athlete:"x"}),log("b",{athlete:"b"})];
+const rules=[{id:"gym",athlete:"a",team:"t",kind:"gym",title:"Skolegym",minutes:45,checks:{"2026-11-17":{done:true,minutes:30,weight:2},"2026-11-16":{done:false,minutes:0,weight:0}}},{id:"foreign",athlete:"a",team:"other",checks:{"2026-11-17":{done:true,minutes:999,weight:5}}}];
+const run=(d=data,p="a",ds=docs)=>recordedActivities(d,ds,rules,logs,"2026-11-01","2026-12-01","2026-11-18",p);
+const rows=run();assert.equal(rows.length,5);assert.equal(rows.filter(r=>r.event==="c").length,1);assert.equal(rows.find(r=>r.event==="c").title,"Publisert trening");assert.equal(rows.find(r=>r.event==="c").planned,90);assert.equal(rows.find(r=>r.event==="s").minutes,35);assert.equal(rows.find(r=>r.event==="s").planned,50);
+assert.equal(rows.find(r=>r.event==="removed").href,undefined);assert.equal(rows.find(r=>r.event==="removed").planned,null);assert.equal(rows.find(r=>r.day==="2026-11-16").done,false);assert.ok(!JSON.stringify(rows).includes("PRIVAT"));
+const athlete={...data,me:{id:"a",squad:"t",role:"athlete"}},athleteDocs=docs.map(d=>({...d,plan:d.sharedPlan,sharedPlan:undefined,audience:undefined}));
+assert.deepEqual(run(athlete,"a",athleteDocs).map(r=>[r.title,r.minutes,r.planned,r.done]),rows.map(r=>[r.title,r.minutes,r.planned,r.done]));assert.deepEqual(run(athlete,"b",athleteDocs),[]);assert.equal(run(data,"b").length,1);
+const withdrawn=run(data,"a",docs.map(d=>({...d,published:false,sharedPlan:undefined}))).find(r=>r.event==="c");assert.equal(withdrawn.minutes,75);assert.equal(withdrawn.href,undefined);assert.equal(withdrawn.title,"Tidligere lagtrening");
+const moved=run(data,"a",docs.map(d=>({...d,sharedPlan:{...shared,start:"2026-11-18"}}))).find(r=>r.event==="c");assert.equal(moved.planned,null);
+console.log("PASS: same coach/athlete records, actual vs planned, duplicate suppression, team/player scope, skipped/future events, withdrawn and moved sessions without private draft leakage");

@@ -29,7 +29,7 @@ function longDate(day:string) {
 }
 export function AthleteTraining({data,busy,run,initialTab="Today"}:{data:Snapshot;busy:boolean;run:Run;initialTab?:string}){
   const [tab,setTab]=useState<string>(initialTab);
-  useEffect(()=>{if(new URLSearchParams(location.search).has("fixture"))setTab("Kamper");},[]);
+  useEffect(()=>{const q=new URLSearchParams(location.search);if(q.has("fixture"))setTab("Kamper");else if(q.get("vis")==="plan")setTab("Plan");},[]);
   const [selected,setSelected]=useState("");
   const [openChallenges,setOpenChallenges]=useState<Challenge[]>([]),[challengeStart,setChallengeStart]=useState<{id:string;exercise:string}>();
   useEffect(()=>{let live=true;challenges(data).then(list=>{if(live)setOpenChallenges(list.filter(c=>phase(c)==="Aktiv"&&c.exercises?.length));}).catch(()=>{if(live)setOpenChallenges([]);});return()=>{live=false;};},[data]);

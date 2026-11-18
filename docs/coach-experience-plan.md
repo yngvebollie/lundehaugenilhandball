@@ -32,7 +32,9 @@ produktet og innforer ingen automatisk publisering eller helsevurdering.
 
 ## Videre etter denne leveransen
 
-- Full brukertest av forste treningsuke med trener og utover.
+- Automatisert flyttest av planlegging, publisering, registrering og
+  oppfolging bestatt 18.11.2026; se training-journey.md.
+- Felles aktivitetshistorikk og videre prioriteringer: backlog-status.md.
 - Kalender-milepaelen er publisert 18.11.2026. Se calendar-and-home-screen.md.
   Registrerte aktiviteter beholdes som historikk; fremtidige planer kan endres.
 - Personlig oppfolging og anbefalinger basert pa verifiserte data, uten a
