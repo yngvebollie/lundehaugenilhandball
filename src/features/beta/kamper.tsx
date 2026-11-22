@@ -19,6 +19,7 @@ import {Attendance} from "./game-attendance";
 import {CupPlanner} from "./cup-planner";
 import {LiveMatches} from "./live-matches";
 import {HalftimeStatistics,PeriodResults} from "./halftime-results";
+import {FixtureEvents} from "./fixture-events";
 import "./kamper.css";
 
 export function Kamper({data}:{data:Snapshot}){
@@ -151,6 +152,7 @@ function ProfileInfo({r,admin,busy,run,notesOnly}:{notesOnly:boolean;r:Registrat
 }
 function MatchDetail({data,game:g,report,back,reload,profileOf}:{back:string;profileOf:(id:string)=>string|undefined;data:Snapshot;game:Fixture;report?:ReportStatus;reload:()=>Promise<void>}){
   const [section,setSection]=useState("Kamprapport");
+  useEffect(()=>{if(new URLSearchParams(location.search).get("section")==="events")setSection("Hendelser");},[]);
   const [d,setD]=useState<Details>(),[selected,pick]=useState(""),[source,setSource]=useState(""),[name,setName]=useState(""),[num,setNum]=useState(""),[score,setScore]=useState(g.score||"");
   const [busy,setBusy]=useState(false),[note,setNote]=useState("");
   const [form,setForm]=useState<Record<string,PlayerForm>>({});
@@ -163,7 +165,8 @@ function MatchDetail({data,game:g,report,back,reload,profileOf}:{back:string;pro
   const sel=d?.rows.find(p=>p.player_id===selected);
   return <section className="grid"><a href={back}><ArrowLeft size={15}/> Kampoversikt</a><header><small>{g.day} {g.start_time?.slice(0,5)} · <span className={"badge result-"+matchResult(g).kind}>{matchResult(g).label}</span></small><h2>{g.home||data.teams.find(x=>x.id===g.team)?.name} – {g.away||g.opponent} {g.score}</h2><p>{[g.venue,g.competition,g.age_class].filter(Boolean).join(" · ")}</p>
     {g.nif_id&&<a href={"https://www.handball.no/system/kamper/kamp/?matchid="+g.nif_id} target="_blank" rel="noreferrer">Kamp på handball.no <ExternalLink size={14}/></a>}</header>
-    <FixtureEdit game={g} reload={reload}/><nav className="workspace-tabs" aria-label="Kampdetaljer">{["Kampinformasjon","Spillere","Kamprapport"].map(v=><button key={v} className={v===section?"current":""} onClick={()=>setSection(v)}>{v}</button>)}<small className="private-mark">Kun trenere</small></nav>
+    <FixtureEdit game={g} reload={reload}/><nav className="workspace-tabs" aria-label="Kampdetaljer">{["Kampinformasjon","Spillere","Kamprapport","Hendelser"].map(v=><button key={v} className={v===section?"current":""} aria-pressed={v===section} onClick={()=>setSection(v)}>{v}</button>)}<small className="private-mark">Kun trenere</small></nav>
+    {section==="Hendelser"&&<FixtureEvents game={g} data={data} onChange={reload}/>}
     {section==="Kampinformasjon"&&<><div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div><PeriodResults game={g} report={report}/></>}
     {!g.registration&&!g.completed&&g.day<=today()&&<form className="day-strip" onSubmit={e=>{e.preventDefault();void mutate("finished",null,{score},"Sluttresultat lagret.");}}><label>Sluttresultat<input required pattern="[0-9]+ *[-:] *[0-9]+" maxLength={20} placeholder="24-21" value={score} onChange={e=>setScore(e.target.value)}/></label><button disabled={busy} className="btn">Marker ferdig</button></form>}
     <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={async()=>{await Promise.all([read(),reload()]);}}/></div><div hidden={section!=="Spillere"}><div className="grid">

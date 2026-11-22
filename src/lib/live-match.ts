@@ -17,6 +17,7 @@ export type MatchEvent = {
   type: MatchEventType;
   side?: MatchSide;
   playerId?: string;
+  playerName?: string;
   number?: number;
   outcome?: PenaltyOutcome;
   label?: string;
@@ -29,6 +30,9 @@ export type LiveMatch = {
   clock: MatchClock;
   events: MatchEvent[];
   finalized: boolean;
+  eventOrigin?: "manual" | "api";
+  importDigest?: string;
+  periodMinutes?: number;
 };
 
 export const eventNames: Record<Exclude<MatchEventType, "clock">, string> = {

@@ -1,5 +1,5 @@
 import {useState} from "react";
-import type {Snapshot} from "@/lib/beta";
+import {today, type Snapshot} from "@/lib/beta";
 import type {Fixture} from "@/lib/match-journal";
 import {liveScore, type LiveMatch, type MatchTeam} from "@/lib/live-match";
 import {LiveMatchLineup} from "./live-match-lineup";
@@ -46,7 +46,15 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
         <header className="competition-heading"><h2>Logg kamp</h2>
           <button className="btn primary" type="button" disabled={storage.loading} onClick={() => setEditing(true)}>+ Opprett kamp</button></header>
         {!storage.loading && !storage.rows.length && <p>Ingen kamper er ført her ennå.</p>}
-        {storage.rows.map(({id, document: match}) => <button type="button" className="btn live-match-row" key={id}
+        {fixtures.filter(game=>!game.completed&&game.day>=today()&&!storage.rows.some(row=>row.id===game.id))
+          .sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||"")).slice(0,8).map(game=>
+          <a className="btn live-match-row" key={game.id} href={"/match?game="+encodeURIComponent(game.id)+"&section=events"}>
+            <span><strong>{game.home||"Hjemmelag"} – {game.away||game.opponent}</strong><small>{game.day}</small></span>Før hendelser
+          </a>)}
+        {storage.rows.map(({id, document: match}) => fixtures.some(game=>game.id===id)?
+          <a className="btn live-match-row" key={id} href={"/match?game="+encodeURIComponent(id)+"&section=events"}>
+            <span><strong>{match.home.name} – {match.away.name}</strong><small>{match.date} · Åpne hendelser</small></span><b>{liveScore(match.events)}</b>
+          </a>:<button type="button" className="btn live-match-row" key={id}
           onClick={() => setSelected(id)}>
           <span><strong>{match.home.name} – {match.away.name}</strong><small>{match.date} · {match.finalized ? "Ferdigstilt" :
             match.clock.status === "finished" ? "Til kontroll" : match.clock.status === "ready" ? "Klar til start" : "Påbegynt"}</small></span>
