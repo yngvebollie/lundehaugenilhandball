@@ -81,3 +81,9 @@ export function fixtureScorers(events:MatchEvent[]) {
   }
   return [...players.values()].sort((a,b)=>b.first+b.second-a.first-a.second);
 }
+
+export function applyFixtureImport(match:LiveMatch, incoming:ReturnType<typeof parseFixtureEvents>, origin:"manual"|"api") {
+  if(origin==="api"&&(match.eventOrigin==="manual"||(!match.eventOrigin&&match.events.length>0))) return match;
+  if(match.importDigest===incoming.digest&&(origin==="api"||match.eventOrigin==="manual")) return match;
+  return {...match,eventOrigin:origin,events:incoming.events,importDigest:incoming.digest,periodMinutes:incoming.periodMinutes};
+}

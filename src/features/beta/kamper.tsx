@@ -20,6 +20,7 @@ import {CupPlanner} from "./cup-planner";
 import {LiveMatches} from "./live-matches";
 import {HalftimeStatistics,PeriodResults} from "./halftime-results";
 import {FixtureEvents} from "./fixture-events";
+import {FixtureReportReading} from "./fixture-event-stats";
 import "./kamper.css";
 
 export function Kamper({data}:{data:Snapshot}){
@@ -169,7 +170,10 @@ function MatchDetail({data,game:g,report,back,reload,profileOf}:{back:string;pro
     {section==="Hendelser"&&<FixtureEvents game={g} data={data} onChange={reload}/>}
     {section==="Kampinformasjon"&&<><div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div><PeriodResults game={g} report={report}/></>}
     {!g.registration&&!g.completed&&g.day<=today()&&<form className="day-strip" onSubmit={e=>{e.preventDefault();void mutate("finished",null,{score},"Sluttresultat lagret.");}}><label>Sluttresultat<input required pattern="[0-9]+ *[-:] *[0-9]+" maxLength={20} placeholder="24-21" value={score} onChange={e=>setScore(e.target.value)}/></label><button disabled={busy} className="btn">Marker ferdig</button></form>}
-    <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={async()=>{await Promise.all([read(),reload()]);}}/></div><div hidden={section!=="Spillere"}><div className="grid">
+    <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={async()=>{await Promise.all([read(),reload()]);}}/>
+    {section==="Kamprapport"&&<FixtureReportReading game={g.id} team={g.team} user={data.me.id}
+      ownSide={g.opponent.trim().toLocaleLowerCase("nb-NO")===g.away?.trim().toLocaleLowerCase("nb-NO")?"home":"away"}/>}</div>
+    <div hidden={section!=="Spillere"}><div className="grid">
     <div className="feature-heading"><FeatureInfo topic="stats"><h3>Spillerstatistikk</h3></FeatureInfo>{g.completed&&<a href={"/merker?game="+g.id}>Koble utøver til kampmerker</a>}</div>
     {d&&<Attendance data={data} match={g.id} names={d.rows.filter(confirmed).map(p=>p.name)} played={new Set(d.rows.filter(confirmed).map(p=>profileOf(p.player_id)?.split("athlete=")[1]||p.player_id))}/>}
     {d&&<PlayerList profileOf={profileOf} rows={d.rows} form={form} selected={selected} pick={pick} day={g.day}/>}

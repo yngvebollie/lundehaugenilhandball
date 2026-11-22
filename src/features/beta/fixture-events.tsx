@@ -1,22 +1,24 @@
 import {useEffect, useRef, useState, type FormEvent} from "react";
 import {Volleyball, Square, Timer, Pencil} from "lucide-react";
 import {db, demo, type Snapshot} from "@/lib/beta";
-import {fixtureEventDocument, fixtureScorers, parseFixtureEvents} from "@/lib/fixture-events";
+import {applyFixtureImport, fixtureEventDocument, parseFixtureEvents} from "@/lib/fixture-events";
 import {clockSeconds,eventNames, formatMatchTime, liveScore, matchTimeline, newMatchEvent, parseMatchTime, shirtNumber, type LiveMatch, type MatchClock, type MatchEvent, type MatchSide} from "@/lib/live-match";
 import type {Fixture} from "@/lib/match-journal";
 import type {Report} from "@/lib/report-text";
 import {useLiveMatchStorage} from "./live-match-storage";
+import {FixtureEventStats} from "./fixture-event-stats";
 
 type Props={game:Fixture;data:Snapshot;onChange:()=>Promise<void>};
 
 export function FixtureEvents({game,data,onChange}:Props) {
-  const storage=useLiveMatchStorage(game.team,data.me.id);
+  const storage=useLiveMatchStorage(game.team,data.me.id,game.id);
   const row=storage.rows.find(row=>row.id===game.id);
   const stored=row?.document;
   const match=stored??fixtureEventDocument(game);
   const [draft,setDraft]=useState<MatchEvent|null>(null);
   const [raw,setRaw]=useState("");
   const [side,setSide]=useState<MatchSide>("home");
+  const [origin,setOrigin]=useState<"manual"|"api">("manual");
   const [preview,setPreview]=useState<ReturnType<typeof parseFixtureEvents>|null>(null);
   const [error,setError]=useState("");
   const [tab,setTab]=useState<"events"|"stats">("events");
@@ -25,6 +27,7 @@ export function FixtureEvents({game,data,onChange}:Props) {
   const roster=data.roster.filter(p=>p.role==="athlete"&&p.squad===game.team);
   const ownSide=game.opponent.trim().toLocaleLowerCase("nb-NO")===game.away?.trim().toLocaleLowerCase("nb-NO")?"home":"away";
   const timeline=matchTimeline(match.events);
+  const manualProtected=origin==="api"&&(match.eventOrigin==="manual"||(!match.eventOrigin&&match.events.length>0));
   useEffect(()=>{
     if(!refreshAfterSave.current||storage.pending||storage.syncing||storage.saveError)return;
     refreshAfterSave.current=false;
@@ -75,7 +78,7 @@ export function FixtureEvents({game,data,onChange}:Props) {
 
   return <section className="grid fixture-event-section">
     <div className="competition-heading"><div><h3>Hendelser</h3>
-      <small>{match.events.length} hendelser · {match.home.name} {liveScore(match.events)} {match.away.name}</small></div>
+      <small>{match.events.length} hendelser · {match.home.name} {liveScore(match.events)} {match.away.name}{match.eventOrigin==="api"?" · Importert feed":match.eventOrigin==="manual"?" · Manuell logg":""}</small></div>
       <button className="btn primary" type="button" disabled={storage.loading||!!draft} onClick={()=>setDraft({
         ...newMatchEvent(match.clock,"goal"),side:ownSide,
       })}>Legg til hendelse</button>
@@ -120,7 +123,7 @@ export function FixtureEvents({game,data,onChange}:Props) {
             <Icon size={15} aria-hidden="true"/><span><strong>{identity||team||type}</strong><small>{[type,identity?team:""].filter(Boolean).join(" · ")}</small></span><Pencil size={13} aria-hidden="true"/>
           </button></td><td><b>{home}–{away}</b></td>
         </EventRows>;
-      })}</tbody></table></div>:!storage.loading&&<p>Ingen hendelser registrert på denne kampen.</p>):<FixtureEventStats match={match}/>}
+      })}</tbody></table></div>:!storage.loading&&<p>Ingen hendelser registrert på denne kampen.</p>):<FixtureEventStats match={match} ownSide={ownSide}/>}
     {tab==="events"&&match.events.some(event=>event.id.startsWith("json:"))&&<small>* Importert tid er oppgitt med minuttpresisjon.</small>}
     <details className="library-tools"><summary>Importer hendelser fra JSON</summary>
       <div className="grid">
@@ -131,14 +134,18 @@ export function FixtureEvents({game,data,onChange}:Props) {
         <label>Hvilket lag er «home» i filen?<select value={side} onChange={e=>{setSide(e.target.value==="home"?"home":"away");setPreview(null);}}>
           <option value="home">{match.home.name}</option><option value="away">{match.away.name}</option>
         </select></label>
+        <label>Kilde<select value={origin} onChange={e=>{setOrigin(e.target.value==="api"?"api":"manual");setPreview(null);}}>
+          <option value="manual">Manuelt innsamlet</option><option value="api">Bearbeidet feed-eksport</option>
+        </select></label>
         <button type="button" className="btn" disabled={!raw||storage.loading} onClick={()=>void validateImport()}>Forhåndsvis import</button>
         {preview&&<div className="grid">
           <p>{preview.events.length} hendelser · {match.home.name} {liveScore(preview.events)} {match.away.name}</p>
           {preview.warning&&<p role="alert">{preview.warning}</p>}
-          {match.importDigest===preview.digest?<p>Filen er allerede importert. Ingen nye hendelser legges til.</p>:<>
+          {manualProtected?<p>Den manuelle loggen beholdes. Import fra feed kan ikke erstatte den.</p>:
+           match.importDigest===preview.digest&&(origin==="api"||match.eventOrigin==="manual")?<p>Filen er allerede importert. Ingen nye hendelser legges til.</p>:<>
             {match.events.length>0&&<p>Importen vil erstatte de {match.events.length} lagrede hendelsene.</p>}
             <button type="button" className="btn primary" onClick={()=>{
-              if(save(previous=>({...previous,eventOrigin:"manual",events:preview.events,importDigest:preview.digest,periodMinutes:preview.periodMinutes})))setPreview(null);
+              if(save(previous=>applyFixtureImport(previous,preview,origin)))setPreview(null);
             }}>{match.events.length?"Bekreft og erstatt hendelser":"Bekreft import"}</button>
           </>}
         </div>}
@@ -207,52 +214,3 @@ function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove}:
   </form>;
 }
 
-function FixtureEventStats({match}:{match:LiveMatch}){
-  const timeline=matchTimeline(match.events),scorers=fixtureScorers(match.events);
-  const [minute,setMinute]=useState(0);
-  const period=(match.periodMinutes??20)*60;
-  const time=(e:MatchEvent)=>(e.half-1)*period+e.seconds;
-  const duration=Math.max(period*2,...timeline.map(row=>time(row.event)));
-  const total=Math.max(1,...timeline.flatMap(row=>[row.home,row.away]));
-  const x=(t:number)=>24+t/duration*350,y=(n:number)=>113-n/total*94;
-  const current=timeline.filter(row=>time(row.event)<=minute*60).at(-1);
-  const maxPlayer=Math.max(1,...scorers.map(p=>p.first+p.second));
-  const goals=(half:1|2,side:MatchSide)=>scorers.filter(p=>p.side===side).reduce((n,p)=>n+(half===1?p.first:p.second),0);
-  let lead=0,run=0,last:MatchSide|undefined;
-  const streak={home:0,away:0},cards={home:0,away:0},suspensions={home:0,away:0};
-  timeline.forEach(({event,home,away},index)=>{
-    lead=Math.max(lead,Math.abs(home-away));const side=event.side;if(!side)return;
-    if(event.type==="warning")cards[side]++;
-    if(event.type==="suspension")suspensions[side]++;
-    if(home+away>((timeline[index-1]?.home??0)+(timeline[index-1]?.away??0))){
-      run=last===side?run+1:1;streak[side]=Math.max(streak[side],run);last=side;
-    }
-  });
-  if(!timeline.length)return <p>Ingen hendelser å beregne statistikk fra ennå.</p>;
-  return <div className="grid">
-    <h3>Målutvikling</h3><div className="day-strip"><b data-side="home">{match.home.name}</b><b data-side="away">{match.away.name}</b></div>
-    <svg className="fixture-event-graph" viewBox="0 0 400 136" role="img" aria-label="Akkumulert målscore per lag">
-      <line x1={24} y1={113} x2={374} y2={113} stroke="currentColor"/>
-      <line x1={x(period)} y1={14} x2={x(period)} y2={113} stroke="currentColor" strokeDasharray="3 3"/>
-      <text x={x(period)} y={130} textAnchor="middle">Pause</text><text x={24} y={130}>0′</text><text x={374} y={130} textAnchor="end">{Math.ceil(duration/60)}′</text>
-      {(["home","away"] as const).map(side=>{
-        const steps=timeline.map(row=>"H"+x(time(row.event))+"V"+y(row[side])).join("");
-        return <path key={side} data-side={side} d={"M"+x(0)+" "+y(0)+steps+"H"+x(duration)} fill="none" strokeWidth={2.5}/>;
-      })}
-      <line x1={x(minute*60)} y1={14} x2={x(minute*60)} y2={113} stroke="currentColor"/>
-    </svg>
-    <label>Kampminutt <input aria-label="Kampminutt" type="range" min={0} max={Math.ceil(duration/60)} value={minute} onChange={e=>setMinute(Number(e.target.value))}/></label>
-    <output>{minute}′ · {current?.home??0}–{current?.away??0}</output>
-    <table className="table"><caption>Mål per omgang</caption><thead><tr><th scope="col">Lag</th><th scope="col">1. omgang</th><th scope="col">2. omgang</th></tr></thead>
-      <tbody>{(["home","away"] as const).map(side=><tr key={side}><th scope="row">{match[side].name}</th>
-        {([1,2] as const).map(half=><td key={half}><meter min={0} max={total} value={goals(half,side)} aria-label={match[side].name+" "+half+". omgang"}/> {goals(half,side)}</td>)}</tr>)}</tbody></table>
-    <table className="table"><caption>Mål per spiller</caption><thead><tr><th scope="col">Spiller</th><th scope="col">1.</th><th scope="col">2.</th><th scope="col">Totalt</th></tr></thead>
-      <tbody>{scorers.map((p,i)=><tr key={i}><th scope="row">{p.playerId?<a href={"/spillere?athlete="+encodeURIComponent(p.playerId)}>{p.name}</a>:p.name}
-        <small> {p.number!==undefined?"#"+p.number+" · ":""}{match[p.side].name}</small></th><td>{p.first}</td><td>{p.second}</td>
-        <td><meter min={0} max={maxPlayer} value={p.first+p.second} aria-label={"Mål "+p.name}/> {p.first+p.second}</td></tr>)}</tbody></table>
-    <table className="table"><caption>Kampstatistikk</caption><thead><tr><th scope="col">Hendelse</th><th scope="col">{match.home.name}</th><th scope="col">{match.away.name}</th></tr></thead>
-      <tbody>{[["Gule kort",cards],["2 min",suspensions],["Lengste målrekke",streak]].map(([label,counts])=>{
-        const values=counts as typeof cards;return <tr key={String(label)}><th scope="row">{String(label)}</th><td>{values.home}</td><td>{values.away}</td></tr>;
-      })}</tbody></table><small>Største målforskjell i kampen: {lead}</small>
-  </div>;
-}

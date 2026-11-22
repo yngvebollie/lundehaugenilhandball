@@ -24,7 +24,11 @@ function mergeRows(rows: MatchRow[], drafts: MatchRow[]) {
   return [...matches.values()].sort((a, b) => b.document.date.localeCompare(a.document.date));
 }
 
-async function readMatches(team: string) {
+async function readMatches(team: string, id?:string) {
+  if(id){
+    const {data}=await db!.from("beta_live_match_logs").select(columns).eq("team",team).eq("id",id).maybeSingle().throwOnError();
+    return data?[data as MatchRow]:[];
+  }
   const matches: MatchRow[] = [];
   for (let offset = 0; ; offset += 100) {
     const {data} = await db!.from("beta_live_match_logs").select(columns).eq("team", team)
@@ -50,7 +54,7 @@ async function upload(team: string, row: MatchRow) {
   }
 }
 
-export function useLiveMatchStorage(team: string, user: string) {
+export function useLiveMatchStorage(team: string, user: string, id?:string) {
   const key = "live-matches:" + team + ":" + user;
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,12 +100,12 @@ export function useLiveMatchStorage(team: string, user: string) {
     setLoading(true);
     setLoadError("");
     try {
-      const local = readLocal(key);
+      const local = readLocal(key).filter(row=>!id||row.id===id);
       latest.current = mergeRows(latest.current, local);
       setRows(latest.current);
       setPending(!demo && local.length > 0);
-      const remote = demo ? [] : await readMatches(team);
-      latest.current = mergeRows(mergeRows(remote, latest.current), readLocal(key));
+      const remote = demo ? [] : await readMatches(team,id);
+      latest.current = mergeRows(mergeRows(remote, latest.current), readLocal(key).filter(row=>!id||row.id===id));
       setRows(latest.current);
     } catch {
       setLoadError("Kunne ikke hente kampene fra serveren.");
@@ -109,7 +113,7 @@ export function useLiveMatchStorage(team: string, user: string) {
       setLoading(false);
     }
     void flush();
-  }, [flush, key, team]);
+  }, [flush, id, key, team]);
 
   useEffect(() => {
     void load();
