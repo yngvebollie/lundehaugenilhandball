@@ -18,6 +18,7 @@ import {SquadStats} from "./squad-stats";
 import {Attendance} from "./game-attendance";
 import {CupPlanner} from "./cup-planner";
 import {LiveMatches} from "./live-matches";
+import {HalftimeStatistics,PeriodResults} from "./halftime-results";
 import "./kamper.css";
 
 export function Kamper({data}:{data:Snapshot}){
@@ -63,7 +64,7 @@ export function Kamper({data}:{data:Snapshot}){
   const registered=regs.find(r=>r.org_id===inputId);
   const aggregate=profile==="all"&&!adding&&!id;
   const logging=view==="log";
-  const matchMenu=<nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"],["log","Logg kamp"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{},...v==="log"&&active?{reg:active.id}:{}})} key={v}>{n}</a>)}</nav>;
+  const matchMenu=<nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["halftime","Kampdata"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"],["log","Logg kamp"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{},...v==="log"&&active?{reg:active.id}:{}})} key={v}>{n}</a>)}</nav>;
   function add(){setOrg("");setCup("");setSquadName("");setNote("");setAdding(true);setView("teams");setId("");history.replaceState(null,"","/match?view=teams");}
   return <div className={"squad-space"+(id?" detail-mode":"")}>
     {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><FeatureInfo topic="matches"><h3>Lag</h3></FeatureInfo>
@@ -77,12 +78,12 @@ export function Kamper({data}:{data:Snapshot}){
       {past?<label>Historisk sesong<select value={past} onChange={e=>{history.replaceState(null,"","/match?history="+e.target.value);setPast(Number(e.target.value));}}>{seasons.options.map(o=><option value={o.id} key={o.id}>{shortSeason(o.label)}</option>)}</select></label>:<SeasonPicker key={String(seasons.active)+squad} settings={seasons} admin={admin} busy={busy} onSave={(sid,label)=>run(async()=>{await saveSeason(squad,sid,label);choose("");setNote("Aktiv sesong: "+shortSeason(label));})}/>}
       {seasons.active&&<button type="button" className="btn" aria-pressed={!!past} onClick={()=>{const n=past?0:seasons.active||0;history.replaceState(null,"",n?"/match?history="+n:"/match");setPast(n);setView("");setAdding(false);}}>{past?"Til aktive lag":"Se historikk"}</button>}</div>}
     {note&&<p role="status" className="km-status">{note}</p>}
-    {id?game?<MatchDetail key={game.id} data={data} game={game} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:logging?<>{matchMenu}<LiveMatches data={data} fixtures={all} teams={[
+    {id?game?<MatchDetail key={game.id} data={data} game={game} report={reports[game.id]} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:view==="halftime"?<>{matchMenu}<HalftimeStatistics games={all} reports={reports}/></>:logging?<>{matchMenu}<LiveMatches data={data} fixtures={all} teams={[
       ...(active?[{key:"nif:"+active.id,name:label(active)}]:[]),
       ...(localTeam?[{key:"group:"+squad,name:localTeam}]:[]),
       ...data.teams.filter(team=>team.id!==squad).map(team=>({key:"group:"+team.id,name:team.name})),
       ...shown.filter(r=>r.id!==active?.id).map(r=>({key:"nif:"+r.id,name:label(r)})),
-    ]}/></>:aggregate?<LeagueOverview regs={shown} games={all} label={label}/>:<>
+    ]}/></>:aggregate?<>{matchMenu}<LeagueOverview regs={shown} games={all} label={label}/></>:<>
       <header className="squad-title"><div><h1>{title}</h1>{active&&admin&&!past&&<TeamSeasonActions key={active.id} team={active} name={title} season={shortSeason(seasons.options.find(o=>o.id===active.season)?.label||"")} updated={async ended=>{await load();if(ended)choose("all");setNote(ended?"Laget ligger nå i sesonghistorikken.":"Lagnavnet er oppdatert.");}}/>}{active&&<small className="id-tag">NIF {active.org_id}</small>}</div>
         <div className="day-strip">{active&&<a className="btn" href={"https://www.handball.no/system/kamper/lag/?lagid="+active.org_id} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Terminliste hos NHF</a>}<button disabled={busy||!!past||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></div></header>
       {matchMenu}
@@ -148,7 +149,7 @@ function ProfileInfo({r,admin,busy,run,notesOnly}:{notesOnly:boolean;r:Registrat
     {!notesOnly&&<label>Profilens liga-ID-er<input readOnly={!admin} value={ids} onChange={e=>setIds(e.target.value)}/></label>}<label>Lagnotat<textarea readOnly={!admin} maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
     {admin&&<button className="btn" disabled={busy}><Save size={16}/>Lagre lagprofil</button>}{saved&&<p role="status">{saved}</p>}</form>;
 }
-function MatchDetail({data,game:g,back,reload,profileOf}:{back:string;profileOf:(id:string)=>string|undefined;data:Snapshot;game:Fixture;reload:()=>Promise<void>}){
+function MatchDetail({data,game:g,report,back,reload,profileOf}:{back:string;profileOf:(id:string)=>string|undefined;data:Snapshot;game:Fixture;report?:ReportStatus;reload:()=>Promise<void>}){
   const [section,setSection]=useState("Kamprapport");
   const [d,setD]=useState<Details>(),[selected,pick]=useState(""),[source,setSource]=useState(""),[name,setName]=useState(""),[num,setNum]=useState(""),[score,setScore]=useState(g.score||"");
   const [busy,setBusy]=useState(false),[note,setNote]=useState("");
@@ -163,9 +164,9 @@ function MatchDetail({data,game:g,back,reload,profileOf}:{back:string;profileOf:
   return <section className="grid"><a href={back}><ArrowLeft size={15}/> Kampoversikt</a><header><small>{g.day} {g.start_time?.slice(0,5)} · <span className={"badge result-"+matchResult(g).kind}>{matchResult(g).label}</span></small><h2>{g.home||data.teams.find(x=>x.id===g.team)?.name} – {g.away||g.opponent} {g.score}</h2><p>{[g.venue,g.competition,g.age_class].filter(Boolean).join(" · ")}</p>
     {g.nif_id&&<a href={"https://www.handball.no/system/kamper/kamp/?matchid="+g.nif_id} target="_blank" rel="noreferrer">Kamp på handball.no <ExternalLink size={14}/></a>}</header>
     <FixtureEdit game={g} reload={reload}/><nav className="workspace-tabs" aria-label="Kampdetaljer">{["Kampinformasjon","Spillere","Kamprapport"].map(v=><button key={v} className={v===section?"current":""} onClick={()=>setSection(v)}>{v}</button>)}<small className="private-mark">Kun trenere</small></nav>
-    {section==="Kampinformasjon"&&<div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div>}
+    {section==="Kampinformasjon"&&<><div className="match-summary"><strong>ResPIN {g.nif_id||"–"}</strong><span>{g.day} · {g.start_time?.slice(0,5)||"–"}</span><span>{g.venue||"Ukjent hall"}</span></div><PeriodResults game={g} report={report}/></>}
     {!g.registration&&!g.completed&&g.day<=today()&&<form className="day-strip" onSubmit={e=>{e.preventDefault();void mutate("finished",null,{score},"Sluttresultat lagret.");}}><label>Sluttresultat<input required pattern="[0-9]+ *[-:] *[0-9]+" maxLength={20} placeholder="24-21" value={score} onChange={e=>setScore(e.target.value)}/></label><button disabled={busy} className="btn">Marker ferdig</button></form>}
-    <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={read}/></div><div hidden={section!=="Spillere"}><div className="grid">
+    <div hidden={section!=="Kamprapport"}><ReportEditor game={g.fixture_source?{...g,...g.fixture_source}:g} data={data} onSaved={async()=>{await Promise.all([read(),reload()]);}}/></div><div hidden={section!=="Spillere"}><div className="grid">
     <div className="feature-heading"><FeatureInfo topic="stats"><h3>Spillerstatistikk</h3></FeatureInfo>{g.completed&&<a href={"/merker?game="+g.id}>Koble utøver til kampmerker</a>}</div>
     {d&&<Attendance data={data} match={g.id} names={d.rows.filter(confirmed).map(p=>p.name)} played={new Set(d.rows.filter(confirmed).map(p=>profileOf(p.player_id)?.split("athlete=")[1]||p.player_id))}/>}
     {d&&<PlayerList profileOf={profileOf} rows={d.rows} form={form} selected={selected} pick={pick} day={g.day}/>}

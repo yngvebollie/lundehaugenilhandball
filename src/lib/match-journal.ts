@@ -36,10 +36,13 @@ function demoPlayers(m:Fixture){
     Object.assign(row,{report_listed:true,report_played:p.played,report_goals:p.total,report_warnings:p.warning==null?null:Number(p.warning),report_suspensions:p.suspensions});
   }return rows;
 }
-export type ReportStatus={revision:number|null;rows:number};
+export type ReportStatus={revision:number|null;rows:number;halfHome?:number|null;halfAway?:number|null};
 export async function reportOverview(team:string,fixtures:Fixture[]):Promise<Record<string,ReportStatus>>{
-  if(demo)return Object.fromEntries(fixtures.map(g=>[g.id,{revision:JSON.parse(sessionStorage.getItem("kamper-private-report:"+team+":"+g.id)||"null")?.revision??null,
-    rows:demoPlayers(g).filter(p=>p.report_listed||p.stats).length}]));
+  if(demo)return Object.fromEntries(fixtures.map(g=>{
+    const saved=JSON.parse(sessionStorage.getItem("kamper-private-report:"+team+":"+g.id)||"null") as {revision:number;reviewed:Report}|null;
+    return [g.id,{revision:saved?.revision??null,rows:demoPlayers(g).filter(p=>p.report_listed||p.stats).length,
+      halfHome:saved?.reviewed.match.half_home,halfAway:saved?.reviewed.match.half_away}];
+  }));
   const result:Record<string,ReportStatus>={};
   for(let i=0;i<fixtures.length;i+=500)Object.assign(result,(await db!.rpc("beta_report_overview",{t:team,ids:fixtures.slice(i,i+500).map(g=>g.id)}).throwOnError()).data);
   return result;
