@@ -17,6 +17,7 @@ import {OpponentRegister} from "./opponent-register";
 import {SquadStats} from "./squad-stats";
 import {Attendance} from "./game-attendance";
 import {CupPlanner} from "./cup-planner";
+import {LiveMatches} from "./live-matches";
 import "./kamper.css";
 
 export function Kamper({data}:{data:Snapshot}){
@@ -61,6 +62,8 @@ export function Kamper({data}:{data:Snapshot}){
   let inputId:number|undefined;try{if(org.trim())inputId=handballId(org,"lag");}catch{/* Show invalid input on submit. */}
   const registered=regs.find(r=>r.org_id===inputId);
   const aggregate=profile==="all"&&!adding&&!id;
+  const logging=view==="log";
+  const matchMenu=<nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"],["log","Logg kamp"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{},...v==="log"&&active?{reg:active.id}:{}})} key={v}>{n}</a>)}</nav>;
   function add(){setOrg("");setCup("");setSquadName("");setNote("");setAdding(true);setView("teams");setId("");history.replaceState(null,"","/match?view=teams");}
   return <div className={"squad-space"+(id?" detail-mode":"")}>
     {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><FeatureInfo topic="matches"><h3>Lag</h3></FeatureInfo>
@@ -68,15 +71,20 @@ export function Kamper({data}:{data:Snapshot}){
       {shown.map(r=><button className={!aggregate&&active?.id===r.id?"current":""} key={r.id} aria-pressed={!aggregate&&active?.id===r.id} onClick={()=>choose(r.id)}><span><strong>{label(r)}</strong><small>NIF {r.org_id}</small></span><ChevronRight size={16}/></button>)}
       {!past&&admin&&<button className="rail-add" onClick={add}><Plus size={16}/>Legg til lag</button>}</aside>}
     <section className="grid kamper">
-    {!id&&shown.length>0&&<label className="squad-compact">Aktiv NIF-lagprofil<select value={aggregate?"all":active?.id||""} onChange={e=>choose(e.target.value)}><option value="all">Alle lag</option>{shown.map(r=><option key={r.id} value={r.id}>{label(r)} · {r.org_id}</option>)}</select></label>}
-    {!id&&<div className="season-toolbar">
+    {!id&&!logging&&shown.length>0&&<label className="squad-compact">Aktiv NIF-lagprofil<select value={aggregate?"all":active?.id||""} onChange={e=>choose(e.target.value)}><option value="all">Alle lag</option>{shown.map(r=><option key={r.id} value={r.id}>{label(r)} · {r.org_id}</option>)}</select></label>}
+    {!id&&!logging&&<div className="season-toolbar">
       {past?<label>Historisk sesong<select value={past} onChange={e=>{history.replaceState(null,"","/match?history="+e.target.value);setPast(Number(e.target.value));}}>{seasons.options.map(o=><option value={o.id} key={o.id}>{shortSeason(o.label)}</option>)}</select></label>:<SeasonPicker key={String(seasons.active)+squad} settings={seasons} admin={admin} busy={busy} onSave={(sid,label)=>run(async()=>{await saveSeason(squad,sid,label);choose("");setNote("Aktiv sesong: "+shortSeason(label));})}/>}
       {seasons.active&&<button type="button" className="btn" aria-pressed={!!past} onClick={()=>{const n=past?0:seasons.active||0;history.replaceState(null,"",n?"/match?history="+n:"/match");setPast(n);setView("");setAdding(false);}}>{past?"Til aktive lag":"Se historikk"}</button>}</div>}
     {note&&<p role="status" className="km-status">{note}</p>}
-    {id?game?<MatchDetail key={game.id} data={data} game={game} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:aggregate?<LeagueOverview regs={shown} games={all} label={label}/>:<>
+    {id?game?<MatchDetail key={game.id} data={data} game={game} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:logging?<>{matchMenu}<LiveMatches data={data} fixtures={all} teams={[
+      ...(active?[{key:"nif:"+active.id,name:label(active)}]:[]),
+      ...(localTeam?[{key:"group:"+squad,name:localTeam}]:[]),
+      ...data.teams.filter(team=>team.id!==squad).map(team=>({key:"group:"+team.id,name:team.name})),
+      ...shown.filter(r=>r.id!==active?.id).map(r=>({key:"nif:"+r.id,name:label(r)})),
+    ]}/></>:aggregate?<><div className="day-strip"><a className="btn" href="/match?view=log">Logg kamp</a></div><LeagueOverview regs={shown} games={all} label={label}/></>:<>
       <header className="squad-title"><div><h1>{title}</h1>{active&&admin&&!past&&<TeamSeasonActions key={active.id} team={active} name={title} season={shortSeason(seasons.options.find(o=>o.id===active.season)?.label||"")} updated={async ended=>{await load();if(ended)choose("all");setNote(ended?"Laget ligger nå i sesonghistorikken.":"Lagnavnet er oppdatert.");}}/>}{active&&<small className="id-tag">NIF {active.org_id}</small>}</div>
         <div className="day-strip">{active&&<a className="btn" href={"https://www.handball.no/system/kamper/lag/?lagid="+active.org_id} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Terminliste hos NHF</a>}<button disabled={busy||!!past||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></div></header>
-      <nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{}})} key={v}>{n}</a>)}</nav>
+      {matchMenu}
       {view==="cups"?(active?<CupPlanner data={data} reg={active.id} key={active.id}/>:<p>Legg til et lag først.</p>):view==="opponents"?(active?<OpponentRegister key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et lag for å se motstandere.</p>):view==="stats"?(active?<SquadStats profileOf={profileOf} key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et lag for å se statistikk.</p>):view==="teams"||view==="notes"?<>
         {view==="teams"&&!past&&admin&&<details className="library-tools" open={adding}><summary onClick={e=>{e.preventDefault();setAdding(!adding);}}>Legg til lag</summary><form className="km-fields" onSubmit={e=>{e.preventDefault();if(registered){choose(registered.id);return;}void run(async()=>{const r=await register(squad,handballId(org,"lag"),seasons.active||0,leagueIds(cup),squadName);choose(r.id);await sync(r,"Laget "+(r.display_name||r.org_id)+" er lagret. ");setOrg("");setCup("");setSquadName("");});}}>
         <label>NIF lag-ID<input required type="text" placeholder="Lag-ID eller laglenke fra handball.no" value={org} onChange={e=>setOrg(e.target.value)}/></label><label>Lagnavn i sesongen<input value={squadName} maxLength={100} placeholder="F.eks. Hundvåg J14" onChange={e=>setSquadName(e.target.value)}/></label><label>Liga-ID-er (valgfritt)<input placeholder="Serie-ID eller turneringslenke" value={cup} onChange={e=>setCup(e.target.value)}/></label>{registered?<div className="km-existing" role="status"><strong>{inputId} er allerede registrert som {label(registered)}.</strong><span>For et annet lag: lim inn det lagets NHF-lenke i «NIF lag-ID».</span><button className="btn" type="button" onClick={()=>choose(registered.id)}>Åpne {label(registered)} <ChevronRight size={16}/></button></div>:<button disabled={busy||!seasons.active||!org.trim()} className="btn primary">Legg til lag og hent kamper</button>}</form></details>}

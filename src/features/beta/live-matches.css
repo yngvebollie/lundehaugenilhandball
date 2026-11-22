@@ -1,0 +1,28 @@
+.live-matches {min-width:0}
+.live-matches .btn {min-height:44px}
+.live-panel {background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;min-width:0}
+.live-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.live-form label {display:grid;gap:4px;min-width:0}
+.live-form input,.live-form select {width:100%;font-size:16px;min-height:44px}
+.live-form fieldset {border:0;margin:0;padding:0;min-width:0}
+.live-pick-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:4px 12px}
+.live-form .live-pick-list label {display:flex;align-items:center;gap:8px;min-height:44px;overflow-wrap:anywhere}
+.live-form .live-pick-list input {width:18px;height:18px;min-height:0;accent-color:var(--accent)}
+.live-lineup-row {display:grid;grid-template-columns:4rem minmax(0,1fr) auto;align-items:end;gap:6px}
+.live-score {display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;text-align:center;overflow-wrap:anywhere}
+.live-score strong {font-size:clamp(1.65rem,5vw,2.6rem);font-variant-numeric:tabular-nums}
+.live-clock {display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;text-align:center}
+.live-clock strong,.live-timeline time,.live-protocol {font-variant-numeric:tabular-nums}
+.live-player-buttons {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(68px,100%),1fr));gap:6px}
+.live-player-buttons .btn {display:grid;gap:1px;min-height:54px;padding:4px;line-height:1.2;overflow-wrap:anywhere}
+.live-player-buttons .btn strong {font-size:1.22rem}
+.live-player-buttons .btn small {color:inherit}
+.live-match-row.btn {width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;overflow-wrap:anywhere}
+.live-match-row small {display:block;color:var(--muted)}
+.live-timeline {list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.live-timeline .btn {width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;text-align:left;overflow-wrap:anywhere}
+.live-timeline time {white-space:nowrap;color:var(--muted);font-size:.8rem}
+.live-protocol {width:100%;border-collapse:collapse;font-size:clamp(.72rem,2.6vw,.9rem)}
+.live-protocol th,.live-protocol td {border-bottom:1px solid var(--border);padding:7px 3px;text-align:right}
+.live-protocol th:first-child {text-align:left;overflow-wrap:anywhere}
+.live-protocol tfoot {font-weight:700}

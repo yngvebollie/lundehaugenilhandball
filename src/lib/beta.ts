@@ -27,6 +27,11 @@ export async function clubDirectory(data:Snapshot):Promise<Directory>{
     invitations:localRows<{team:string;role:string;email:string;expires:number}>("invite:").filter(i=>teams.some(t=>t.id===i.team&&(i.role==="athlete"||t.admin))).map(i=>({...i,kind:"E-post",expired:i.expires<=Date.now(),expires:new Date(i.expires).toISOString()}))};
 }
 export type Snapshot = { club?:ClubRole;me: Member; teams:Team[]; roster: Member[]; plans: Assignment[]; checks: Check[]; programs:Program[]; feedback:Feedback[]; library:Exercise[]; usage:Usage[];focusMembers:FocusMember[];reviews:WorkoutReview[];notices:Notice[];admins:string[] };
+export async function teamRoster(team: string): Promise<Member[]> {
+  if (!demo) return pages<Member>((start, end) => db!.rpc("beta_team_roster", {team_id: team}).order("id").range(start, end).throwOnError());
+  const memberships = localRows<{id:string;team:string}>("membership:");
+  return demoMembers().filter(member => member.squad === team || memberships.some(link => link.id === member.id && link.team === team));
+}
 const hasAnyConfig = Boolean(env.supabaseUrl || env.supabaseAnonKey);
 export const demo = !hasAnyConfig;
 export const db = hasSupabaseEnv() ? createSupabaseBrowserClient() : null;
