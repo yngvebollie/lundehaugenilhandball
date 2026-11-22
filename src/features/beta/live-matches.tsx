@@ -35,7 +35,9 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
       <button type="button" className="btn" onClick={() => void storage.reload()}>Hent på nytt</button></div>}
     {storage.saveError ? <div className="day-strip"><span role="alert">{storage.saveError}</span>
       {storage.pending && <button type="button" className="btn" onClick={() => void storage.retry()}>Synkroniser på nytt</button>}</div>
-      : storage.syncing && <small role="status">Lagret på enheten. Synkroniserer …</small>}
+      : (active || storage.syncing) && <small className="live-save-status" role="status">
+        {storage.pending ? "Lagret på enheten. Synkroniserer …" : "Alle endringer lagret."}
+      </small>}
     {editing ? <LiveMatchLineup data={data} teams={[...choices.values()]} fixtures={fixtures} previous={previous}
       match={active?.document} onCancel={() => setEditing(false)} onSave={saveLineup}/> :
       active ? <LiveMatchLog key={active.id} match={active.document} editLineup={() => setEditing(true)} close={() => setSelected(null)}

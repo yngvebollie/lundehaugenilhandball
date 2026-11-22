@@ -71,6 +71,7 @@ export function Kamper({data}:{data:Snapshot}){
       {shown.map(r=><button className={!aggregate&&active?.id===r.id?"current":""} key={r.id} aria-pressed={!aggregate&&active?.id===r.id} onClick={()=>choose(r.id)}><span><strong>{label(r)}</strong><small>NIF {r.org_id}</small></span><ChevronRight size={16}/></button>)}
       {!past&&admin&&<button className="rail-add" onClick={add}><Plus size={16}/>Legg til lag</button>}</aside>}
     <section className="grid kamper">
+    {!id&&!logging&&(view===""||aggregate)&&<div className="day-strip"><a className="btn primary" aria-label="Åpne Logg kamp" href={"/match?"+new URLSearchParams({view:"log",...active&&!aggregate?{reg:active.id}:{}})}><ClipboardList size={16} aria-hidden="true"/>Logg kamp</a></div>}
     {!id&&!logging&&shown.length>0&&<label className="squad-compact">Aktiv NIF-lagprofil<select value={aggregate?"all":active?.id||""} onChange={e=>choose(e.target.value)}><option value="all">Alle lag</option>{shown.map(r=><option key={r.id} value={r.id}>{label(r)} · {r.org_id}</option>)}</select></label>}
     {!id&&!logging&&<div className="season-toolbar">
       {past?<label>Historisk sesong<select value={past} onChange={e=>{history.replaceState(null,"","/match?history="+e.target.value);setPast(Number(e.target.value));}}>{seasons.options.map(o=><option value={o.id} key={o.id}>{shortSeason(o.label)}</option>)}</select></label>:<SeasonPicker key={String(seasons.active)+squad} settings={seasons} admin={admin} busy={busy} onSave={(sid,label)=>run(async()=>{await saveSeason(squad,sid,label);choose("");setNote("Aktiv sesong: "+shortSeason(label));})}/>}
@@ -81,7 +82,7 @@ export function Kamper({data}:{data:Snapshot}){
       ...(localTeam?[{key:"group:"+squad,name:localTeam}]:[]),
       ...data.teams.filter(team=>team.id!==squad).map(team=>({key:"group:"+team.id,name:team.name})),
       ...shown.filter(r=>r.id!==active?.id).map(r=>({key:"nif:"+r.id,name:label(r)})),
-    ]}/></>:aggregate?<><div className="day-strip"><a className="btn" href="/match?view=log">Logg kamp</a></div><LeagueOverview regs={shown} games={all} label={label}/></>:<>
+    ]}/></>:aggregate?<LeagueOverview regs={shown} games={all} label={label}/>:<>
       <header className="squad-title"><div><h1>{title}</h1>{active&&admin&&!past&&<TeamSeasonActions key={active.id} team={active} name={title} season={shortSeason(seasons.options.find(o=>o.id===active.season)?.label||"")} updated={async ended=>{await load();if(ended)choose("all");setNote(ended?"Laget ligger nå i sesonghistorikken.":"Lagnavnet er oppdatert.");}}/>}{active&&<small className="id-tag">NIF {active.org_id}</small>}</div>
         <div className="day-strip">{active&&<a className="btn" href={"https://www.handball.no/system/kamper/lag/?lagid="+active.org_id} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Terminliste hos NHF</a>}<button disabled={busy||!!past||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></div></header>
       {matchMenu}

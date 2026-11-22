@@ -1,5 +1,6 @@
 .live-matches {min-width:0}
 .live-matches .btn {min-height:44px}
+.live-save-status {min-height:1.5em}
 .live-panel {background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px;min-width:0}
 .live-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .live-form label {display:grid;gap:4px;min-width:0}
