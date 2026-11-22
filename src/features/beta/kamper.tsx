@@ -18,7 +18,8 @@ import {SquadStats} from "./squad-stats";
 import {Attendance} from "./game-attendance";
 import {CupPlanner} from "./cup-planner";
 import {LiveMatches} from "./live-matches";
-import {HalftimeStatistics,PeriodResults} from "./halftime-results";
+import {PeriodResults} from "./halftime-results";
+import {SeasonMatchStatistics} from "./season-match-statistics";
 import {FixtureEvents} from "./fixture-events";
 import {FixtureReportReading} from "./fixture-event-stats";
 import "./kamper.css";
@@ -66,7 +67,7 @@ export function Kamper({data}:{data:Snapshot}){
   const registered=regs.find(r=>r.org_id===inputId);
   const aggregate=profile==="all"&&!adding&&!id;
   const logging=view==="log";
-  const matchMenu=<nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["halftime","Kampdata"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"],["log","Logg kamp"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{},...v==="log"&&active?{reg:active.id}:{}})} key={v}>{n}</a>)}</nav>;
+  const matchMenu=<nav className="workspace-tabs" aria-label="Kampmeny">{[["","Kamper"],["halftime","Statistikk kamper"],["cups","Turneringer"],["stats","Spillerstatistikk"],["opponents","Motstandere"],["teams","Lagprofil"],["notes","Trenernotater"],["log","Logg kamp"]].map(([v,n])=><a className={view===v?"current":""} href={"/match?"+new URLSearchParams({...v?{view:v}:{},...past?{history:String(past)}:{},...v==="log"&&active?{reg:active.id}:{}})} key={v}>{n}</a>)}</nav>;
   function add(){setOrg("");setCup("");setSquadName("");setNote("");setAdding(true);setView("teams");setId("");history.replaceState(null,"","/match?view=teams");}
   return <div className={"squad-space"+(id?" detail-mode":"")}>
     {!id&&<aside className="squad-rail"><h2>{localTeam}</h2><small>Treningsgruppe</small><FeatureInfo topic="matches"><h3>Lag</h3></FeatureInfo>
@@ -77,10 +78,10 @@ export function Kamper({data}:{data:Snapshot}){
     {!id&&!logging&&(view===""||aggregate)&&<div className="day-strip"><a className="btn primary" aria-label="Åpne Logg kamp" href={"/match?"+new URLSearchParams({view:"log",...active&&!aggregate?{reg:active.id}:{}})}><ClipboardList size={16} aria-hidden="true"/>Logg kamp</a></div>}
     {!id&&!logging&&shown.length>0&&<label className="squad-compact">Aktiv NIF-lagprofil<select value={aggregate?"all":active?.id||""} onChange={e=>choose(e.target.value)}><option value="all">Alle lag</option>{shown.map(r=><option key={r.id} value={r.id}>{label(r)} · {r.org_id}</option>)}</select></label>}
     {!id&&!logging&&<div className="season-toolbar">
-      {past?<label>Historisk sesong<select value={past} onChange={e=>{history.replaceState(null,"","/match?history="+e.target.value);setPast(Number(e.target.value));}}>{seasons.options.map(o=><option value={o.id} key={o.id}>{shortSeason(o.label)}</option>)}</select></label>:<SeasonPicker key={String(seasons.active)+squad} settings={seasons} admin={admin} busy={busy} onSave={(sid,label)=>run(async()=>{await saveSeason(squad,sid,label);choose("");setNote("Aktiv sesong: "+shortSeason(label));})}/>}
-      {seasons.active&&<button type="button" className="btn" aria-pressed={!!past} onClick={()=>{const n=past?0:seasons.active||0;history.replaceState(null,"",n?"/match?history="+n:"/match");setPast(n);setView("");setAdding(false);}}>{past?"Til aktive lag":"Se historikk"}</button>}</div>}
+      {past?<label>Historisk sesong<select value={past} onChange={e=>{history.replaceState(null,"","/match?"+new URLSearchParams({history:e.target.value,...view==="halftime"?{view}:{}}));setPast(Number(e.target.value));}}>{seasons.options.map(o=><option value={o.id} key={o.id}>{shortSeason(o.label)}</option>)}</select></label>:<SeasonPicker key={String(seasons.active)+squad} settings={seasons} admin={admin} busy={busy} onSave={(sid,label)=>run(async()=>{await saveSeason(squad,sid,label);choose("");setNote("Aktiv sesong: "+shortSeason(label));})}/>}
+      {seasons.active&&<button type="button" className="btn" aria-pressed={!!past} onClick={()=>{const n=past?0:seasons.active||0;const keep=view==="halftime";const query=new URLSearchParams({...n?{history:String(n)}:{},...keep?{view}:{}});history.replaceState(null,"","/match"+(query.size?"?"+query:""));setPast(n);if(!keep)setView("");setAdding(false);}}>{past?"Til aktive lag":"Se historikk"}</button>}</div>}
     {note&&<p role="status" className="km-status">{note}</p>}
-    {id?game?<MatchDetail key={game.id} data={data} game={game} report={reports[game.id]} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:view==="halftime"?<>{matchMenu}<HalftimeStatistics games={all} reports={reports}/></>:logging?<>{matchMenu}<LiveMatches data={data} fixtures={all} teams={[
+    {id?game?<MatchDetail key={game.id} data={data} game={game} report={reports[game.id]} back={past?"/match?history="+past:"/match"} reload={load} profileOf={profileOf}/>:<p>Kampen er ikke tilgjengelig. <a href="/match">Til oversikten</a></p>:view==="halftime"?<>{matchMenu}<SeasonMatchStatistics key={past||seasons.active||0} team={squad} games={all} reports={reports} teams={regs.map(r=>({id:r.id,name:label(r)}))} history={past}/></>:logging?<>{matchMenu}<LiveMatches data={data} fixtures={all} teams={[
       ...(active?[{key:"nif:"+active.id,name:label(active)}]:[]),
       ...(localTeam?[{key:"group:"+squad,name:localTeam}]:[]),
       ...data.teams.filter(team=>team.id!==squad).map(team=>({key:"group:"+team.id,name:team.name})),

@@ -65,6 +65,21 @@
 .event-insights{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));margin:0}
 .event-insights>div{padding:9px;background:var(--bg-soft);border-radius:5px}
 .event-insights dt{font-weight:700}.event-insights dd{margin:3px 0 0}
+.season-filters,.season-key-stats,.season-interval-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:10px}
+.season-filters label,.season-key-stats>div,.season-interval-half{display:grid;gap:5px;min-width:0}
+.season-filters select{width:100%}
+.season-key-stats>div,.season-interval-half{padding:12px;background:var(--bg-soft);border-radius:6px}
+.season-key-stats strong{font-size:1.55rem;font-variant-numeric:tabular-nums}
+.season-outcome{display:grid;gap:4px}
+.season-outcome-title{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:5px 10px}
+.season-outcome-title span{font-variant-numeric:tabular-nums;color:var(--muted)}
+.season-interval{display:grid;grid-template-columns:minmax(72px,1fr) minmax(0,2fr);gap:2px 8px;align-items:center;padding:4px 0}
+.season-interval>div:first-child{grid-row:span 2}
+.season-interval small,.season-match-list small{display:block;color:var(--muted)}
+.season-interval-bar{display:grid;grid-template-columns:minmax(0,1fr) 3.5ch;gap:5px;align-items:center;text-align:right}
+.season-match-list{min-width:620px}
+.season-match-list :is(td,th):not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.season-match-list th:first-child{max-width:360px;overflow-wrap:anywhere}
 .halftime-table{font-variant-numeric:tabular-nums}
 .halftime-table :is(th,td):not(:first-child){text-align:right}
 .match-data-options{display:flex;flex-wrap:wrap;gap:8px 16px;border:1px solid var(--border);padding:6px 12px;margin:0;min-width:0}

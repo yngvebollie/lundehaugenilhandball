@@ -4,7 +4,7 @@ export function eventSecond(event:MatchEvent, period:number) {
   return (event.half-1)*period+event.seconds;
 }
 
-export function analyzeFixture(match:LiveMatch, own:MatchSide) {
+export function analyzeFixture(match:Pick<LiveMatch,"events"|"periodMinutes"|"finalized"|"clock">, own:MatchSide) {
   const rows=matchTimeline(match.events);
   const other:MatchSide=own==="home"?"away":"home";
   const goals=rows.filter(({event})=>isMatchGoal(event)&&event.side);
