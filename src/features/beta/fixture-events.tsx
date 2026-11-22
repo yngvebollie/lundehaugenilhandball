@@ -78,7 +78,7 @@ export function FixtureEvents({game,data,onChange}:Props) {
 
   return <section className="grid fixture-event-section">
     <div className="competition-heading"><div><h3>Hendelser</h3>
-      <small>{match.events.length} hendelser · {match.home.name} {liveScore(match.events)} {match.away.name}{match.eventOrigin==="api"?" · Importert feed":match.eventOrigin==="manual"?" · Manuell logg":""}</small></div>
+      <small>{match.events.length} hendelser · {match.home.name} {match.events.length?liveScore(match.events):game.score||liveScore(match.events)} {match.away.name}{match.eventOrigin==="api"?(match.events.some(e=>e.id.startsWith("nhf-public:"))?" · NHFs offentlige kampside":" · Importert feed"):match.eventOrigin==="manual"?" · Manuell logg":""}</small></div>
       <button className="btn primary" type="button" disabled={storage.loading||!!draft} onClick={()=>setDraft({
         ...newMatchEvent(match.clock,"goal"),side:ownSide,
       })}>Legg til hendelse</button>

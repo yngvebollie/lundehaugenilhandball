@@ -1,6 +1,7 @@
 import {createClient} from "@supabase/supabase-js";
 import {env} from "@/lib/env";
 import {discover,type Registration} from "@/lib/nif";
+import {syncNhfPublicEvents} from "@/lib/sync-nhf-public-events";
 
 export const maxDuration=300;
 const reply=(status:number,message:string)=>Response.json({message},{status,headers:{"Cache-Control":"no-store"}});
@@ -26,7 +27,12 @@ export async function POST(req:Request){
     if(typeof id!=="string"||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return reply(400,"Velg et lag.");
     try{const result=await fetch(env.supabaseUrl+"/functions/v1/nhf-public-schedule",{method:"POST",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(40000),
       headers:{Authorization:"Bearer "+token,apikey:env.supabaseAnonKey,"Content-Type":"application/json"},body:JSON.stringify({id})});
-      const body=await result.json();return reply(result.status,body.message||"Kunne ikke hente NHFs offentlige terminliste.");
+      const body=await result.json();
+      const message=body.message||"Kunne ikke hente NHFs offentlige terminliste.";
+      if(!result.ok)return reply(result.status,message);
+      const userDb=createClient(env.supabaseUrl,env.supabaseAnonKey,{...opts,global:{headers:{Authorization:"Bearer "+token}}});
+      const events=await syncNhfPublicEvents(userDb,id).catch(()=>"Hendelser kunne ikke oppdateres.");
+      return reply(result.status,message+" "+events);
     }catch{return reply(502,"Terminlistetjenesten svarer ikke. Lagrede kamper er beholdt.");}
   }
   if(!serviceKey)return reply(503,"Planlagt NIF-synk er ikke konfigurert.");
@@ -49,7 +55,8 @@ export async function POST(req:Request){
       await service.rpc("beta_import_fixture",{rid:r.id,f,people,authoritative}).throwOnError();
     },includePlayers);
     await service.from("beta_team_seasons").update({synced_at:new Date().toISOString(),sync_result:message}).eq("id",r.id).throwOnError();
-    return reply(200,message);
+    const events=await syncNhfPublicEvents(userDb,r.id).catch(()=>"Hendelser kunne ikke oppdateres.");
+    return reply(200,message+" "+events);
   }catch(e){
     const msg=e instanceof Error&&/^(NIF|Ufullstendig|Uventet)/.test(e.message)?e.message:"Synkronisering mislyktes. Prøv igjen.";
     await service.from("beta_team_seasons").update({sync_result:msg}).eq("id",r.id);

@@ -102,6 +102,7 @@ function PeriodPanels({match,analysis}:{match:LiveMatch;analysis:Analysis}){
       <tbody>{([["7 m-mål","penalties"],["Gule kort","warnings"],["2 min","suspensions"]] as const).map(([label,key])=>
         <tr key={key}><th scope="row">{label}</th><td>{totals[0][key]}</td><td>{totals[1][key]}</td></tr>)}
         <tr><th scope="row">Lengste målrekke</th><td>{analysis.runs[own].length}</td><td>{analysis.runs[other].length}</td></tr>
+        <tr><th scope="row">Lengste periode uten mål</th><td>{formatMatchTime(analysis.droughts[own].seconds)}</td><td>{formatMatchTime(analysis.droughts[other].seconds)}</td></tr>
       </tbody></table>
   </section>;
 }
@@ -150,11 +151,18 @@ function MatchReading({match,analysis}:{match:LiveMatch;analysis:Analysis}){
         {secondStart&&after&&<div><dt>Første mål etter pause</dt><dd>{match[secondStart.event.side!].name} scoret til {score(secondStart)} ({clock(secondStart)}).</dd></div>}
         {moment&&<div><dt>{ownName}s lengste målrekke</dt><dd>{run.length} på rad fra {clock(run[0])} til {clock(moment)}, med {score(moment)} etter siste mål.</dd></div>}
         {peak&&<div><dt>Største målforskjell</dt><dd>{peakDiff} mål ved {score(peak)} ({clock(peak)}).</dd></div>}
+        {analysis.openingSecond&&<div><dt>Første fem minutter etter pause</dt><dd>{ownName} scoret {analysis.openingSecond.own} mål og {otherName} scoret {analysis.openingSecond.other}.</dd></div>}
+        {analysis.played>0&&<div><dt>Tid i ledelse</dt><dd>{ownName} ledet i {formatMatchTime(analysis.leadTime.ahead)}, lå under i {formatMatchTime(analysis.leadTime.behind)} og sto likt i {formatMatchTime(analysis.leadTime.tied)}.</dd></div>}
+        {([own,other] as const).map(side=>{
+          const drought=analysis.droughts[side];
+          return drought.seconds>0&&<div key={side}><dt>Lengste måltørke for {match[side].name}</dt>
+            <dd>{formatMatchTime(drought.seconds)} uten scoring, fra {formatMatchTime(drought.from)} til {formatMatchTime(drought.to)} samlet spilletid.</dd></div>;
+        })}
         {leadMoments.length>0&&<div><dt>Ledelsen skiftet {leadMoments.length} {leadMoments.length===1?"gang":"ganger"}</dt><dd>Siste skifte kom ved {score(leadMoments.at(-1)!)} ({clock(leadMoments.at(-1)!)}).</dd></div>}
       </dl>
       {player&&<p>{player.name} scoret {player.first+player.second} av lagets {ours.total} mål ({percent((player.first+player.second)/ours.total)}).</p>}
     </>}
-    <p className="event-analysis-note">Hendelsene viser når stillingen endret seg. Vurder årsakene sammen med video eller trenernotater.</p>
+    <p className="event-analysis-note">Pausen regnes utenom spilletiden. Tidstall fra en logg med minuttpresisjon er omtrentlige. Uten kjent sluttid for omgangen brukes siste registrerte hendelse. Vurder årsakene sammen med video eller trenernotater.</p>
     <details><summary>Hva kan vi følge opp?</summary><ul>
       <li>Sammenlign de fem første minuttene etter pause på tvers av kamper for å se hvordan laget starter andre omgang.</li>
       <li>Bruk tidspunktene for målrekker til å finne videoklipp og se hva laget gjorde i de periodene.</li>
