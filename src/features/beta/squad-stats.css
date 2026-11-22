@@ -21,7 +21,20 @@
 .opponent-fixture time{font-variant-numeric:tabular-nums}
 .opponent-fixture>span:first-of-type{flex:1 1 130px}
 .stat-player-name{display:inline-flex;align-items:center;text-align:left;gap:4px;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
-.stat-player-details{display:grid;gap:6px;text-align:left;padding:6px;white-space:normal}
+.stat-aggregate-scroll{container-type:inline-size}
+.stat-expanded-row>td{padding:0;background:var(--panel)}
+.stat-player-details{display:grid;gap:10px;text-align:left;padding:12px;white-space:normal;width:100cqi;box-sizing:border-box}
+.stat-player-details>header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.stat-player-details>header h3{margin:0}
+.stat-detail-link{font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.squad-stats .stat-player-details .stat-table{min-width:0}
+.stat-player-details .stat-level-table{width:min(100%,42rem)}
+.squad-stats .stat-player-details .stat-match-table{min-width:420px}
+.stat-player-details .stat-table :is(th,td){padding:8px}
+.stat-player-details .stat-table :is(th,td):first-child{width:auto}
+.stat-player-details .stat-table tbody th[scope=row]{min-width:0;text-align:left}
+.stat-player-details .stat-match-table :is(th,td):nth-child(-n+3){text-align:left}
+.stat-player-details .stat-match-table tbody th small{display:block;color:var(--muted)}
 .player-profile{max-width:960px}.player-profile header img{vertical-align:middle}
 .coach-feed .feed-scroll{max-height:350px;overflow:auto}.feed-scroll ol{list-style:none;padding:0;margin:0}
 .feed-scroll li{display:grid;grid-template-columns:minmax(75px,100px) minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid var(--border)}

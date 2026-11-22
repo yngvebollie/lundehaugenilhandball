@@ -49,7 +49,8 @@ export function PlayerStatistics({data,overview=false,athleteId}:{data:Snapshot;
    const playedCups=cupRows.filter(({game})=>game.played?.length||(game.scored!=null&&game.conceded!=null));
    for(const {reg,game} of cupRows){
     for(const athlete of game.declined||[])rejected.push({athlete,reg,fixtureKey:"cup:"+game.id});
-    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,opponent:game.opponent,score:game.scored!=null&&game.conceded!=null?game.scored+"-"+game.conceded:null,fixtureTitle:"Turneringskamp · egne mål først",outcome:cupOutcome(game.scored,game.conceded),fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:regs.find(r=>r.id===reg)?.display_name||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
+    const team=regs.find(r=>r.id===reg)?.display_name;
+    for(const athlete of game.played||[]){const p=data.roster.find(p=>p.id===athlete);if(p)results.push({reg,opponent:game.opponent,score:game.scored!=null&&game.conceded!=null?game.scored+"-"+game.conceded:null,fixtureTitle:team&&game.opponent?team+" – "+game.opponent:undefined,outcome:cupOutcome(game.scored,game.conceded),fixtureKey:"cup:"+game.id,match_id:game.id,day:game.day,player:athlete,name:p.name,shirt:p.shirt_number||null,level:team||"Turnering",played:true,home:null,goals:null,field_goals:null,penalty:null,warnings:null,suspensions:null,disqualifications:null,missed:null,errors:null,saves:null,rating:null,awards:null});}
    }
    if(ok){setDecisions([...fixtures.filter(g=>g.completed).map(g=>({fixtureKey:g.nif_id?"nif:"+g.nif_id:"local:"+g.id,reg:g.registration||"",outcome:fixtureOutcome(g)})),...playedCups.map(({reg,game})=>({fixtureKey:"cup:"+game.id,reg,outcome:cupOutcome(game.scored,game.conceded)}))]);setReplies(rejected);setLines(results);setAliases(mappings);setSeason(ss.options.find(o=>o.id===ss.active)?.label||"–");setLevels(regs.map(reg=>{const gs=fixtures.filter(g=>g.registration===reg.id);return {id:reg.id,label:levelName(reg.display_name||"Lag "+reg.org_id,gs.find(g=>g.competition)?.competition),games:new Set(gs.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.filter(c=>c.reg===reg.id).length};}).sort((a,b)=>b.label.localeCompare(a.label,"nb")));
     setGames(new Set(fixtures.filter(g=>g.completed).map(g=>g.nif_id||g.id)).size+playedCups.length);setError("");}
@@ -84,16 +85,53 @@ export function PlayerStatistics({data,overview=false,athleteId}:{data:Snapshot;
  {lines&&!error&&summary}<nav className="workspace-tabs" aria-label="Samlet spillerstatistikk">{(Object.keys(views) as (keyof typeof views)[]).map(v=><button key={v} aria-pressed={view===v} className={view===v?"current":""} onClick={()=>{if(view==="Nivåfordeling"&&v!==view)setLevel("");setExpand("");setView(v);}}>{v}</button>)}</nav>
  {view==="Nivåfordeling"&&<nav className="workspace-tabs" aria-label="Velg lag"><button aria-pressed={!active} className={!active?"current":""} onClick={()=>{setLevel("");setExpand("");}}>Alle</button>{levels.map(n=><button key={n.id} aria-pressed={active?.id===n.id} className={active?.id===n.id?"current":""} onClick={()=>{setLevel(n.id);setExpand("");}}>{n.label}</button>)}</nav>}
  <label>Søk etter spiller<input type="search" placeholder="Spillernavn" value={search} onChange={e=>setSearch(e.target.value)}/></label>
- {error?<p role="alert">{error}</p>:!lines?<p>Laster sesongstatistikk …</p>:<div className="player-list-scroll"><table className="table stat-table aggregate-grid"><thead><tr>{heading("shirt","Draktnr.")}{heading("name","Spiller")}{view==="Nivåfordeling"&&<th>Nivå / serie</th>}{cols.map(c=>heading(c,labels[c]))}<th scope="col">Takket nei</th><th title="Flest registrerte mål på laget i en kamp. Ved likt antall får begge gullball.">Gullballer</th></tr></thead>
+ {error?<p role="alert">{error}</p>:!lines?<p>Laster sesongstatistikk …</p>:<div className="player-list-scroll stat-aggregate-scroll"><table className="table stat-table aggregate-grid"><thead><tr>{heading("shirt","Draktnr.")}{heading("name","Spiller")}{view==="Nivåfordeling"&&<th>Nivå / serie</th>}{cols.map(c=>heading(c,labels[c]))}<th scope="col">Takket nei</th><th title="Flest registrerte mål på laget i en kamp. Ved likt antall får begge gullball.">Gullballer</th></tr></thead>
  <tbody>{players.map(p=>{const used=[...new Set(p.filtered.map(r=>r.level))].sort(),byLevel=used.map(l=>({l,m:metrics(uniqueGames(p.filtered.filter(r=>r.level===l)).rows)}));
  const rows=view==="Nivåfordeling"?(active&&byLevel.length?byLevel:[{l:active?.label||"Alle",m:p.m}]):[{l:"",m:p.m}];
  return rows.map(({l,m},i)=><PlayerStatRow key={p.key+":"+l} p={p} no={noCount(p.athlete,p.filtered)} l={l} m={m} cols={cols} split={view==="Nivåfordeling"} expanded={expand===p.key&&i===0} toggle={()=>setExpand(expand===p.key?"":p.key)} levels={byLevel}/>);})}</tbody></table></div>}
  {!error&&lines&&!players.length&&<p>Ingen spillere i dette utvalget.</p>}</section>;
 }
 function PlayerStatRow({p,no,l,m,cols,split,expanded,toggle,levels}:{no:number;p:{name:string;balls:number;athlete?:string;shirt?:string|null;conflicts:number;filtered:ClubLine[]};l:string;m:ReturnType<typeof metrics>;cols:readonly Column[];split:boolean;expanded:boolean;toggle:()=>void;levels:{l:string;m:ReturnType<typeof metrics>}[]}){
- return <><tr><td className="stat-jersey">{p.shirt||"–"}</td><th scope="row"><button className="stat-player-name" onClick={toggle} aria-label={"Kampdetaljer for "+p.name} aria-expanded={expanded}>{expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>}</button> {p.athlete?<a href={"/spillere?athlete="+encodeURIComponent(p.athlete)}>{p.name}</a>:<button className="stat-player-name" onClick={toggle} aria-expanded={expanded}>{p.name}</button>}{p.balls>0&&<> <span className="season-balls" role="img" aria-label={`${p.balls} ${p.balls===1?"gullball":"gullballer"}`} title={p.balls+" "+(p.balls===1?"kamp":"kamper")+" som toppscorer i utvalget"}>{Array.from({length:p.balls},(_,i)=><Volleyball size={14} key={i} aria-hidden="true"/>)}</span></>}</th>{split&&<td>{l}</td>}{cols.map(c=><td key={c}>{fmt(m[c])}</td>)}<td>{no}</td><td>{p.balls}</td></tr>
- {expanded&&<tr><td colSpan={cols.length+(split?5:4)}><div className="stat-player-details"><strong>{p.name}</strong>{p.athlete&&<a href={"/spillere?athlete="+encodeURIComponent(p.athlete)}>Åpne utøverprofil</a>}
- {levels.map(v=><p key={v.l}>{v.l} · {v.m.games} kamper · {fmt(v.m.goals)} mål · {fmt(v.m.average)} mål/kamp</p>)}
- {!!p.conflicts&&<small>Ulike registreringer i {p.conflicts} kamp(er). Motstridende verdier er holdt utenfor summen.</small>}
- {[...p.filtered].sort((a,b)=>b.day.localeCompare(a.day)).map(r=><a key={r.reg+r.match_id+r.player} href={r.fixtureKey.startsWith("cup:")?"/match?view=cups&reg="+r.reg:"/match?game="+r.match_id}>{r.day} · {r.level} · {fmt(r.goals)} mål</a>)}</div></td></tr>}</>;
+ const profile=p.athlete?"/spillere?athlete="+encodeURIComponent(p.athlete):null;
+ return <>
+  <tr><td className="stat-jersey">{p.shirt||"–"}</td><th scope="row">
+   <button type="button" className="stat-player-name" onClick={toggle} aria-label={"Kampdetaljer for "+p.name} aria-expanded={expanded}>{expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>}</button>{" "}
+   {profile?<a className="stat-detail-link" href={profile}>{p.name}</a>:<button type="button" className="stat-player-name" onClick={toggle} aria-expanded={expanded}>{p.name}</button>}
+   {p.balls>0&&<> <span className="season-balls" role="img" aria-label={`${p.balls} ${p.balls===1?"gullball":"gullballer"}`} title={p.balls+" "+(p.balls===1?"kamp":"kamper")+" som toppscorer i utvalget"}>{Array.from({length:p.balls},(_,i)=><Volleyball size={14} key={i} aria-hidden="true"/>)}</span></>}
+  </th>{split&&<td>{l}</td>}{cols.map(c=><td key={c}>{fmt(m[c])}</td>)}<td>{no}</td><td>{p.balls}</td></tr>
+  {expanded&&<tr className="stat-expanded-row"><td colSpan={cols.length+(split?5:4)}>
+   <div className="stat-player-details">
+    <header><h3>{p.name}</h3>{profile&&<a className="btn" href={profile}>Åpne utøverprofil</a>}</header>
+    {levels.length>0&&<table className="table stat-table stat-level-table">
+     <caption>Fordeling per lag / nivå</caption>
+     <thead><tr><th scope="col">Lag / nivå</th><th scope="col">Kamper</th><th scope="col">Mål</th><th scope="col">Mål/kamp</th></tr></thead>
+     <tbody>{levels.map(({l,m})=><tr key={l}><th scope="row">{l}</th><td>{m.games}</td><td>{fmt(m.goals)}</td><td>{fmt(m.average)}</td></tr>)}</tbody>
+    </table>}
+    {!!p.conflicts&&<small>Ulike registreringer i {p.conflicts} kamp(er). Motstridende verdier er holdt utenfor summen.</small>}
+    <PlayerStatMatches rows={p.filtered}/>
+   </div>
+  </td></tr>}
+ </>;
+}
+
+function PlayerStatMatches({rows}:{rows:ClubLine[]}){
+ const games=uniqueGames(rows).rows.sort((a,b)=>b.day.localeCompare(a.day)||(b.start_time||"").localeCompare(a.start_time||"")||a.fixtureKey.localeCompare(b.fixtureKey));
+ if(!games.length)return <p>Ingen kampregistreringer i dette utvalget.</p>;
+ return <div className="player-list-scroll" role="region" aria-label="Kamphistorikk" tabIndex={0}>
+  <table className="table stat-table stat-match-table">
+   <caption>Kamphistorikk</caption>
+   <thead><tr><th scope="col">Dato</th><th scope="col">Oppgjør</th><th scope="col">Lag / nivå</th><th scope="col">Resultat</th><th scope="col">Mål</th></tr></thead>
+   <tbody>{games.map(game=>{
+    const query=game.fixtureKey.startsWith("cup:")
+      ?new URLSearchParams({view:"cups",reg:game.reg,cupGame:game.match_id})
+      :new URLSearchParams({game:game.match_id});
+    const title=game.fixtureTitle||(game.opponent?"Mot "+game.opponent:"Kampdetaljer");
+    return <tr key={game.fixtureKey}>
+     <td><time dateTime={game.day}>{game.day.split("-").reverse().join(".")}</time></td>
+     <th scope="row"><a href={"/match?"+query} className="stat-detail-link">{title}</a>{!game.played&&<small>Deltakelse ikke bekreftet</small>}</th>
+     <td>{game.level}</td><td>{game.score||"–"}</td><td>{fmt(game.goals)}</td>
+    </tr>;
+   })}</tbody>
+  </table>
+ </div>;
 }
