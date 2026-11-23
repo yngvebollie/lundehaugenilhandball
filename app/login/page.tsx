@@ -10,9 +10,11 @@ import {SignupSuccess} from "@/features/beta/signup-success";
 import {clubLink} from "@/lib/club-url";
 import {registerPlayer,passwordLogin,contactAddress} from "@/lib/player-access";
 import {emailSignIn,validPhone,validTeamCode} from "@/lib/invite-auth";
+import {ClubRegistration} from "@/features/beta/club-registration";
 
 export default function Login(){
   const [next,setNext]=useState("");
+  const [createClub,setCreateClub]=useState(false);
   const destination=next==="ratings"?"/#ratings":next==="development"?"/utvikling":next==="bank"?"/okter?vis=bank":next==="court"?"/okter":"";
   const onward=next?"&next="+next:"";
   const [invite,setInvite]=useState("");
@@ -34,6 +36,7 @@ export default function Login(){
   const [account,setAccount]=useState("coach");
   const [accounts,setAccounts]=useState<{id:string;name:string;role:string}[]>([]);
   useEffect(()=>{
+    setCreateClub(new URLSearchParams(location.search).get("create_club")==="1");
     setInvite(new URLSearchParams(location.search).get("invite")||"");
     setSignup(new URLSearchParams(location.search).get("new")==="1");
     const qp=new URLSearchParams(location.search);setNext(["development","court","bank","ratings"].includes(qp.get("next")||"")?qp.get("next")!:"");const param=qp.get("role")||(qp.has("invite")?"athlete":null);const code=qp.get("team_code")?.trim().toUpperCase();if(code&&validTeamCode(code)){setTeamCode(code);setRole("athlete");setSelected(true);setJoin(true);}
@@ -76,7 +79,10 @@ export default function Login(){
           const user=(await db.auth.getUser()).data.user;
           const member=await db.from("beta_members").select("role").eq("id",user?.id).maybeSingle().throwOnError();
           if(member.data&&member.data.role!==role)throw Error("Choose "+member.data.role+" sign-in for this account.");
-          if(!member.data){if(role==="athlete"){location.assign(joinPath);return;}throw Error("Accept a coach invitation to open the coach dashboard.");}
+          if(!member.data){if(role==="athlete"){location.assign(joinPath);return;}
+            const request=(await db.rpc("beta_club_request_status").throwOnError()).data;
+            if(request){location.assign("/login?role=coach&create_club=1");return;}
+            throw Error("Accept a coach invitation to open the coach dashboard.");}
         }
         if(invite){
           const user=(await db.auth.getUser()).data.user;if(!user)throw Error("Logg inn på nytt for å bruke invitasjonen.");
@@ -93,6 +99,7 @@ export default function Login(){
       location.assign(invite?(demoAccounts().find(p=>p.id===sessionStorage.getItem("nhf-persona"))?.role==="athlete"?"/athlete":"/"):destination||(role==="athlete"?"/athlete":"/"));
     }catch(error){setMessage((error as Error).message||"Could not sign in.");}finally{setBusy(false);}
   }
+  if(createClub&&!demo)return <PublicShell><div className="entry-content"><ClubRegistration/></div></PublicShell>;
   if(mail&&!signed)return <PublicShell><div className="entry-content"><SignupSuccess name={name} email={email} known={mail==="created"}/><button className="btn" onClick={()=>{setMail("");setJoin(false);setSignup(false);}}>Til innlogging</button></div></PublicShell>;
   const choice=!selected&&!invite;
   return <PublicShell><div className="entry-content">
@@ -118,6 +125,7 @@ export default function Login(){
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
     {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}
     </>}
+    {!demo&&!invite&&role==="coach"&&<a className="btn" href="/login?role=coach&create_club=1">Opprett ny klubb</a>}
     {demo&&<small className="entry-demo">Browser-local demo</small>}
     <footer className="entry-footer"><a href="/documentation"><BookOpen size={17}/>Platform documentation<ArrowRight size={15}/></a></footer>
     </div></PublicShell>;
