@@ -24,7 +24,9 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
   const [homeName, setHomeName] = useState(match?.home.name ?? "");
   const [awayName, setAwayName] = useState(match?.away.name ?? "");
   const [date, setDate] = useState(match?.date ?? today());
+  const [title, setTitle] = useState(match?.title ?? "");
   const [players, setPlayers] = useState<Candidate[]>(() => match?.players.map(fromPlayer) ?? []);
+  const [awayPlayers, setAwayPlayers] = useState<Candidate[]>(() => match?.awayPlayers?.map(fromPlayer) ?? []);
   const [imported, setImported] = useState<Candidate[]>([]);
   const [historyError, setHistoryError] = useState(false);
   const [otherRoster, setOtherRoster] = useState<{team: string; members: Member[]; error?: boolean}>();
@@ -96,21 +98,33 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
     if (!homeTeam.name || !awayTeam.name || homeTeam.key === awayTeam.key || nameKey(homeTeam.name) === nameKey(awayTeam.name)) {
       return setError("Velg eller skriv inn to forskjellige lagnavn.");
     }
-    if (!players.length) return setError("Velg minst én spiller på hjemmelaget.");
-    const lineup: MatchPlayer[] = [];
-    const numbers = new Set<number>();
-    for (const player of players) {
-      const number = shirtNumber(player.number);
-      if (number === null) return setError("Alle spillere må ha et draktnummer fra 0 til 99.");
-      if (numbers.has(number)) return setError("Draktnummer " + number + " brukes av flere spillere. Velg et unikt nummer for hver spiller.");
-      numbers.add(number);
-      lineup.push({...player, name: player.name.trim() || "Ukjent spiller", number});
+    function saveRoster(candidates: Candidate[], teamName: string) {
+      const lineup: MatchPlayer[] = [];
+      const numbers = new Set<number>();
+      for (const player of candidates) {
+        const number = shirtNumber(player.number);
+        if (number === null) throw new Error(teamName + ": Bruk draktnummer fra 0 til 99.");
+        if (numbers.has(number)) throw new Error(teamName + ": Draktnummer " + number + " er brukt flere ganger.");
+        numbers.add(number);
+        lineup.push({...player, name: player.name.trim() || "Ukjent spiller", number});
+      }
+      return lineup.sort((a, b) => a.number - b.number);
     }
-    lineup.sort((a, b) => a.number - b.number);
-    onSave(match ? {...match, players: lineup, events: match.events.map(event => {
-      const player = lineup.find(player => player.id === event.playerId);
-      return player ? {...event, number: player.number} : event;
-    }), finalized: false} : {home: homeTeam, away: awayTeam, date, players: lineup, clock: initialClock, events: [], finalized: false});
+    try {
+      const lineup = saveRoster(players, homeTeam.name);
+      const awayLineup = saveRoster(awayPlayers, awayTeam.name);
+      const fields = {title:title.trim() || undefined, players:lineup, awayPlayers:awayLineup};
+      onSave(match ? {...match, ...fields, events:match.events.map(event => {
+        if (!event.side || event.number === undefined && !event.playerId) return event;
+        const before = event.side === "home" ? match.players : match.awayPlayers ?? [];
+        const after = event.side === "home" ? lineup : awayLineup;
+        const identity = event.playerId ?? before.find(player => player.number === event.number)?.id;
+        const player = identity ? after.find(player => player.id === identity) : after.find(player => player.number === event.number);
+        return player ? {...event, playerId:player.id, playerName:player.name, number:player.number} : event;
+      })} : {home:homeTeam, away:awayTeam, date, ...fields, clock:initialClock, events:[], finalized:false});
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Kunne ikke lagre kamptroppen.");
+    }
   }
 
   function choices(title: string, options: Candidate[]) {
@@ -133,7 +147,10 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
         if (isHome) {
           setHome(event.target.value);
           setPlayers([]);
-        } else setAway(event.target.value);
+        } else {
+          setAway(event.target.value);
+          setAwayPlayers([]);
+        }
       }}>
         {teams.map(team => <option key={team.key} value={team.key}>{team.name}</option>)}
         <option value={custom}>Legg til lag</option>
@@ -144,10 +161,12 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
   }
 
   return <form className="grid live-form" onSubmit={submit}>
-    <h2>{match ? "Rediger hjemmelagets spillere" : "Opprett kamp"}</h2>
+    <h2>{match ? "Rediger kamp og kamptropper" : "Opprett kamp"}</h2>
     {!match && <div className="live-pair">{teamField("home")}{teamField("away")}
       <label>Kampdato<input type="date" required value={date} onChange={event => setDate(event.target.value)}/></label>
     </div>}
+    <label>Kampnavn (valgfritt)<input maxLength={100} value={title} placeholder="F.eks. Treningskamp eller Cup"
+      onChange={event => setTitle(event.target.value)}/></label>
     <section className="grid live-panel">
       <h3>Spillere på hjemmelaget</h3>
       <p>Kontroller navn og draktnummer i kamptroppen før du lagrer.</p>
@@ -167,7 +186,20 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
           <button type="button" className="btn" disabled={used} onClick={() => toggle(player)}>Fjern</button>
         </div>;
       })}
-      <button className="btn" type="button" onClick={() => toggle({id: crypto.randomUUID(), name: "", number: ""})}>+ Legg til ukjent spiller</button>
+      <button className="btn" type="button" onClick={() => toggle({id: crypto.randomUUID(), name: "", number: ""})}>+ Legg til spiller på hjemmelaget</button>
+    </section>
+    <section className="grid live-panel">
+      <h3>Spillere på bortelaget</h3>
+      {awayPlayers.map(player => <div key={player.id} className="live-lineup-row">
+        <label>Nr.<input inputMode="numeric" maxLength={2} value={player.number} required
+          onChange={event => setAwayPlayers(items => items.map(item => item.id === player.id ? {...item, number:event.target.value} : item))}/></label>
+        <label>Navn<input maxLength={100} value={player.name} placeholder="Ukjent spiller"
+          onChange={event => setAwayPlayers(items => items.map(item => item.id === player.id ? {...item, name:event.target.value} : item))}/></label>
+        <button type="button" className="btn" disabled={match?.events.some(event => event.side === "away" &&
+          (event.playerId === player.id || event.number === match.awayPlayers?.find(saved => saved.id === player.id)?.number && event.number !== undefined))}
+          onClick={() => setAwayPlayers(items => items.filter(item => item.id !== player.id))}>Fjern</button>
+      </div>)}
+      <button className="btn" type="button" onClick={() => setAwayPlayers(items => [...items, {id:crypto.randomUUID(), name:"", number:""}])}>+ Legg til spiller på bortelaget</button>
     </section>
     {error && <p role="alert">{error}</p>}
     <div className="day-strip"><button className="btn" type="button" onClick={onCancel}>Avbryt</button>

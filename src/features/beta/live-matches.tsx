@@ -56,7 +56,7 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
             <span><strong>{match.home.name} – {match.away.name}</strong><small>{match.date} · Åpne hendelser</small></span><b>{liveScore(match.events)}</b>
           </a>:<button type="button" className="btn live-match-row" key={id}
           onClick={() => setSelected(id)}>
-          <span><strong>{match.home.name} – {match.away.name}</strong><small>{match.date} · {match.finalized ? "Ferdigstilt" :
+          <span><strong>{match.home.name} – {match.away.name}</strong><small>{match.date}{match.title && " · " + match.title} · {match.finalized ? "Ferdigstilt" :
             match.clock.status === "finished" ? "Til kontroll" : match.clock.status === "ready" ? "Klar til start" : "Påbegynt"}</small></span>
           <b>{liveScore(match.events)}</b>
         </button>)}

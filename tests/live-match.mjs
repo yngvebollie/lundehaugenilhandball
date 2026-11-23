@@ -33,6 +33,11 @@ assert.deepEqual(matchProtocol(played, "away")[0], {
   id: "0", name: "", number: 0, goals: 0, penalties: 1, total: 1, warnings: 0, suspensions: 1,
 });
 assert.equal(matchProtocol(played, "home")[1].warnings, 1);
+const friendly = {...played, title:"Treningskamp", awayPlayers:[{id:"away-7",number:7,name:"Kopervik-spiller"}]};
+friendly.events=[...friendly.events,event("goal","away",7,40,{playerId:"away-7"}),event("goal","away",undefined,41)];
+assert.equal(matchProtocol(friendly,"away").find(row=>row.number===7)?.name,"Kopervik-spiller");
+assert.equal(matchProtocol(friendly,"away").find(row=>row.number===undefined)?.total,1);
+assert.equal(matchProtocol(friendly,"away").reduce((sum,row)=>sum+row.total,0),3);
 
 const corrected = {...played, events: played.events.map(row => row.id === "25" ? {...row, number: 14, seconds: 7} : row)};
 assert.equal(matchProtocol(corrected, "away")[1].penalties, 1);

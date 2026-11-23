@@ -69,6 +69,7 @@ export function SeasonMatchStatistics({team,games,reports,teams,history}:Props){
       <div><small>Mål for · mål imot</small><strong>{goalTotals[0]} · {goalTotals[1]}</strong></div>
       <div><small>Seier etter pauseledelse</small><strong>{percent(stats.pause.W.W,count(stats.pause.W))}</strong><small>{stats.pause.W.W} av {count(stats.pause.W)} kamper</small></div>
     </div>
+    {fetchState==="ready"&&confirmed>0&&<CoachingInsights stats={stats}/>}
     {stats.rows.length>0&&<ResultProgress rows={stats.rows} history={history}/>}
     <section className="event-panel">
       <header className="event-section-heading"><div><h3>Fra pause til fulltid</h3>
@@ -93,6 +94,7 @@ export function SeasonMatchStatistics({team,games,reports,teams,history}:Props){
         <p>{stats.streakCoverage} av {stats.total} kamper med kontrollert hendelseslogg. Hver kamp telles én gang, etter motstanderens lengste rekke.</p></div></header>
       <p>Minst tre på rad i <strong>{stats.affected} kamper</strong>. Vi tapte <strong>{affect.filter(row=>row.final==="L").length} av {stats.affected}</strong> av dem ({percent(affect.filter(row=>row.final==="L").length,stats.affected)}).</p>
       {stats.recoveryKnown>0&&<p>Etter første tremålsrekke scoret vi innen to spilleminutter i <strong>{stats.withinTwo} av {stats.recoveryKnown}</strong> kamper med målt tid til vårt neste mål.</p>}
+      {stats.noResponse>0&&<p>I <strong>{stats.noResponse} av {stats.affected}</strong> kamper scoret vi ikke igjen etter motstanderens tredje mål på rad første gang dette skjedde.</p>}
       {streaks.map(key=><OutcomeBar key={key} title={key+" mål på rad"} counts={stats.streaks[key]}
         active={details?.kind==="streak"&&details.value===key} onSelect={()=>inspect({kind:"streak",value:key})}/>)}
     </section>
@@ -107,12 +109,30 @@ export function SeasonMatchStatistics({team,games,reports,teams,history}:Props){
               <small>{row.game.day} · {teams.find(t=>t.id===row.game.registration)?.name||row.game.competition}</small></th>
             <td>{score(row.half)}</td><td>{row.half?score(row.full.map((goals,i)=>goals-row.half![i])):"–"}</td><td><strong>{score(row.full)}</strong></td>
             <td>{row.streak?row.max:"–"}{row.third&&row.firstRunScore&&<small>3. mål: {row.third.half}. omg. {formatMatchTime(row.third.seconds)} · {row.firstRunScore[row.side]}–{row.firstRunScore[row.side==="home"?"away":"home"]}</small>}</td>
-            <td>{row.recovery===null?"–":formatMatchTime(row.recovery)}</td>
+            <td>{row.noResponse?"Ingen flere mål":row.recovery===null?"–":formatMatchTime(row.recovery)}</td>
           </tr>)}</tbody>
         </table>
       </div>:<p>Ingen kamper i dette utvalget.</p>}
       <small>Stillinger i tabellen vises fra eget lags perspektiv. Kamper med motstridende data utelates fra berørte beregninger. Pause regnes utenom spilletiden. Importerte tider kan ha minuttpresisjon.</small>
     </section>
+  </section>;
+}
+
+function CoachingInsights({stats}:{stats:Analytics}){
+  const {timeStats,openings}=stats;
+  const led=count(stats.pause.W);
+  const withoutRun=stats.streaks["0–2"];
+  const withRunLosses=stats.streaks["3"].L+stats.streaks["4"].L+stats.streaks["5+"].L;
+  const openingDifference=(openings.second-openings.first)/openings.games;
+  return <section className="event-panel event-reading">
+    <header className="event-section-heading"><div><h3>Trenerinnsikt</h3><p>Observasjoner og forslag basert på kampene i valgt filter.</p></div></header>
+    <dl className="event-insights">
+      {timeStats.seconds>0&&<div><dt>Måltempo</dt><dd>{average(timeStats.goals,timeStats.seconds/600)} mål for og {average(timeStats.against,timeStats.seconds/600)} mål imot per ti spilleminutter i {stats.timed} kamper. Se på periodene med flest baklengsmål og sjekk returløp, balltap og hvor motstanderen avslutter.</dd></div>}
+      {openings.games>0&&<div><dt>Starten på omgangene</dt><dd>Målforskjellen de første fem minuttene var i snitt {(openings.first/openings.games).toLocaleString("nb-NO",{maximumFractionDigits:1})} i første omgang og {(openings.second/openings.games).toLocaleString("nb-NO",{maximumFractionDigits:1})} i andre omgang, målt i de samme {openings.games} kampene. {openingDifference<0?"Avtal første angrep og hvem som sikrer returløpet før dere går ut etter pause.":"Se hvilke valg og oppstillinger som fungerer etter pause, og prøv dem ved kampstart."}</dd></div>}
+      {led>0&&<div><dt>Forsvare en pauseledelse</dt><dd>Vi beholdt seieren i {stats.pause.W.W} av {led} kamper med pauseledelse. {stats.pause.W.W<led?"Gå gjennom når ledelsen forsvant, og avtal hva laget skal gjøre ved to raske baklengsmål.":"Se gjennom de jevneste kampene for å finne hvilke valg som bidro til at ledelsen holdt."}</dd></div>}
+      {stats.affected>0&&<div><dt>Respons på målrekker</dt><dd>Vi tapte {withRunLosses} av {stats.affected} kamper med minst tre baklengsmål på rad{count(withoutRun)>0&&", mot "+withoutRun.L+" av "+count(withoutRun)+" med høyst to"}. Avtal et enkelt angrep og tydelig retursikring etter to baklengsmål. Bruk kampgrunnlaget til å finne klippene og vurdere om timeout eller et bytte er aktuelt.</dd></div>}
+    </dl>
+    <p className="event-analysis-note">Måltempo måler hvor ofte det scores. For å vurdere angrepstempo og effektivitet trengs også antall angrep, balltap og skudd. Resultatforskjeller viser mønstre i utvalget. Bruk video eller trenernotater for å vurdere årsaker, særlig når få kamper inngår.</p>
   </section>;
 }
 

@@ -27,6 +27,8 @@ export type LiveMatch = {
   away: MatchTeam;
   date: string;
   players: MatchPlayer[];
+  awayPlayers?: MatchPlayer[];
+  title?: string;
   clock: MatchClock;
   events: MatchEvent[];
   finalized: boolean;
@@ -91,14 +93,29 @@ export function liveScore(events: MatchEvent[]) {
 
 export function matchProtocol(match: LiveMatch, side: MatchSide) {
   const events = match.events.filter(event => event.side === side);
-  const players = side === "home" ? match.players : [...new Set(events.flatMap(event => event.number === undefined ? [] : [event.number]))]
-    .map(number => ({id: String(number), number, name: ""}));
-  return [...players].sort((a, b) => a.number - b.number).map(player => {
-    const rows = events.filter(event => side === "home" ? event.playerId === player.id : event.number === player.number);
+  const roster = matchPlayers(match, side);
+  const unlisted = new Map<number, MatchPlayer>();
+  for (const event of events) {
+    if (event.number === undefined || roster.some(player => player.number === event.number)) continue;
+    const number = event.number;
+    unlisted.set(number, {id: String(number), number, name: event.playerName || unlisted.get(number)?.name || ""});
+  }
+  const unknown = events.some(event => event.type !== "timeout" && event.type !== "clock" &&
+    event.number === undefined && !roster.some(player => player.id === event.playerId));
+  const players = [...roster, ...unlisted.values()].sort((a,b)=>a.number-b.number);
+  const lines = unknown ? [...players, {id:"unknown", number:undefined, name:"Ukjent spiller"}] : players;
+  return lines.map(player => {
+    const rows = events.filter(event => event.number !== undefined ? event.number === player.number :
+      event.type !== "timeout" && event.type !== "clock" &&
+      (event.playerId === player.id || player.number === undefined && !roster.some(entry => entry.id === event.playerId)));
     const goals = rows.filter(event => event.type === "goal").length;
     const penalties = rows.filter(event => event.type === "penalty" && isMatchGoal(event)).length;
     const warnings = rows.filter(event => event.type === "warning").length;
     const suspensions = rows.filter(event => event.type === "suspension").length;
     return {...player, goals, penalties, total: goals + penalties, warnings, suspensions};
   });
+}
+
+export function matchPlayers(match: LiveMatch, side: MatchSide) {
+  return side === "home" ? match.players : match.awayPlayers ?? [];
 }

@@ -47,6 +47,14 @@ assert.deepEqual(result.streaks["5+"],{W:0,D:0,L:1});
 assert.equal(result.rows[0].recovery,60);
 assert.equal(result.rows[0].game.id,"a");
 assert.equal(result.timed,3);
+assert.deepEqual(result.openings,{games:3,first:-3,second:-2});
+assert.deepEqual([result.timeStats.seconds,result.timeStats.goals,result.timeStats.against],[7200,7,12]);
+assert.equal(result.noResponse,0);
+const withoutAnswer=seasonMatchStatistics([game("e",5,"1–3")],{},{
+  e:log(["home"],["away","away","away"]),
+});
+assert.equal(withoutAnswer.noResponse,1);
+assert.equal(withoutAnswer.recoveryKnown,0);
 assert.equal(result.intervals.length,8);
 assert.equal(result.intervals[0].games,3);
 assert.equal(result.intervals.find(row=>row.half===2&&row.from===5).goals,0); // 05:00 belongs in the first bin.

@@ -134,6 +134,8 @@ function MatchReading({match,analysis}:{match:LiveMatch;analysis:Analysis}){
   const score=(row:{home:number;away:number})=>row[own]+"–"+row[other];
   const clock=(row:(typeof goals)[number])=>row.event.half+". omgang "+formatMatchTime(row.event.seconds);
   const run=runs[own],moment=run.at(-1);
+  const opposingRun=runs[other],thirdConceded=opposingRun[2];
+  const response=thirdConceded?goals.slice(goals.indexOf(thirdConceded)+1).find(row=>row.event.side===own):undefined;
   const after=analysis.halftime;
   const secondStart=goals.find(row=>row.event.half===2);
   const player=fixtureScorers(match.events).find(p=>p.side===own&&p.name!=="Ukjent målscorer");
@@ -141,7 +143,7 @@ function MatchReading({match,analysis}:{match:LiveMatch;analysis:Analysis}){
   const halfSummary=halfDiff===0?"sto likt":halfDiff>0?"ledet":"lå under";
   const secondSummary=finalDiff-halfDiff;
   return <section className="event-panel event-reading">
-    <header className="event-section-heading"><div><h3>Hva skjedde i kampen?</h3><p>Stillingen i teksten oppgis med {ownName} først.</p></div></header>
+    <header className="event-section-heading"><div><h3>Trenerinnsikt for kampen</h3><p>Stillingen i teksten oppgis med {ownName} først.</p></div></header>
     {!goals.length?<p>Loggen inneholder ingen registrerte mål.</p>:<>
       <p>{ownName} {hasSecond||match.finalized?halfSummary+" "+ours.first+"–"+theirs.first+" til pause":"står på "+ours.total+"–"+theirs.total+" i den registrerte delen av første omgang"}.
         {hasSecond&&" I andre omgang scoret laget "+ours.second+" mot "+theirs.second+" for "+otherName+"."}
@@ -150,6 +152,7 @@ function MatchReading({match,analysis}:{match:LiveMatch;analysis:Analysis}){
       <dl className="event-insights">
         {secondStart&&after&&<div><dt>Første mål etter pause</dt><dd>{match[secondStart.event.side!].name} scoret til {score(secondStart)} ({clock(secondStart)}).</dd></div>}
         {moment&&<div><dt>{ownName}s lengste målrekke</dt><dd>{run.length} på rad fra {clock(run[0])} til {clock(moment)}, med {score(moment)} etter siste mål.</dd></div>}
+        {thirdConceded&&<div><dt>Respons på {otherName}s lengste målrekke</dt><dd>{otherName} scoret {opposingRun.length} på rad. Det tredje målet kom ved {clock(thirdConceded)}, til {score(thirdConceded)}. {response?ownName+" scoret neste gang ved "+clock(response)+", til "+score(response)+".":match.finalized?ownName+" scoret ikke igjen.":"Se resten av hendelsesloggen for videre utvikling."}</dd></div>}
         {peak&&<div><dt>Største målforskjell</dt><dd>{peakDiff} mål ved {score(peak)} ({clock(peak)}).</dd></div>}
         {analysis.openingSecond&&<div><dt>Første fem minutter etter pause</dt><dd>{ownName} scoret {analysis.openingSecond.own} mål og {otherName} scoret {analysis.openingSecond.other}.</dd></div>}
         {analysis.played>0&&<div><dt>Tid i ledelse</dt><dd>{ownName} ledet i {formatMatchTime(analysis.leadTime.ahead)}, lå under i {formatMatchTime(analysis.leadTime.behind)} og sto likt i {formatMatchTime(analysis.leadTime.tied)}.</dd></div>}
@@ -163,10 +166,11 @@ function MatchReading({match,analysis}:{match:LiveMatch;analysis:Analysis}){
       {player&&<p>{player.name} scoret {player.first+player.second} av lagets {ours.total} mål ({percent((player.first+player.second)/ours.total)}).</p>}
     </>}
     <p className="event-analysis-note">Pausen regnes utenom spilletiden. Tidstall fra en logg med minuttpresisjon er omtrentlige. Uten kjent sluttid for omgangen brukes siste registrerte hendelse. Vurder årsakene sammen med video eller trenernotater.</p>
-    <details><summary>Hva kan vi følge opp?</summary><ul>
-      <li>Sammenlign de fem første minuttene etter pause på tvers av kamper for å se hvordan laget starter andre omgang.</li>
-      <li>Bruk tidspunktene for målrekker til å finne videoklipp og se hva laget gjorde i de periodene.</li>
-      <li>Registrer bomskudd og balltap hvis dere vil beregne uttelling og skille få sjanser fra lav scoringsprosent.</li>
+    <details><summary>Hva kan vi følge opp på trening?</summary><ul>
+      {analysis.openingSecond&&analysis.openingSecond.own<analysis.openingSecond.other&&<li>Øv på de første angrepene etter pause og avtal hvem som sikrer returløpet ved balltap.</li>}
+      {thirdConceded&&<li>Se videoklippene rundt målrekken. Sjekk om baklengsmålene kommer etter balltap, svakt returløp eller avslutninger fra samme område. Øv på et enkelt angrep som laget kan gå til under press.</li>}
+      {analysis.totals[0].suspensions>0&&<li>Se på angrep og forsvar under utvisning. Marker start og slutt på undertallet i videoen før dere vurderer hvilke valg som fungerte.</li>}
+      <li>Registrer angrep, skudd og balltap for å skille angrepstempo og sjanseskaping fra scoringsprosent. Marker gjerne kontringer og etablert spill separat.</li>
     </ul></details>
   </section>;
 }

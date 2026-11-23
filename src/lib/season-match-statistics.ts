@@ -29,7 +29,8 @@ export function seasonMatchStatistics(games:Fixture[], reports:Record<string,Rep
   const pause={W:counts(),D:counts(),L:counts()};
   const streaks=Object.fromEntries(groups.map(key=>[key,counts()])) as Record<StreakGroup,Count>;
   let timed=0;
-  const timeStats={longestOwn:0,longestOpp:0,ahead:0,tied:0,behind:0};
+  const timeStats={longestOwn:0,longestOpp:0,ahead:0,tied:0,behind:0,seconds:0,goals:0,against:0};
+  const openings={games:0,first:0,second:0};
   for(const [key,records] of byFixture){
     const candidates=records.flatMap(game=>{
       const side=ownMatchSide(game),final=fixtureOutcome(game),{half,full}=periodScores(game,reports[game.id]);
@@ -56,6 +57,14 @@ export function seasonMatchStatistics(games:Fixture[], reports:Record<string,Rep
     const verifiedDuration=duration?.every((seconds,index)=>seconds>0&&seconds<=5400&&goals.every(e=>e.half!==index+1||e.seconds<=seconds))?duration:null;
     if(verifiedDuration){
       timed++;
+      timeStats.seconds+=verifiedDuration[0]+verifiedDuration[1];
+      timeStats.goals+=full[0];timeStats.against+=full[1];
+      if(verifiedDuration.every(seconds=>seconds>=300)){
+        openings.games++;
+        for(const event of goals)if(event.seconds<=300){
+          openings[event.half===1?"first":"second"]+=event.side===side?1:-1;
+        }
+      }
       const analysis=analyzeFixture(log!,side);
       timeStats.longestOwn=Math.max(timeStats.longestOwn,analysis.droughts[side].seconds);
       timeStats.longestOpp=Math.max(timeStats.longestOpp,analysis.droughts[side==="home"?"away":"home"].seconds);
@@ -83,13 +92,15 @@ export function seasonMatchStatistics(games:Fixture[], reports:Record<string,Rep
     const third=goals[firstRun];
     const recovery=next&&(next.half===third.half||verifiedDuration)?next.seconds-third.seconds+(next.half!==third.half?verifiedDuration![0]:0):null;
     const firstRunScore=firstRun>=0?events[firstRun]:null;
-    rows.push({key,game,final,full,half,atBreak,streak,max,episodes,recovery,firstRunScore,side,third});
+    rows.push({key,game,final,full,half,atBreak,streak,max,episodes,recovery,
+      noResponse:firstRun>=0&&!next,firstRunScore,side,third});
   }
   const affected=rows.filter(row=>row.episodes);
-  return {total:byFixture.size,rows,pause,streaks,timed,timeStats,
+  return {total:byFixture.size,rows,pause,streaks,timed,timeStats,openings,
     intervals:[...buckets.values()].sort((a,b)=>a.half-b.half||a.from-b.from),
     pauseCoverage:rows.filter(row=>row.half).length,streakCoverage:rows.filter(row=>row.streak).length,
     affected:affected.length,recoveryKnown:affected.filter(row=>row.recovery!==null).length,
+    noResponse:affected.filter(row=>row.noResponse).length,
     withinTwo:affected.filter(row=>row.recovery!==null&&row.recovery<=120).length,
   };
 }

@@ -1,6 +1,6 @@
 import {useEffect, useState, type FormEvent} from "react";
 import {
-  appendMatchEvent, clockSeconds, eventNames, formatMatchTime, liveScore, matchProtocol, matchTimeline,
+  appendMatchEvent, clockSeconds, eventNames, formatMatchTime, liveScore, matchPlayers, matchProtocol, matchTimeline,
   newMatchEvent, parseMatchTime, penaltyNames, shirtNumber,
   type LiveMatch, type MatchClock, type MatchEvent, type MatchEventType, type MatchSide, type PenaltyOutcome,
 } from "@/lib/live-match";
@@ -17,13 +17,14 @@ const actions = {running: "Klokka går", ready: "Klar til start", paused: "Klokk
 
 function eventDescription(match: LiveMatch, event: MatchEvent) {
   if (event.type === "clock") return event.label ?? "Kampklokke";
-  const player = match.players.find(player => player.id === event.playerId);
+  const roster = event.side ? matchPlayers(match, event.side) : [];
+  const player = roster.find(player => player.id === event.playerId) ?? roster.find(player => player.number === event.number);
   return [
     eventNames[event.type],
     event.outcome && penaltyNames[event.outcome],
     event.side && match[event.side].name,
     event.number !== undefined && "#" + event.number,
-    player?.name,
+    player?.name ?? event.playerName,
   ].filter(Boolean).join(" · ");
 }
 
@@ -55,10 +56,10 @@ export function LiveMatchLog({match, save, close, editLineup}: Props) {
     });
   }
 
-  function quickGoal(id: string) {
-    const player = match.players.find(player => player.id === id);
+  function quickGoal(side: MatchSide, id: string) {
+    const player = matchPlayers(match, side).find(player => player.id === id);
     if (!player) return;
-    const event: MatchEvent = {...newMatchEvent(clock, "goal"), side: "home", playerId: player.id, number: player.number};
+    const event: MatchEvent = {...newMatchEvent(clock, "goal"), side, playerId: player.id, playerName:player.name, number: player.number};
     if (save(current => appendMatchEvent(current, event))) setReceipt(event);
   }
 
@@ -89,9 +90,10 @@ export function LiveMatchLog({match, save, close, editLineup}: Props) {
   return <div className="grid live-log">
     <div className="day-strip">
       <button type="button" className="btn" onClick={close}>‹ Logg kamp</button>
-      <button type="button" className="btn" disabled={!!draft} onClick={editLineup}>Rediger kamptropp</button>
+      <button type="button" className="btn" disabled={!!draft} onClick={editLineup}>Rediger kamp og kamptropper</button>
     </div>
     <section className="live-panel grid" aria-label="Stilling og kampklokke">
+      {match.title&&<strong>{match.title}</strong>}
       <div className="live-score"><b>{match.home.name}</b><strong>{liveScore(match.events)}</strong><b>{match.away.name}</b></div>
       <div className="live-clock"><span>{clock.half}. omgang · {actions[clock.status]}</span>
         <button type="button" className="btn" disabled={!!draft || !inPlay} aria-label="Juster kampklokka"
@@ -109,12 +111,14 @@ export function LiveMatchLog({match, save, close, editLineup}: Props) {
     </nav>
     {draft ? <EventEditor match={match} draft={draft} onSave={submit} onCancel={() => setDraft(null)}/> :
       tab === "register" ? <div className="grid">
-        <h3>Mål til {match.home.name}</h3>
-        <div className="live-player-buttons">{match.players.map(player => <button key={player.id} className="btn primary" type="button" disabled={!inPlay}
-          aria-label={"Mål til nummer " + player.number + ", " + player.name} onClick={() => quickGoal(player.id)}>
+        {(["home","away"] as const).map(side=><section key={side} className="grid">
+        <h3>Mål til {match[side].name}</h3>
+        <div className="live-player-buttons">{matchPlayers(match,side).map(player => <button key={player.id} className="btn primary" type="button" disabled={!inPlay}
+          aria-label={"Mål til " + match[side].name + ", nummer " + player.number + ", " + player.name} onClick={() => quickGoal(side,player.id)}>
           <strong>#{player.number}</strong><small>{player.name}</small>
         </button>)}</div>
-        <button type="button" className="btn" disabled={!inPlay} onClick={() => open("goal", "away", true)}>+ Mål til {match.away.name}</button>
+        <button type="button" className="btn" disabled={!inPlay} onClick={() => open("goal", side, true)}>+ Mål til {match[side].name} uten valgt spiller</button>
+        </section>)}
         <div className="live-pair">{(["penalty", "suspension", "warning", "timeout"] as const).map(type =>
           <button type="button" className="btn" key={type} disabled={!inPlay || type === "timeout" && clock.status === "timeout"}
             onClick={() => open(type)}>{eventNames[type]}</button>)}</div>
@@ -149,7 +153,7 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
   const {kind, event} = draft;
   const [side, setSide] = useState<MatchSide>(event.side ?? "home");
   const [playerId, setPlayerId] = useState(event.playerId ?? "");
-  const [awayNumber, setAwayNumber] = useState(event.side === "away" && event.number !== undefined ? String(event.number) : "");
+  const [shirt, setShirt] = useState(event.number === undefined ? "" : String(event.number));
   const [half, setHalf] = useState(event.half);
   const [time, setTime] = useState(formatMatchTime(event.seconds));
   const [outcome, setOutcome] = useState<PenaltyOutcome>(event.outcome ?? "goal");
@@ -164,10 +168,13 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
     const seconds = parseMatchTime(time);
     if (seconds === null) return setError("Skriv kamptiden som minutter og sekunder, f.eks. 08:45.");
     if (!hasTeam) return onSave({...event, seconds});
-    const player = side === "home" && hasPlayer ? match.players.find(player => player.id === playerId) : undefined;
-    const number = hasPlayer ? side === "home" ? player?.number : shirtNumber(awayNumber) : undefined;
-    if (hasPlayer && number == null) return setError("Velg en spiller eller skriv et draktnummer fra 0 til 99.");
-    onSave({...event, side, half, seconds, number: number ?? undefined, playerId: player?.id, outcome: event.type === "penalty" ? outcome : undefined});
+    const numberInput = shirtNumber(shirt);
+    const roster = matchPlayers(match, side);
+    const player = hasPlayer ? roster.find(player => player.id === playerId) ?? roster.find(player => player.number === numberInput) : undefined;
+    if (hasPlayer && !player && shirt.trim() && numberInput === null) return setError("Skriv et draktnummer fra 0 til 99, eller la feltet stå tomt.");
+    const number = hasPlayer ? player?.number ?? numberInput ?? undefined : undefined;
+    const playerName = hasPlayer ? player?.name ?? (side === event.side && number === event.number ? event.playerName : undefined) : undefined;
+    onSave({...event, side, half, seconds, number, playerId: player?.id, playerName, outcome: event.type === "penalty" ? outcome : undefined});
   }
 
   return <form className="grid live-panel live-form" onSubmit={submit}>
@@ -175,13 +182,13 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
     {kind === "edit" && <p>{eventDescription(match, event)}</p>}
     {hasTeam && !draft.awayOnly && <fieldset className="grid"><legend>Lag</legend><div className="live-pair">
       {(["home", "away"] as const).map(team => <button type="button" className={"btn" + (side === team ? " selected" : "")}
-        key={team} aria-pressed={side === team} onClick={() => setSide(team)}>{match[team].name}</button>)}
+        key={team} aria-pressed={side === team} onClick={() => {if(side!==team){setSide(team);setPlayerId("");setShirt("");}}}>{match[team].name}</button>)}
     </div></fieldset>}
-    {hasPlayer && (side === "home" ? <fieldset className="grid"><legend>Draktnummer</legend><div className="live-player-buttons">
-      {match.players.map(player => <button type="button" key={player.id} className={"btn" + (playerId === player.id ? " selected" : "")}
-        aria-pressed={playerId === player.id} onClick={() => setPlayerId(player.id)}><strong>#{player.number}</strong><small>{player.name}</small></button>)}
-    </div></fieldset> : <label>Motstanderens draktnummer<input inputMode="numeric" maxLength={2} required value={awayNumber}
-      onChange={event => setAwayNumber(event.target.value)}/></label>)}
+    {hasPlayer && <fieldset className="grid"><legend>Spiller</legend><div className="live-player-buttons">
+      {matchPlayers(match,side).map(player => <button type="button" key={player.id} className={"btn" + (playerId === player.id ? " selected" : "")}
+        aria-pressed={playerId === player.id} onClick={() => {setPlayerId(player.id);setShirt(String(player.number));}}><strong>#{player.number}</strong><small>{player.name}</small></button>)}
+    </div><label>Draktnummer (valgfritt)<input inputMode="numeric" maxLength={2} value={shirt}
+      onChange={event => {setPlayerId("");setShirt(event.target.value);}}/></label><small>La feltet stå tomt for ukjent spiller.</small></fieldset>}
     {event.type === "penalty" && <fieldset className="grid"><legend>Utfall</legend><div className="day-strip">
       {(Object.keys(penaltyNames) as PenaltyOutcome[]).map(key => <button key={key} type="button" className={"btn" + (outcome === key ? " selected" : "")}
         aria-pressed={outcome === key} onClick={() => setOutcome(key)}>{penaltyNames[key]}</button>)}
@@ -210,7 +217,7 @@ function MatchReport({match, finalize}: {match: LiveMatch; finalize: () => void}
       return <div className="live-panel grid" key={side}><h3>{match[side].name}</h3>
         <table className="live-protocol" aria-label={"Målprotokoll for " + match[side].name}>
           <thead><tr><th scope="col">Spiller</th>{["Mål", "7 m", "Totalt", "Gult", "2 min"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
-          <tbody>{rows.map(player => <tr key={player.id}><th scope="row">#{player.number}{player.name && " · " + player.name}</th>
+          <tbody>{rows.map(player => <tr key={player.id}><th scope="row">{player.number===undefined ? player.name : "#"+player.number+(player.name ? " · " + player.name : "")}</th>
             {columns.map(key => <td key={key}>{player[key]}</td>)}</tr>)}</tbody>
           <tfoot><tr><th scope="row">Lag totalt</th>{columns.map(key => <td key={key}>{rows.reduce((sum, player) => sum + player[key], 0)}</td>)}</tr></tfoot>
         </table>
