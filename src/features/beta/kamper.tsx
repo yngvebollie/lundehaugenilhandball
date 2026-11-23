@@ -13,6 +13,7 @@ import {blank,confirmed,editProfile,matchAction,metrics,refreshSeason,register,r
 import type {LinkId} from "@/lib/club-player-stats";
 import type {Registration} from "@/lib/nif";
 import {ReportEditor} from "./report-editor";
+import {TeamReportDownload} from "./team-report-download";
 import {OpponentRegister} from "./opponent-register";
 import {SquadStats} from "./squad-stats";
 import {Attendance} from "./game-attendance";
@@ -92,6 +93,8 @@ export function Kamper({data}:{data:Snapshot}){
       <header className="squad-title"><div><h1>{title}</h1>{active&&admin&&!past&&<TeamSeasonActions key={active.id} team={active} name={title} season={shortSeason(seasons.options.find(o=>o.id===active.season)?.label||"")} updated={async ended=>{await load();if(ended)choose("all");setNote(ended?"Laget ligger nå i sesonghistorikken.":"Lagnavnet er oppdatert.");}}/>}{active&&<small className="id-tag">NIF {active.org_id}</small>}</div>
         <div className="day-strip">{active&&<a className="btn" href={"https://www.handball.no/system/kamper/lag/?lagid="+active.org_id} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Terminliste hos NHF</a>}<button disabled={busy||!!past||!active?.active} className="btn primary" onClick={()=>active&&run(()=>sync(active))}><RefreshCw size={16}/>Hent kamper nå</button></div></header>
       {matchMenu}
+      {active&&view===""&&<TeamReportDownload key={active.id} name={label(active)} season={shortSeason(seasons.options.find(o=>o.id===active.season)?.label||"")}
+        team={squad} user={data.me.id} matches={all.filter(g=>g.registration===active.id)} reports={reports}/>}
       {view==="cups"?(active?<CupPlanner data={data} reg={active.id} key={active.id}/>:<p>Legg til et lag først.</p>):view==="opponents"?(active?<OpponentRegister key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et lag for å se motstandere.</p>):view==="stats"?(active?<SquadStats profileOf={profileOf} key={active.id} reg={active.id} fixtures={all}/>:<p>Velg et lag for å se statistikk.</p>):view==="teams"||view==="notes"?<>
         {active&&<>{view==="teams"&&<div className="km-row"><div><strong>Synkronisering</strong><p>{active.sync_result||"Ikke synkronisert"}{active.synced_at&&" · "+new Date(active.synced_at).toLocaleString("nb-NO")}</p></div>{admin&&!past&&<button disabled={busy} className="btn" onClick={()=>run(()=>toggleRegistration(active))}>{active.active?"Sett på pause":"Aktiver"}</button>}</div>}
         <ProfileInfo key={active.id+view} r={active} admin={admin&&!past} busy={busy} run={run} notesOnly={view==="notes"}/></>}
@@ -198,4 +201,3 @@ function StatEditor({p,busy,save,erase}:{p:Player;busy:boolean;save:(s:Stats)=>P
     <label>Privat trenernotat<textarea maxLength={500} value={s.notes||""} onChange={e=>set({...s,notes:e.target.value})}/><small>{s.notes?.length||0}/500</small></label>
     <div className="day-strip"><button className="btn primary" disabled={busy}><Save size={16}/>Lagre statistikk</button>{erase&&<button className="btn" disabled={busy} type="button" onClick={erase}>Slett vurdering</button>}</div></form>;
 }
-

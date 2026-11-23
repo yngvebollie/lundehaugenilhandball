@@ -6,6 +6,7 @@ import {FeatureInfo} from "./feature-info";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Activity, BookOpen, CalendarDays, Download, Dumbbell, LogOut, Users } from "lucide-react";
 import { clubRole,db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
+import {ClubRequestNotice} from "./club-request-notice";
 
 import { ProgramBuilder, type Run } from "./program-builder";
 import {WizardGate} from "./player-wizard";
@@ -31,6 +32,7 @@ import {ScanLine,ClipboardList as ClipboardIcon} from "lucide-react";
 import {AdminAthleteView} from "./admin-athlete-view";
 import {CoachMenu,coachPageTitle} from "./coach-menu";
 import {PlayerHub} from "./player-hub";
+import {ClubStatistics} from "./club-statistics";
 import {DirectoryPanel} from "./directory-panel";
 import { TeamTools } from "./team-tools";
 import {CoachRatings} from "./coach-ratings";
@@ -41,7 +43,7 @@ function message(error: unknown) {
   return error && typeof error==="object" && "message" in error ? String(error.message) : "Could not save. Please retry.";
 }
 function signedOut() { return db?.auth.signOut().then(({error})=>{if(error) throw error;}); }
-export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"roster"|"dashboard"|"team"|"match"|"challenges"|"directory"|"badges"|"players"|"live"|"development"|"court" }) {
+export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boolean;view?:"roster"|"dashboard"|"team"|"match"|"challenges"|"directory"|"badges"|"players"|"live"|"development"|"court"|"club-stats" }) {
   const [preview,setPreview]=useState(false),[restore,remember]=useState<"club"|"coach">("coach");
   const [more,setMore]=useState(false),[hash,setHash]=useState("");
   useEffect(()=>{const follow=()=>{setHash(location.hash);setMore(false);};follow();window.addEventListener("hashchange",follow);return()=>window.removeEventListener("hashchange",follow);},[]);
@@ -101,7 +103,8 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
   return <div className={"app-shell beta"+(view==="development"||view==="court"?" dev-shell":"")}><aside className="sidebar"><Brand/><nav className="nav-section" aria-label="Hovedmeny">{navigation}</nav><div className="sidebar-footer muted">Performance operations</div></aside>
     <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {pageTitle}</span><h1>{pageTitle}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
     <nav className="phone-tabs" aria-label="Trenervalg"><a className={view==="dashboard"&&(!hash||hash==="#overview")?"current":""} href="/#overview"><House/>Oversikt</a><a className={view==="dashboard"&&hash==="#weekly"?"current":""} href="/#weekly"><CalendarDays/>Kalender</a><a className={view==="match"?"current":""} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><button aria-expanded={more} onClick={()=>setMore(!more)}><Ellipsis/>Mer</button></nav>{notice}
-    {preview&&data.club?.active?<AdminAthleteView key={data.me.squad} data={data} exit={()=>{setPreview(false);void run(async()=>{await clubRole(restore);});}}/>:view==="court"?<CourtRoom key={data.me.squad} data={data}/>:view==="development"?<Development key={data.me.squad} data={data}/>:view==="live"?<LiveAnalysis key={data.me.squad} data={data}/>:view==="players"||view==="roster"?<PlayerHub key={data.me.squad} data={data} busy={busy} run={run} legacy={view==="players"}/>:view==="badges"?<BadgePanel key={data.me.squad} data={data}/>:view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} hash={hash} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
+    {data.club?.eligible&&db&&!preview&&<ClubRequestNotice key={data.me.id} active={data.club.active}/>}
+    {preview&&data.club?.active?<AdminAthleteView key={data.me.squad} data={data} exit={()=>{setPreview(false);void run(async()=>{await clubRole(restore);});}}/>:view==="court"?<CourtRoom key={data.me.squad} data={data}/>:view==="development"?<Development key={data.me.squad} data={data}/>:view==="live"?<LiveAnalysis key={data.me.squad} data={data}/>:view==="players"||view==="roster"?<PlayerHub key={data.me.squad} data={data} busy={busy} run={run} legacy={view==="players"}/>:view==="badges"?<BadgePanel key={data.me.squad} data={data}/>:view==="club-stats"?<ClubStatistics key={data.me.squad+":"+!!data.club?.active} data={data}/>:view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} hash={hash} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}
 function count(data:Snapshot,id:string){return data.checks.filter(c=>c.assignment===id).length;}

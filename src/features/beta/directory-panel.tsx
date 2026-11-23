@@ -1,6 +1,7 @@
 import {FeatureInfo} from "./feature-info";
 import {useEffect,useState} from "react";
 import {clubDirectory,db,type Directory,type Snapshot} from "@/lib/beta";
+import {clubRequestsChanged} from "./club-request-notice";
 import "./squad-stats.css";
 export function DirectoryPanel({data}:{data:Snapshot}){
   const [rows,setRows]=useState<Directory>(),[error,setError]=useState(""),[team,setTeam]=useState(""),[tab,setTab]=useState("Alle brukere"),[query,setQuery]=useState("");
@@ -24,22 +25,31 @@ export function DirectoryPanel({data}:{data:Snapshot}){
 }
 
 type ClubRequest={id:string;club:string;coach:string;email:string;created:string};
+type ClubActivity={id:string;at:string;event:"request"|"approved"|"declined"|"user";person:string;club:string;role:string|null};
+const activityLabels={request:"Klubbsøknad mottatt",approved:"Klubb godkjent",declined:"Klubbsøknad avslått",user:"Konto opprettet"};
 
 function ClubRequests({onApproved}:{onApproved:()=>void}){
   const [allowed,setAllowed]=useState(false);
   const [requests,setRequests]=useState<ClubRequest[]>([]);
+  const [activity,setActivity]=useState<ClubActivity[]>([]);
   const [busy,setBusy]=useState("");
   const [confirm,setConfirm]=useState<{id:string;approve:boolean}|null>(null);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
+  useEffect(()=>{
+    if(allowed&&new URLSearchParams(location.search).get("section")==="club-requests")
+      document.getElementById("klubbsoknader")?.scrollIntoView({block:"start"});
+  },[allowed]);
   useEffect(()=>{
     let active=true;
     const read=async()=>{
       const {data}=await db!.rpc("beta_can_approve_clubs").throwOnError();
       if(!active||!data)return;
       setAllowed(true);
-      const pending=await db!.rpc("beta_pending_club_requests").throwOnError();
-      if(active)setRequests(pending.data);
+      const [pending,recent]=await Promise.all([
+        db!.rpc("beta_pending_club_requests").throwOnError(),db!.rpc("beta_club_owner_activity").throwOnError(),
+      ]);
+      if(active){setRequests(pending.data);setActivity(recent.data);}
     };
     void read().catch(e=>{if(active)setError(e.message);});
     return ()=>{active=false;};
@@ -50,12 +60,15 @@ function ClubRequests({onApproved}:{onApproved:()=>void}){
       await db!.rpc("beta_decide_club_request",{applicant_id:request.id,approve}).throwOnError();
       setRequests(rows=>rows.filter(row=>row.id!==request.id));setConfirm(null);
       setMessage(request.club+(approve?" er godkjent.":" ble avslått."));
+      window.dispatchEvent(new Event(clubRequestsChanged));
       if(approve)onApproved();
+      const {data}=await db!.rpc("beta_club_owner_activity").throwOnError();
+      setActivity(data);
     }catch(e){setError((e as Error).message);}
     finally{setBusy("");}
   }
   if(!allowed)return error?<p role="alert">{error}</p>:null;
-  return <section className="grid" aria-label="Klubbsøknader">
+  return <section className="grid" id="klubbsoknader" aria-label="Klubbsøknader">
     <h3>Klubbsøknader</h3>
     {message&&<p role="status">{message}</p>}
     {error&&<p role="alert">{error}</p>}
@@ -73,5 +86,12 @@ function ClubRequests({onApproved}:{onApproved:()=>void}){
           </>}</div></td>
         </tr>)}</tbody>
       </table></div>}
+    <details className="library-tools"><summary>Aktivitetslogg for klubber og brukere</summary>
+      {activity.length===0?<p>Ingen aktivitet å vise.</p>:<div className="player-list-scroll"><table className="table stat-table">
+        <thead><tr><th scope="col">Tidspunkt</th><th scope="col">Hendelse</th><th scope="col">Bruker</th><th scope="col">Klubb eller lag</th></tr></thead>
+        <tbody>{activity.map(row=><tr key={row.id}><td>{new Date(row.at).toLocaleString("nb-NO",{dateStyle:"short",timeStyle:"short"})}</td>
+          <th scope="row">{activityLabels[row.event]}{row.role==="coach"?" · Trener":row.role==="athlete"?" · Utøver":""}</th><td>{row.person}</td><td>{row.club}</td></tr>)}</tbody>
+      </table></div>}
+    </details>
   </section>;
 }

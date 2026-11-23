@@ -7,6 +7,7 @@ import type {Fixture} from "@/lib/match-journal";
 import type {Report} from "@/lib/report-text";
 import {useLiveMatchStorage} from "./live-match-storage";
 import {FixtureEventStats} from "./fixture-event-stats";
+import {ReportDownload} from "./report-download";
 
 type Props={game:Fixture;data:Snapshot;onChange:()=>Promise<void>};
 
@@ -77,6 +78,11 @@ export function FixtureEvents({game,data,onChange}:Props) {
   }
 
   return <section className="grid fixture-event-section">
+    {!!match.events.length&&<ReportDownload label="Last ned kamp og hendelser (PDF)" create={async()=>{
+      const [{readSavedReport,reportPDFItem},{downloadMatchPDF}]=await Promise.all([import("@/lib/match-report-data"),import("@/lib/report-export")]);
+      const item=reportPDFItem(game,await readSavedReport(game),match);
+      await downloadMatchPDF(item.label,[item],"Kamprapport "+game.day+" "+item.label);
+    }}/>}
     <div className="competition-heading"><div><h3>Hendelser</h3>
       <small>{match.events.length} hendelser · {match.home.name} {match.events.length?liveScore(match.events):game.score||liveScore(match.events)} {match.away.name}{match.eventOrigin==="api"?(match.events.some(e=>e.id.startsWith("nhf-public:"))?" · NHFs offentlige kampside":" · Importert feed"):match.eventOrigin==="manual"?" · Manuell logg":""}</small></div>
       <button className="btn primary" type="button" disabled={storage.loading||!!draft} onClick={()=>setDraft({

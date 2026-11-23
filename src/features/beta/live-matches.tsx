@@ -4,6 +4,7 @@ import type {Fixture} from "@/lib/match-journal";
 import {liveScore, type LiveMatch, type MatchTeam} from "@/lib/live-match";
 import {LiveMatchLineup} from "./live-match-lineup";
 import {LiveMatchLog} from "./live-match-log";
+import {ReportDownload} from "./report-download";
 import {useLiveMatchStorage} from "./live-match-storage";
 import "./live-matches.css";
 
@@ -11,6 +12,7 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
   const storage = useLiveMatchStorage(data.me.squad, data.me.id);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [exportTeam,setExportTeam]=useState("");
   const active = storage.rows.find(row => row.id === selected);
   const previous = storage.rows.map(row => row.document);
   const choices = new Map<string, MatchTeam>();
@@ -20,6 +22,11 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
       if (team.key.startsWith("new:") && !choices.has(team.key)) choices.set(team.key, team);
     }
   }
+  const standalone=storage.rows.filter(row=>row.document.home.key!=="home"&&row.document.away.key!=="away"&&
+    !fixtures.some(game=>game.id===row.id)&&
+    (row.document.finalized||row.document.clock.status==="finished")&&row.document.events.length);
+  const exportTeams=new Map(standalone.flatMap(({document})=>[document.home,document.away].map(team=>[team.key,team.name] as const)));
+  const exportKey=exportTeams.has(exportTeam)?exportTeam:exportTeams.keys().next().value;
 
   function saveLineup(document: LiveMatch) {
     const id = active?.id ?? crypto.randomUUID();
@@ -45,6 +52,18 @@ export function LiveMatches({data, teams, fixtures}: {data: Snapshot; teams: Mat
       <>
         <header className="competition-heading"><h2>Logg kamp</h2>
           <button className="btn primary" type="button" disabled={storage.loading} onClick={() => setEditing(true)}>+ Opprett kamp</button></header>
+        {exportKey&&<div className="live-panel day-strip">
+          <label>Lag i egenførte kamper<select value={exportKey} onChange={e=>setExportTeam(e.target.value)}>
+            {[...exportTeams].map(([key,name])=><option key={key} value={key}>{name}</option>)}
+          </select></label>
+          <ReportDownload label="Last ned lagets egenførte kamper (PDF)" create={async()=>{
+            const {downloadMatchPDF}=await import("@/lib/report-export");
+            const items=standalone.filter(({document:log})=>log.home.key===exportKey||log.away.key===exportKey)
+              .sort((a,b)=>a.document.date.localeCompare(b.document.date))
+              .map(({document:log})=>({label:log.home.name+" – "+log.away.name,log}));
+            await downloadMatchPDF("Egenførte kamper · "+exportTeams.get(exportKey),items);
+          }}/>
+        </div>}
         {!storage.loading && !storage.rows.length && <p>Ingen kamper er ført her ennå.</p>}
         {fixtures.filter(game=>!game.completed&&game.day>=today()&&!storage.rows.some(row=>row.id===game.id))
           .sort((a,b)=>a.day.localeCompare(b.day)||(a.start_time||"").localeCompare(b.start_time||"")).slice(0,8).map(game=>

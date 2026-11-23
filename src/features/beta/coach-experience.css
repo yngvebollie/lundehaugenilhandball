@@ -31,3 +31,5 @@
 .session-followup td{vertical-align:top}
 .session-followup td:nth-child(4),.session-followup td:nth-child(5){text-align:right;font-variant-numeric:tabular-nums}
 
+.club-inbox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;background:var(--panel)}
+.club-inbox>div{display:grid;gap:4px}.club-inbox small{color:var(--muted)}.club-inbox .btn{min-height:44px}

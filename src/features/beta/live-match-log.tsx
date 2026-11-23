@@ -1,4 +1,5 @@
 import {useEffect, useState, type FormEvent} from "react";
+import {ReportDownload} from "./report-download";
 import {
   appendMatchEvent, clockSeconds, eventNames, formatMatchTime, liveScore, matchPlayers, matchProtocol, matchTimeline,
   newMatchEvent, parseMatchTime, penaltyNames, shirtNumber,
@@ -208,6 +209,11 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
 function MatchReport({match, finalize}: {match: LiveMatch; finalize: () => void}) {
   const halfEnded = match.events.some(event => event.type === "clock" && event.label === "Slutt 1. omgang");
   return <section className="grid">
+    {match.events.length>0&&<ReportDownload label="Last ned kamprapport (PDF)" create={async()=>{
+      const {downloadMatchPDF}=await import("@/lib/report-export");
+      const label=match.home.name+" – "+match.away.name;
+      await downloadMatchPDF(label,[{label,log:match}],"Kamprapport "+match.date+" "+label);
+    }}/>}
     <div><h3>Målprotokoll</h3><p>{match.finalized ? "Ferdigstilt" : match.clock.status === "finished" ? "Til kontroll" : "Oppdateres fortløpende"}
       {halfEnded && " · Pause " + liveScore(match.events.filter(event => event.half === 1))}
       {match.clock.status === "finished" && " · Slutt " + liveScore(match.events)}</p></div>

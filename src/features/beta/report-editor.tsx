@@ -3,9 +3,9 @@ import {useEffect,useState} from "react";
 import {ClipboardPaste,Download,FileText,Save,Upload} from "lucide-react";
 import {db,demo,type Snapshot} from "@/lib/beta";
 import type {Fixture} from "@/lib/match-journal";
+import {readReportLogs,readSavedReport,reportPDFItem,type SavedReport as Saved} from "@/lib/match-report-data";
 import {canReviewTeamLabels,importDraft,parsePaste,reportTeamMatches,validateReport,type Report,type ReportPlayer,type ReportMatch} from "@/lib/report-text";
 
-type Saved={digest:string;original:Report;reviewed:Report;revision:number};
 const digestText=async(text:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,"0")).join("");
 const numbers=["goals","penalty","total","suspensions"] as const;
 const props={goals:"Spillemål",penalty:"7 m (straffemål)",total:"Totalt",suspensions:"2 min"};
@@ -22,7 +22,7 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
   const [file,setFile]=useState<File|null>(null),[preview,setPreview]=useState(""),[side,setSide]=useState<"A"|"B">("A");
   const [source,setSource]=useState<"paste"|"pdf">("paste"),[picked,pick]=useState(0);
   const key="kamper-private-report:"+g.team+":"+g.id;
-  async function read(){const r=demo?JSON.parse(sessionStorage.getItem(key)||"null"):(await db!.rpc("beta_report",{action:"read",t:g.team,m:g.id}).throwOnError()).data;
+  async function read(){const r=await readSavedReport(g);
     setSaved(r);setReady(true);return r as Saved|null;}
   useEffect(()=>{void read().catch(e=>setNote(e.message));},[g.id]);
   useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview);},[preview]);
@@ -60,7 +60,11 @@ export function ReportEditor({game:g,data,onSaved}:{game:Fixture;data:Snapshot;o
   const index=report?.players[picked]?.side===side?picked:(report?.players.findIndex(p=>p.side===side)??-1),player=report?.players[index];
   return <section className="grid review-work"><header className="feature-heading"><FeatureInfo topic="report"><h3><FileText size={17}/> Kamprapport</h3></FeatureInfo>
     {g.nif_id&&<a href={"https://www.handball.no/system/kamper/kamprapport/?matchid="+g.nif_id} target="_blank" rel="noreferrer"><Download size={15}/> Åpne NHF-rapport</a>}</header>
-    {saved&&<div className="day-strip"><small>Lagret · revisjon {saved.revision}</small><button className="btn" disabled={busy} onClick={()=>act(async()=>{const {downloadReport}=await import("@/lib/report-export");await downloadReport(saved.reviewed,saved.revision);setNote("PDF eksportert.");})}><Download size={16}/>Last ned PDF</button><button className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);}}>Rediger lagret rapport</button>
+    {saved&&<div className="day-strip"><small>Lagret · revisjon {saved.revision}</small><button className="btn" disabled={busy} onClick={()=>act(async()=>{
+      const [{downloadMatchPDF},logs]=await Promise.all([import("@/lib/report-export"),readReportLogs(g.team,[g.id],data.me.id)]);
+      const item=reportPDFItem(g,saved,logs.get(g.id));
+      await downloadMatchPDF(item.label,[item],"Kamprapport "+g.day+" "+item.label);setNote("PDF er klar til nedlasting.");
+    })}><Download size={16}/>Last ned PDF</button><button className="btn" onClick={()=>{setFile(null);open(saved.reviewed,saved.original,saved.digest);}}>Rediger lagret rapport</button>
       {!demo&&saved.original.method!=="paste"&&<button className="btn" onClick={()=>act(async()=>{const result=await db!.storage.from("kamprapporter").download(privatePath(g,saved.digest));if(result.error)throw result.error;setPreview(URL.createObjectURL(result.data));})}>Vis original PDF</button>}</div>}
     {preview&&<object data={preview} type="application/pdf" width="100%" height="340"><a href={preview} target="_blank" rel="noreferrer">Åpne privat forhåndsvisning</a></object>}
     {report&&<>{editing&&teamIssues(report).length>0&&<section className="report-conflict" aria-label="Lagnavn må kontrolleres"><strong>Kamp-ID og lagnavn kontrolleres hver for seg</strong>
