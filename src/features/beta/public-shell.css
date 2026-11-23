@@ -16,6 +16,10 @@
 .athlete .role-icon{color:var(--accent);background:var(--accent-soft)}.coach .role-icon{color:var(--on-accent);background:var(--accent)}
 .entry-role>svg{color:var(--muted)}.entry-role:hover{border-color:var(--border-strong);background:var(--bg-soft)}
 .entry-role strong{display:block;font-size:18px}.entry-role small{display:block;margin-top:4px;color:var(--muted);line-height:1.4}
+.entry-create-club{margin-top:24px;border-color:var(--accent);background:var(--accent-soft);color:var(--text);text-decoration:none}
+.entry-create-club .role-icon{background:var(--accent);color:var(--on-accent)}
+.entry-create-club>svg{color:var(--accent)}
+.entry-create-club:hover{background:var(--panel);border-color:var(--accent);text-decoration:none}
 .entry-content form{margin-top:26px}.entry-content label{color:var(--text)}.entry-content input,.entry-content select{min-height:46px}
 .entry-content .btn.primary{background:var(--accent);color:var(--on-accent);border:0}
 .entry-content .btn.primary:hover{background:var(--accent-hover)}

@@ -4,6 +4,12 @@ Når brukeren ber deg jobbe med appen, gjennomfør oppgaven selvstendig. Kjør r
 
 Bruk godkjenningen som allerede er gitt for oppgaven. Be om ekstra bekreftelse bare når verktøyet krever det. Hvis verktøyet krever bekreftelse, forklar hvilken handling det gjelder, og samle bekreftelser der verktøyet tillater det.
 
+## Visuell kvalitet i appen
+
+- Gjør nye handlinger tydelige i visningen der de hører hjemme. Bruk appens knappestiler, med klar vekt på hovedhandlingen og lesbare etiketter for sekundære handlinger.
+- Se over plassering, avstand, kontrast og trykkflater på mobil og desktop når du endrer et grensesnitt. Sjekk tastaturfokus og relevante tilstander for venting, lagring og feil.
+- Kontroller den ferdige visningen i nettleser når det er mulig. Rett synlige layout- og stilproblemer før levering.
+
 ## Testmiljø og opprydding
 
 - Bruk produksjon til lesekontroller som utgivelsesstatus, dekning og kontrollsummer. Kontroller ekte data før og etter arbeidet når det er relevant.

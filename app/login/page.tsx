@@ -3,7 +3,7 @@
 import {FeatureInfo} from "@/features/beta/feature-info";
 import { useEffect, useState, type FormEvent } from "react";
 import { db, demo, demoAccounts, joinDemo, registerDemoAthlete,selectTeam } from "@/lib/beta";
-import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, BookOpen, ClipboardList, Plus } from "lucide-react";
 import { PublicShell } from "@/features/beta/public-shell";
 import {AthleteName,joinName,legacyNames} from "@/features/beta/athlete-name";
 import {SignupSuccess} from "@/features/beta/signup-success";
@@ -125,7 +125,11 @@ export default function Login(){
     {signed&&<button className="btn" onClick={()=>db?.auth.signOut()}>Switch account</button>}{message&&<p role="status">{message}</p>}
     {!invite&&<div className="entry-alternate">{join?"Already have an account?":"New to the platform?"} <button type="button" onClick={()=>{setJoin(!join);setMessage("");}}>{join?"Sign in":"Create account"}</button></div>}
     </>}
-    {!demo&&!invite&&role==="coach"&&<a className="btn" href="/login?role=coach&create_club=1">Opprett ny klubb</a>}
+    {!demo&&!invite&&role==="coach"&&<a className="entry-role entry-create-club" href="/login?role=coach&create_club=1">
+      <span className="role-icon"><Plus size={24} aria-hidden="true"/></span>
+      <span><strong>Opprett ny klubb</strong><small>Søk om et eget oppsett der du blir administrator.</small></span>
+      <ArrowRight size={19} aria-hidden="true"/>
+    </a>}
     {demo&&<small className="entry-demo">Browser-local demo</small>}
     <footer className="entry-footer"><a href="/documentation"><BookOpen size={17}/>Platform documentation<ArrowRight size={15}/></a></footer>
     </div></PublicShell>;
