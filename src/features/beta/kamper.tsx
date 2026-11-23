@@ -75,6 +75,7 @@ export function Kamper({data}:{data:Snapshot}){
       {shown.map(r=><button className={!aggregate&&active?.id===r.id?"current":""} key={r.id} aria-pressed={!aggregate&&active?.id===r.id} onClick={()=>choose(r.id)}><span><strong>{label(r)}</strong><small>NIF {r.org_id}</small></span><ChevronRight size={16}/></button>)}
       {!past&&admin&&<button className="rail-add" onClick={add}><Plus size={16}/>Legg til NHF-lag</button>}</aside>}
     <section className="grid kamper">
+    {!id&&!past&&admin&&view!=="add-team"&&<div className="squad-compact"><button type="button" className="btn" onClick={add}><Plus size={16}/>Legg til NHF-lag</button></div>}
     {!id&&!logging&&(view===""||aggregate)&&<div className="day-strip"><a className="btn primary" aria-label="Åpne Logg kamp" href={"/match?"+new URLSearchParams({view:"log",...active&&!aggregate?{reg:active.id}:{}})}><ClipboardList size={16} aria-hidden="true"/>Logg kamp</a></div>}
     {!id&&!logging&&shown.length>0&&<label className="squad-compact">Aktiv NIF-lagprofil<select value={aggregate?"all":active?.id||""} onChange={e=>choose(e.target.value)}><option value="all">Alle lag</option>{shown.map(r=><option key={r.id} value={r.id}>{label(r)} · {r.org_id}</option>)}</select></label>}
     {!id&&!logging&&<div className="season-toolbar">
@@ -197,3 +198,4 @@ function StatEditor({p,busy,save,erase}:{p:Player;busy:boolean;save:(s:Stats)=>P
     <label>Privat trenernotat<textarea maxLength={500} value={s.notes||""} onChange={e=>set({...s,notes:e.target.value})}/><small>{s.notes?.length||0}/500</small></label>
     <div className="day-strip"><button className="btn primary" disabled={busy}><Save size={16}/>Lagre statistikk</button>{erase&&<button className="btn" disabled={busy} type="button" onClick={erase}>Slett vurdering</button>}</div></form>;
 }
+
