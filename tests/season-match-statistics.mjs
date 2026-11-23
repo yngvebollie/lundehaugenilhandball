@@ -14,6 +14,7 @@ function load(file){
   return exports;
 }
 const {seasonMatchStatistics}=load(fileURLToPath(new URL("../src/lib/season-match-statistics.ts",import.meta.url)));
+const {opponentPacket}=load(fileURLToPath(new URL("../src/lib/opponent-watch.ts",import.meta.url)));
 const base={completed:true,home:"Eget lag",away:"Motstander",opponent:"Motstander"};
 const game=(id,nif_id,score,attributes={})=>({...base,id,nif_id,score,...attributes});
 const log=(first,second,origin="manual")=>({
@@ -50,6 +51,19 @@ assert.equal(result.timed,3);
 assert.deepEqual(result.openings,{games:3,first:-3,second:-2});
 assert.deepEqual([result.timeStats.seconds,result.timeStats.goals,result.timeStats.against],[7200,7,12]);
 assert.equal(result.noResponse,0);
+const watchedAway=game("external",1,"4–3",{opponent:"Eget lag"});
+const watchedHome=game("other",6,"3–0");
+const watch={fixtures:[{game:watchedAway,log:logs["a-copy"]},{game:watchedHome}]};
+const packet=opponentPacket(watch,[games[0]],{},logs,false);
+assert.equal(packet.games.length,2);
+assert.equal(packet.logs.external.eventOrigin,"manual");
+assert.equal(packet.links.external,"/match?game=a&section=events");
+assert.match(packet.links.other,/matchid=6#tab=events$/);
+const watched=seasonMatchStatistics(packet.games,packet.reports,packet.logs);
+assert.equal(watched.rows[0].side,"away");
+assert.deepEqual(watched.rows[0].half,[0,2]);
+assert.equal(watched.rows[0].ownMax,3);
+assert.equal(opponentPacket(watch,[games[0]],{},logs,true).games.length,1);
 const withoutAnswer=seasonMatchStatistics([game("e",5,"1–3")],{},{
   e:log(["home"],["away","away","away"]),
 });

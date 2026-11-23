@@ -278,6 +278,21 @@ try {
   await pg.exec("alter table public.beta_cup_games add column declined uuid[] default '{}'"); 
   for(const file of ["20261116200000_cup_participation","20261116210000_athlete_results_and_sets","20261116212000_merit_match_links","20261116213000_match_ballots","20261116230000_historical_award_match","20261116230100_quick_sets_grants","20261116232000_vote_award_fixture"])await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
   await checkPeers(pg,login,uuid,team,rid);
+  await pg.exec("reset role");
+  for(const file of ["20261116220000_fixture_corrections","20261123123000_opponent_watches","20261123123001_fixture_edit_invoker"])
+    await pg.exec(await readFile(new URL("../supabase/migrations/"+file+".sql",import.meta.url),"utf8"));
+  await pg.query("insert into auth.users(id,email,email_confirmed_at) values($1,'isolated-coach@test.local',now())",[uuid(970)]);
+  await pg.query("insert into beta_members(id,squad,name,role) values($1,$2,'Isolated coach','coach')",[uuid(970),uuid(20)]);
+  await pg.exec("set role authenticated");
+  await login(1);
+  const watch=(target)=>pg.query("insert into beta_opponent_watches(team,season,org_id,name) values($1,1,9,'Opponent')",[target]);
+  await watch(team);await assert.rejects(watch(team));await assert.rejects(watch(uuid(20)));
+  const editFixture=(target)=>pg.query("select beta_edit_fixture($1,$2,$3,null)",[target,m,{venue:"Kontrollhall"}]);
+  await editFixture(team);
+  await login(970);assert.equal((await pg.query("select count(*) n from beta_opponent_watches")).rows[0].n,0);
+  await assert.rejects(editFixture(team));
+  await login(2);await assert.rejects(watch(team));await assert.rejects(editFixture(team));
+  await login(1);
   const squadLines=async()=>(await pg.query("select beta_squad_stat_lines($1) v",[rid])).rows[0].v;
   const lines=(await squadLines()).filter(r=>r.name==="Test home");
   assert.equal(lines.length,3);assert.equal(new Set(lines.map(r=>r.player)).size,1);

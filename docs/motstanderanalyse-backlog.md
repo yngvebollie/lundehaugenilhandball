@@ -1,6 +1,6 @@
 # Backlogg: Analyse av motstandere
 
-**Status:** Planlagt. Kampoversikten får et separat register under **Kamper → Motstandere**.
+**Status 23.11.2026:** Register og kampanalyse er implementert under **Kamper → Motstandere**. Synk i produksjon må kontrolleres med en innlogget trenerøkt.
 
 ## Flyt
 
@@ -27,3 +27,8 @@ Vis antall kamper bak hver beregning. Ved manglende hendelser vises resultatene 
 2. Gjenbruk NHF-importen med egne koblinger for motstanderkamper. Dedupliser oppgjør på NHF-kamp-ID og behold perspektivet til motstanderen, også når laget er bortelag. Hvis et oppgjør allerede finnes blant egne kamper, lenk til det og behold den manuelle loggen som foretrukket kilde der den finnes.
 3. Gjenbruk beregningene for pause, femminuttersintervaller og målrekker. Test særlig bortelag, kamper mellom to registrerte motstandere, ufullstendige logger og samme kamp i flere turneringsutvalg.
 4. Lever register og formsammendrag først. Legg deretter til kampfaser, målrekker og kampforberedelse når hendelsesdekningen er synlig. Verifiser at to synk gir samme antall oppgjør, at kampgrunnlaget stemmer med grafene og at motstanderregistreringer ikke påvirker egne sesongtall.
+
+## Videre oppfølging
+
+- Kontroller to synk av samme motstander i en isolert trenerøkt mot NHFs levende feed. Databasetesten dekker unik registrering, og en egen test dekker deduplisering i terminlisten.
+- Sammenligning side om side med eget lag er en mulig utvidelse. Dagens visning har filter for innbyrdes kamper og egne kampanalyser i nabofanen.

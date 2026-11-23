@@ -1,5 +1,11 @@
 # Backloggstatus 18.11.2026
 
+## Oppfølging 23.11.2026
+
+- Motstanderanalyse er implementert. Funksjonalitet og gjenstående produksjonskontroll står i [motstanderanalyse-backlog.md](motstanderanalyse-backlog.md).
+- M3: Den offentlige funksjonen for kampredigering kjører med innkallerens rettigheter og delegerer til den tilgangskontrollerte funksjonen i privat skjema. Isolerte tester bekreftet redigering for riktig trener og avvisning for utøver og trener på et annet lag. Passordinnstillingen står fortsatt åpen.
+- M1 og M2 gjenstår for fysiske telefoner og faktisk levering i innboks. Automatiserte tester er delkontroller. Ved avstemming av eldre ønsker skal produksjonsverifisering fortsatt registreres separat fra kode og isolerte tester.
+
 ## Levert i siste milepaeler
 
 - Trenernavigasjon og konkret oppfolging: coach-experience-plan.md.

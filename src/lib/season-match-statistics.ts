@@ -81,9 +81,10 @@ export function seasonMatchStatistics(games:Fixture[], reports:Record<string,Rep
         }
       }
     }
-    let length=0,max=0,episodes=0,firstRun=-1;
+    let length=0,max=0,ownLength=0,ownMax=0,episodes=0,firstRun=-1;
     goals.forEach((event,index)=>{
       length=event.side===side?0:length+1;max=Math.max(max,length);
+      ownLength=event.side===side?ownLength+1:0;ownMax=Math.max(ownMax,ownLength);
       if(length===3){episodes++;if(firstRun<0)firstRun=index;}
     });
     const streak=log?groupOf(max):null;
@@ -92,7 +93,7 @@ export function seasonMatchStatistics(games:Fixture[], reports:Record<string,Rep
     const third=goals[firstRun];
     const recovery=next&&(next.half===third.half||verifiedDuration)?next.seconds-third.seconds+(next.half!==third.half?verifiedDuration![0]:0):null;
     const firstRunScore=firstRun>=0?events[firstRun]:null;
-    rows.push({key,game,final,full,half,atBreak,streak,max,episodes,recovery,
+    rows.push({key,game,final,full,half,atBreak,streak,max,ownMax,timed:!!verifiedDuration,episodes,recovery,
       noResponse:firstRun>=0&&!next,firstRunScore,side,third});
   }
   const affected=rows.filter(row=>row.episodes);
