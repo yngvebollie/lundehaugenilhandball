@@ -1,5 +1,6 @@
 import {useEffect, useState, type FormEvent} from "react";
 import {ReportDownload} from "./report-download";
+import {MatchEventDialog} from "./match-event-dialog";
 import {
   appendMatchEvent, clockSeconds, eventNames, formatMatchTime, liveScore, matchPlayers, matchProtocol, matchTimeline,
   newMatchEvent, parseMatchTime, penaltyNames, shirtNumber,
@@ -110,10 +111,10 @@ export function LiveMatchLog({match, save, close, editLineup}: Props) {
       {(Object.keys(tabs) as (keyof typeof tabs)[]).map(key => <button type="button" className={tab === key ? "current" : ""}
         aria-pressed={tab === key} key={key} disabled={!!draft} onClick={() => setTab(key)}>{tabs[key]}</button>)}
     </nav>
-    {draft ? <EventEditor match={match} draft={draft} onSave={submit} onCancel={() => setDraft(null)} onRemove={draft.kind==="edit"&&draft.event.type!=="clock"?()=>{
+    {draft&&<EventEditor match={match} draft={draft} onSave={submit} onCancel={() => setDraft(null)} onRemove={draft.kind==="edit"&&draft.event.type!=="clock"?()=>{
       if(save(current=>({...current,finalized:false,events:current.events.filter(event=>event.id!==draft.event.id)})))setDraft(null);
-    }:undefined}/> :
-      tab === "register" ? <div className="grid">
+    }:undefined}/>}
+      {tab === "register" ? <div className="grid">
         {(["home","away"] as const).map(side=><section key={side} className="grid">
         <h3>Mål til {match[side].name}</h3>
         <div className="live-player-buttons">{matchPlayers(match,side).map(player => <button key={player.id} className="btn primary" type="button" disabled={!inPlay}
@@ -182,10 +183,9 @@ function EventEditor({match, draft, onSave, onCancel, onRemove}: {match: LiveMat
     onSave({...event, type, side, half, seconds, number, playerId: player?.id, playerName, outcome: type === "penalty" ? outcome : undefined});
   }
 
-  return <form className="grid live-panel live-form" onSubmit={submit}>
-    <h3>{title}</h3>
+  return <MatchEventDialog title={title} onCancel={onCancel}><form className="grid live-form match-event-dialog-form" onSubmit={submit}>
     {kind === "edit" && <p>{eventDescription(match, event)}</p>}
-    {kind==="edit"&&event.type!=="clock"&&<label>Hendelse<select value={type} onChange={e=>setType(e.target.value as MatchEventType)}>{Object.entries(eventNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
+    {kind==="edit"&&event.type!=="clock"&&<label>Hendelse<select data-event-focus value={type} onChange={e=>setType(e.target.value as MatchEventType)}>{Object.entries(eventNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
     {hasTeam && !draft.awayOnly && <fieldset className="grid"><legend>Lag</legend><div className="live-pair">
       {(["home", "away"] as const).map(team => <button type="button" className={"btn" + (side === team ? " selected" : "")}
         key={team} aria-pressed={side === team} onClick={() => {if(side!==team){setSide(team);setPlayerId("");setShirt("");}}}>{match[team].name}</button>)}
@@ -209,7 +209,7 @@ function EventEditor({match, draft, onSave, onCancel, onRemove}: {match: LiveMat
     {onRemove&&<button type="button" className="btn" onClick={()=>removing?onRemove():setRemoving(true)}>{removing?"Bekreft fjerning":"Fjern hendelse"}</button>}
     <div className="live-pair"><button type="button" className="btn" onClick={onCancel}>Avbryt</button>
       <button className="btn primary">{kind === "end" ? "Avslutt omgang" : "Lagre"}</button></div>
-  </form>;
+  </form></MatchEventDialog>;
 }
 
 function MatchReport({match, finalize}: {match: LiveMatch; finalize: () => void}) {

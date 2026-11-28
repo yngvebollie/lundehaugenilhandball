@@ -10,6 +10,7 @@ import {useLiveMatchStorage} from "./live-match-storage";
 import {FixtureEventStats} from "./fixture-event-stats";
 import {ReportDownload} from "./report-download";
 import {fixturePlayer,FixtureRoster} from "./fixture-roster";
+import {MatchEventDialog} from "./match-event-dialog";
 
 type Props={game:Fixture;data:Snapshot;onChange:()=>Promise<void>;rosterOnly?:boolean;onOpenEvents?:()=>void;onOpenRoster?:()=>void;fixturePlayers?:FixturePlayer[]};
 const quickActions = [
@@ -221,7 +222,11 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
           {receipt&&(receipt.number===undefined?match[receipt.side!].name:"#"+receipt.number)+" · "+eventNames[receipt.type as Exclude<MatchEvent["type"],"clock">]+(receipt.outcome?" · "+penaltyNames[receipt.outcome]:"")+" · "}
           {receipt?(storage.pending?"Lagret på enheten. Synkroniserer …":"Lagret."):""}
         </p>}
-        <button className="btn" type="button" onClick={()=>{setTab("events");setFullscreen(false);if(receipt)setDraft(match.events.find(event=>event.id===receipt.id)??null);}}>{receipt?"Rett siste hendelse":"Åpne hendelsesloggen"}</button>
+        <button className="btn" type="button" onClick={()=>{
+          const latest=receipt&&match.events.find(event=>event.id===receipt.id);
+          if(latest)setDraft(latest);
+          else{setTab("events");setFullscreen(false);}
+        }}>{receipt?"Rett siste hendelse":"Åpne hendelsesloggen"}</button>
       </div>}
     </dialog>
     {!game.completed&&match.clock.status!=="finished"&&<div className="day-strip">
@@ -229,7 +234,7 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
       {clockButton}
       {["running","paused"].includes(match.clock.status)&&<button type="button" className="btn" disabled={!!draft} onClick={()=>clockAction("end")}>Avslutt {match.clock.half}. omgang</button>}
     </div>}
-    {!draft&&!storage.loading&&!storage.loadError&&<section className="live-panel grid">
+    {!storage.loading&&!storage.loadError&&<section className="live-panel grid">
       <h3>Hurtiglogg</h3>{quickButtons()}
       <details className="library-tools"><summary>Administrer kamptroppen</summary>{rosterPanel}{profileFeedback}</details>
     </section>}
@@ -237,10 +242,16 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
     {storage.loadError&&<p role="alert">{storage.loadError} <button type="button" className="btn" onClick={()=>void storage.reload()}>Prøv igjen</button></p>}
     {storage.saveError?<p role="alert">{storage.saveError} {storage.pending&&<button type="button" className="btn" onClick={()=>void storage.retry()}>Prøv lagring igjen</button>}</p>:
       storage.pending?<small role="status">Lagret på enheten. Synkroniserer …</small>:stored&&<small role="status">Hendelsene er lagret.</small>}
-    {draft&&<FixtureEventForm key={draft.id} draft={draft} match={match} roster={forEditor} ownSide={ownSide}
-      onSave={keep} onCancel={()=>setDraft(null)} onRemove={match.events.some(e=>e.id===draft.id)?()=>{
-        if(save(previous=>({...previous,eventOrigin:"manual",events:previous.events.filter(e=>e.id!==draft.id)})))setDraft(null);
-      }:undefined}/>}
+    {draft&&<MatchEventDialog key={draft.id} title={match.events.some(event=>event.id===draft.id)?"Rett hendelse":"Legg til hendelse"} onCancel={()=>setDraft(null)}>
+      <FixtureEventForm draft={draft} match={match} roster={forEditor} ownSide={ownSide} saveError={storage.saveError}
+        onSave={event=>{if(keep(event)&&receipt?.id===event.id)setReceipt(event);}}
+        onCancel={()=>setDraft(null)} onRemove={match.events.some(e=>e.id===draft.id)?()=>{
+          if(save(previous=>({...previous,eventOrigin:"manual",events:previous.events.filter(e=>e.id!==draft.id)}))){
+            if(receipt?.id===draft.id)setReceipt(undefined);
+            setDraft(null);
+          }
+        }:undefined}/>
+    </MatchEventDialog>}
     <div className="day-strip"><button type="button" className="btn" aria-pressed={tab==="events"} onClick={()=>setTab("events")}>Hendelseslogg</button>
       <button type="button" className="btn" aria-pressed={tab==="stats"} onClick={()=>setTab("stats")}>Statistikk</button></div>
     {tab==="events"?(timeline.length?<div className="fixture-event-scroll" role="region" aria-label="Alle kamphendelser" tabIndex={0}>
@@ -304,14 +315,16 @@ function EventRows({pause,children}:{pause?:string;children:React.ReactNode}) {
   return <>{pause&&<tr className="fixture-event-pause"><td colSpan={3}>Pause · {pause}</td></tr>}<tr>{children}</tr></>;
 }
 
-function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove}:{
+function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove,saveError}:{
   draft:MatchEvent;match:LiveMatch;roster:FixturePlayer[];ownSide:MatchSide;
-  onSave:(event:MatchEvent)=>void;onCancel:()=>void;onRemove?:()=>void;
+  onSave:(event:MatchEvent)=>void;onCancel:()=>void;onRemove?:()=>void;saveError:string;
 }) {
   const [side,setSide]=useState<MatchSide>(draft.side??ownSide);
   const [id,setId]=useState(draft.playerId??"");
   const [type,setType]=useState(draft.type);
   const [outcome,setOutcome]=useState<PenaltyOutcome>(draft.outcome??"goal");
+  const [shirt,setShirt]=useState(String(draft.number??""));
+  const [name,setName]=useState(draft.playerName??"");
   const [error,setError]=useState("");
   const [removing,setRemoving]=useState(false);
   function submit(e:FormEvent<HTMLFormElement>){
@@ -323,7 +336,7 @@ function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove}:
     const player=side===ownSide?roster.find(p=>p.id===id):undefined;
     if(type!=="clock"&&!Object.hasOwn(eventNames,type))return setError("Velg en hendelsestype.");
     onSave({...draft,side:type==="clock"?undefined:side,half:fields.get("half")==="2"?2:1,seconds,type:type as MatchEvent["type"],
-      playerId:type==="timeout"||type==="clock"?undefined:player?.id,
+      playerId:type==="timeout"||type==="clock"||side!==ownSide?undefined:player?.id||(id||undefined),
       playerName:type==="timeout"||type==="clock"?undefined:player?.name||String(fields.get("player")??"").trim()||undefined,
       number:type==="timeout"||type==="clock"?undefined:number??player?.number,
       outcome:type==="penalty"?outcome:undefined,
@@ -332,24 +345,28 @@ function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove}:
       keeperName:type==="penalty"&&outcome==="saved"&&draft.side===side?draft.keeperName:undefined,
     });
   }
-  return <form className="grid live-panel live-form" onSubmit={submit}>
-    <h3>Hendelsesdetaljer</h3>
-    <div className="live-pair"><label>Omgang<select name="half" defaultValue={draft.half}><option value="1">1. omgang</option><option value="2">2. omgang</option></select></label>
-      <label>Kamptid<input required name="time" defaultValue={formatMatchTime(draft.seconds)}/></label></div>
-    <div className="live-pair"><label>Hendelse<select value={type} onChange={e=>setType(e.target.value as MatchEvent["type"])}>
+  return <form className="grid live-form match-event-dialog-form" onSubmit={submit}>
+    <div className="live-pair"><label>Hendelse<select data-event-focus value={type} onChange={e=>setType(e.target.value as MatchEvent["type"])}>
       {draft.type==="clock"&&<option value="clock">{draft.label||"Klokke"}</option>}
       {Object.entries(eventNames).map(([key,text])=><option key={key} value={key}>{text}</option>)}</select></label>
-      <label>Lag<select value={side} onChange={e=>{setSide(e.target.value==="home"?"home":"away");setId("");}}>
+      <label>Lag<select value={side} onChange={e=>{setSide(e.target.value==="home"?"home":"away");setId("");setShirt("");setName("");}}>
         <option value="home">{match.home.name}</option><option value="away">{match.away.name}</option>
       </select></label></div>
-    {side===ownSide&&<label>Koble til utøverprofil<select value={id} onChange={e=>setId(e.target.value)}>
-      <option value="">Ingen profil valgt</option>{roster.map(p=><option key={p.id} value={p.id}>{p.number!==undefined&&"#"+p.number+" · "}{p.name}</option>)}
-    </select></label>}
     {type==="penalty"&&<label>Utfall på 7-meter<select value={outcome} onChange={e=>setOutcome(e.target.value as PenaltyOutcome)}>{Object.entries(penaltyNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
-    <div className="live-pair"><label>Draktnummer<input name="number" inputMode="numeric" maxLength={2} defaultValue={draft.number}/></label>
-      <label>Navn (valgfritt)<input name="player" maxLength={150} defaultValue={draft.playerName}/></label></div>
+    {side===ownSide&&<label>Spiller<select value={id} onChange={e=>{
+      const player=roster.find(row=>row.id===e.target.value);
+      setId(e.target.value);setShirt(String(player?.number??""));setName(player?.name??"");
+    }}>
+      <option value="">Ingen profil valgt</option>{id&&!roster.some(row=>row.id===id)&&<option value={id}>{draft.playerName||"Tidligere valgt spiller"}</option>}
+      {roster.map(p=><option key={p.id} value={p.id}>{p.number!==undefined&&"#"+p.number+" · "}{p.name}</option>)}
+    </select></label>}
+    <div className="live-pair"><label>Draktnummer<input name="number" inputMode="numeric" maxLength={2} value={shirt} onChange={e=>{setShirt(e.target.value);if(id){setId("");setName("");}}}/></label>
+      <label>Navn (valgfritt)<input name="player" maxLength={150} value={name} onChange={e=>{setId("");setName(e.target.value);}}/></label></div>
+    <div className="live-pair"><label>Omgang<select name="half" defaultValue={draft.half}><option value="1">1. omgang</option><option value="2">2. omgang</option></select></label>
+      <label>Kamptid<input required name="time" defaultValue={formatMatchTime(draft.seconds)}/></label></div>
     {error&&<p role="alert">{error}</p>}
-    <div className="day-strip"><button className="btn primary">Lagre hendelse</button><button className="btn" type="button" onClick={onCancel}>Avbryt</button>
+    {saveError&&<p role="alert">{saveError}</p>}
+    <div className="day-strip match-event-dialog-actions"><button className="btn primary">Lagre hendelse</button><button className="btn" type="button" onClick={onCancel}>Avbryt</button>
       {onRemove&&<button className="btn" type="button" onClick={()=>removing?onRemove():setRemoving(true)}>{removing?"Bekreft fjerning":"Fjern hendelse"}</button>}</div>
   </form>;
 }
