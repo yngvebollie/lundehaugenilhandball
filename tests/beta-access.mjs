@@ -41,12 +41,36 @@ try {
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107222143_match_discipline_to_date.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261107222806_seasonal_goal_badge.sql",import.meta.url),"utf8"));
   await pg.exec(await readFile(new URL("../supabase/migrations/20261108090923_keeper_match_sessions.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261128131000_match_player_profiles.sql",import.meta.url),"utf8"));
   assert.equal((await pg.query("select count(*)::int n from nhf_private.badge_defs")).rows[0].n,45);
   assert.equal((await pg.query("select nhf_private.report_side_matches('KFUM','KFUM 1','KFUM 2') v")).rows[0].v,false);
   await pg.query("insert into auth.users values ($1,'new@test.local',now())",[uuid(6)]);
   await pg.query("insert into auth.users values ($1,'apply@test.local',now()),($2,'code@test.local',now())",[uuid(7),uuid(8)]);
   await pg.exec("set role authenticated");
   const login=id=>pg.query("select set_config('test.uid',$1,false)",[uuid(id)]);
+  await pg.exec("begin");
+  try {
+    const denied=async(action)=>{
+      await pg.exec("savepoint rejected");
+      try{await assert.rejects(action);}
+      finally{await pg.exec("rollback to savepoint rejected; release savepoint rejected");}
+    };
+    await login(1);
+    const insert=(team,name)=>pg.query("insert into beta_match_player_profiles(team,name) values($1,$2) on conflict(team,name_key) do nothing returning id",[uuid(team),name]);
+    const saved=(await insert(10,"Test Spiller")).rows[0].id;
+    assert.equal((await insert(10,"test  spiller")).rows.length,0);
+    assert.equal((await pg.query("update beta_match_player_profiles set number=9 where id=$1 returning number",[saved])).rows[0].number,9);
+    const connect=athlete=>pg.query("update beta_match_player_profiles set athlete=$1 where id=$2 returning athlete",[uuid(athlete),saved]);
+    await denied(()=>connect(5));
+    await denied(()=>connect(1));
+    assert.equal((await connect(2)).rows[0].athlete,uuid(2));
+    assert.equal((await connect(3)).rows.length,0);
+    for(const actor of [2,4]){
+      await login(actor);
+      assert.equal((await pg.query("select id from beta_match_player_profiles where id=$1",[saved])).rows.length,0);
+      await denied(()=>insert(10,"Uautorisert Spiller"));
+    }
+  } finally {await pg.exec("rollback");}
   const challenge=async(action,c=null,v={})=>(await pg.query("select beta_challenge($1,$2,$3,$4) r",[action,uuid(10),c,v])).rows[0].r;
   const days=(await pg.query("select ((now() at time zone 'Europe/Oslo')::date)::text starts,((now() at time zone 'Europe/Oslo')::date+13)::text ends")).rows[0];
   await login(1);const push=await challenge("create",null,{...days,title:"Pushups",unit:"reps",anonymous:true});

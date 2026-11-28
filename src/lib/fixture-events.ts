@@ -12,9 +12,10 @@ const norm = (value:string) => value.trim().toLocaleLowerCase("nb-NO").replace(/
 const first = (value:string) => norm(value).split(" ")[0];
 
 export function fixtureEventDocument(game:Fixture):LiveMatch {
+  const j12=/\b(?:j\s*12|jenter\s*12)\b/i.test([game.age_class,game.competition].filter(Boolean).join(" "));
   return {
     home:{key:"home",name:game.home||"Hjemmelag"},away:{key:"away",name:game.away||"Bortelag"},
-    date:game.day,players:[],events:[],finalized:game.completed===true,
+    date:game.day,players:[],events:[],finalized:game.completed===true,periodMinutes:j12?20:undefined,
     clock:{half:game.completed?2:1,status:game.completed?"finished":"ready",seconds:0,since:null},
   };
 }

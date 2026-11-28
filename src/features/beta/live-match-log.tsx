@@ -110,7 +110,9 @@ export function LiveMatchLog({match, save, close, editLineup}: Props) {
       {(Object.keys(tabs) as (keyof typeof tabs)[]).map(key => <button type="button" className={tab === key ? "current" : ""}
         aria-pressed={tab === key} key={key} disabled={!!draft} onClick={() => setTab(key)}>{tabs[key]}</button>)}
     </nav>
-    {draft ? <EventEditor match={match} draft={draft} onSave={submit} onCancel={() => setDraft(null)}/> :
+    {draft ? <EventEditor match={match} draft={draft} onSave={submit} onCancel={() => setDraft(null)} onRemove={draft.kind==="edit"&&draft.event.type!=="clock"?()=>{
+      if(save(current=>({...current,finalized:false,events:current.events.filter(event=>event.id!==draft.event.id)})))setDraft(null);
+    }:undefined}/> :
       tab === "register" ? <div className="grid">
         {(["home","away"] as const).map(side=><section key={side} className="grid">
         <h3>Mål til {match[side].name}</h3>
@@ -150,7 +152,7 @@ function ClockValue({clock}: {clock: MatchClock}) {
   return <strong>{formatMatchTime(clockSeconds(clock, now))}</strong>;
 }
 
-function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft: Draft; onSave: (event: MatchEvent) => void; onCancel: () => void}) {
+function EventEditor({match, draft, onSave, onCancel, onRemove}: {match: LiveMatch; draft: Draft; onSave: (event: MatchEvent) => void; onCancel: () => void;onRemove?:()=>void}) {
   const {kind, event} = draft;
   const [side, setSide] = useState<MatchSide>(event.side ?? "home");
   const [playerId, setPlayerId] = useState(event.playerId ?? "");
@@ -158,9 +160,11 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
   const [half, setHalf] = useState(event.half);
   const [time, setTime] = useState(formatMatchTime(event.seconds));
   const [outcome, setOutcome] = useState<PenaltyOutcome>(event.outcome ?? "goal");
+  const [type,setType]=useState(event.type);
+  const [removing,setRemoving]=useState(false);
   const [error, setError] = useState("");
-  const hasTeam = event.type !== "clock";
-  const hasPlayer = hasTeam && event.type !== "timeout";
+  const hasTeam = type !== "clock";
+  const hasPlayer = hasTeam && type !== "timeout";
   const title = kind === "end" ? "Avslutt " + half + ". omgang?" : kind === "clock" ? "Juster kampklokka" :
     kind === "edit" ? "Rett hendelse" : event.type === "goal" && side === "away" ? "Mål til " + match.away.name : eventNames[event.type as keyof typeof eventNames];
 
@@ -175,12 +179,13 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
     if (hasPlayer && !player && shirt.trim() && numberInput === null) return setError("Skriv et draktnummer fra 0 til 99, eller la feltet stå tomt.");
     const number = hasPlayer ? player?.number ?? numberInput ?? undefined : undefined;
     const playerName = hasPlayer ? player?.name ?? (side === event.side && number === event.number ? event.playerName : undefined) : undefined;
-    onSave({...event, side, half, seconds, number, playerId: player?.id, playerName, outcome: event.type === "penalty" ? outcome : undefined});
+    onSave({...event, type, side, half, seconds, number, playerId: player?.id, playerName, outcome: type === "penalty" ? outcome : undefined});
   }
 
   return <form className="grid live-panel live-form" onSubmit={submit}>
     <h3>{title}</h3>
     {kind === "edit" && <p>{eventDescription(match, event)}</p>}
+    {kind==="edit"&&event.type!=="clock"&&<label>Hendelse<select value={type} onChange={e=>setType(e.target.value as MatchEventType)}>{Object.entries(eventNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
     {hasTeam && !draft.awayOnly && <fieldset className="grid"><legend>Lag</legend><div className="live-pair">
       {(["home", "away"] as const).map(team => <button type="button" className={"btn" + (side === team ? " selected" : "")}
         key={team} aria-pressed={side === team} onClick={() => {if(side!==team){setSide(team);setPlayerId("");setShirt("");}}}>{match[team].name}</button>)}
@@ -190,7 +195,7 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
         aria-pressed={playerId === player.id} onClick={() => {setPlayerId(player.id);setShirt(String(player.number));}}><strong>#{player.number}</strong><small>{player.name}</small></button>)}
     </div><label>Draktnummer (valgfritt)<input inputMode="numeric" maxLength={2} value={shirt}
       onChange={event => {setPlayerId("");setShirt(event.target.value);}}/></label><small>La feltet stå tomt for ukjent spiller.</small></fieldset>}
-    {event.type === "penalty" && <fieldset className="grid"><legend>Utfall</legend><div className="day-strip">
+    {type === "penalty" && <fieldset className="grid"><legend>Utfall</legend><div className="day-strip">
       {(Object.keys(penaltyNames) as PenaltyOutcome[]).map(key => <button key={key} type="button" className={"btn" + (outcome === key ? " selected" : "")}
         aria-pressed={outcome === key} onClick={() => setOutcome(key)}>{penaltyNames[key]}</button>)}
     </div></fieldset>}
@@ -201,6 +206,7 @@ function EventEditor({match, draft, onSave, onCancel}: {match: LiveMatch; draft:
       <label>Kamptid i {half}. omgang<input required value={time} onChange={event => setTime(event.target.value)}/></label>
     </div>
     {error && <p role="alert">{error}</p>}
+    {onRemove&&<button type="button" className="btn" onClick={()=>removing?onRemove():setRemoving(true)}>{removing?"Bekreft fjerning":"Fjern hendelse"}</button>}
     <div className="live-pair"><button type="button" className="btn" onClick={onCancel}>Avbryt</button>
       <button className="btn primary">{kind === "end" ? "Avslutt omgang" : "Lagre"}</button></div>
   </form>;

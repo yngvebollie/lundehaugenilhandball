@@ -8,11 +8,22 @@ import {useLiveMatchStorage} from "./live-match-storage";
 type Analysis=ReturnType<typeof analyzeFixture>;
 const percent=(n:number)=>n.toLocaleString("nb-NO",{style:"percent",maximumFractionDigits:0});
 
-export function FixtureEventStats({match,ownSide}:{match:LiveMatch;ownSide:MatchSide}){
+export function FixtureEventStats({match,ownSide,officialScore}:{match:LiveMatch;ownSide:MatchSide;officialScore?:string|null}){
   const analysis=analyzeFixture(match,ownSide);
-  if(!analysis.rows.length)return <p>Ingen hendelser å beregne statistikk fra ennå.</p>;
+  if(!analysis.rows.some(({event})=>event.type!=="clock"))return <section className="event-panel"><h2>Kampanalyse</h2>
+    {officialScore&&<p>Registrert sluttresultat: {match.home.name} {officialScore} {match.away.name}.</p>}
+    <p>Legg til kamphendelser for å se målutvikling, målrekker og uttelling på 7-meter.</p>
+  </section>;
+  const loggedScore=[ownSide==="home"?analysis.ours.total:analysis.theirs.total,ownSide==="home"?analysis.theirs.total:analysis.ours.total].join("-");
+  const normalizedScore=officialScore?.replace(/\s+/g,"").replace(/[:–]/g,"-");
   return <div className="event-dashboard">
     <header className="event-dashboard-title"><div><h2>Kampen i tall</h2><p>{match[ownSide].name} · {analysis.rows.length} loggførte hendelser</p></div><Activity size={25} aria-hidden="true"/></header>
+    {normalizedScore&&normalizedScore!==loggedScore&&<p className="event-panel" role="status">Kampresultatet er {officialScore}, mens hendelsesloggen gir {loggedScore}. Analysen under bygger på hendelsene som er registrert.</p>}
+    {analysis.totals.some(row=>row.penaltyAttempts||row.redCards)&&<section className="event-panel">
+      <h3>7-meter og røde kort</h3>
+      <dl className="event-insights">{analysis.totals.map(row=><div key={row.side}><dt>{match[row.side].name}</dt>
+        <dd>{row.penaltyAttempts?row.penalties+" av "+row.penaltyAttempts+" på 7-meter ("+percent(row.penalties/row.penaltyAttempts)+")":"Ingen 7-metere med registrert utfall"} · Røde kort: {row.redCards}</dd></div>)}</dl>
+    </section>}
     <MatchMomentum match={match} analysis={analysis}/>
     <PeriodPanels match={match} analysis={analysis}/>
     <ScorerPanels match={match} analysis={analysis}/>

@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
+import {parseSpondRoster} from "../src/lib/spond-roster.ts";
 import {
   appendMatchEvent, clockSeconds, initialClock, liveScore, matchProtocol, matchTimeline, parseMatchTime, shirtNumber,
 } from "../src/lib/live-match.ts";
+
+assert.deepEqual(parseSpondRoster(`Svarte deltar (3)
+- [image](https://spond.com/static/img/icon_recipient_type_sponder.svg)
+  **Signe Østby**
+- **Ola Nordmann**
+- **Inès Marie Adam"**
+- **signe  østby**
+Svarte deltar ikke (1)
+- **Spiller Utenfor**`),["Signe Østby","Ola Nordmann","Inès Marie Adam"]);
 
 const match = {
   home: {key: "home", name: "Lundehaugen"},

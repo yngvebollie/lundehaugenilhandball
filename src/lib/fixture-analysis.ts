@@ -71,7 +71,11 @@ export function analyzeFixture(match:Pick<LiveMatch,"events"|"periodMinutes"|"fi
     hasSecond, played, leadTime, droughts:{home:drought("home"),away:drought("away")},
     openingSecond:secondEnd>=300?{own:openingSecond.filter(({event})=>event.side===own).length,
       other:openingSecond.filter(({event})=>event.side===other).length}:null,
-    totals:scores.map(score=>({...score,warnings:discipline(score.side,"warning"),suspensions:discipline(score.side,"suspension"),
-      penalties:goals.filter(({event})=>event.side===score.side&&event.type==="penalty").length})),
+    totals:scores.map(score=>({
+      ...score,warnings:discipline(score.side,"warning"),suspensions:discipline(score.side,"suspension"),
+      redCards:discipline(score.side,"red"),
+      penalties:goals.filter(({event})=>event.side===score.side&&event.type==="penalty").length,
+      penaltyAttempts:rows.filter(({event})=>event.side===score.side&&event.type==="penalty"&&event.outcome).length,
+    })),
   };
 }

@@ -2,6 +2,7 @@ import {useEffect, useState, type FormEvent} from "react";
 import {teamRoster, today, type Member, type Snapshot} from "@/lib/beta";
 import {squadStatLines, type Fixture} from "@/lib/match-journal";
 import {initialClock, shirtNumber, type LiveMatch, type MatchPlayer, type MatchTeam} from "@/lib/live-match";
+import {matchPlayerProfiles,type MatchPlayerProfile} from "@/lib/match-player-profiles";
 
 type Candidate = {id: string; name: string; number: string; memberId?: string};
 type Props = {
@@ -31,8 +32,18 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
   const [historyError, setHistoryError] = useState(false);
   const [otherRoster, setOtherRoster] = useState<{team: string; members: Member[]; error?: boolean}>();
   const [error, setError] = useState("");
+  const [teamProfiles,setTeamProfiles]=useState<{team:string;rows:MatchPlayerProfile[];error?:boolean}>();
   const rosterTeam = home.startsWith("group:") ? home.slice(6) : data.me.squad;
   const roster = rosterTeam === data.me.squad ? data.roster : otherRoster?.team === rosterTeam ? otherRoster.members : [];
+  useEffect(()=>{
+    let active=true;
+    matchPlayerProfiles(rosterTeam).then(rows=>{if(active)setTeamProfiles({team:rosterTeam,rows});})
+      .catch(()=>{if(active)setTeamProfiles({team:rosterTeam,rows:[],error:true});});
+    return()=>{active=false;};
+  },[rosterTeam]);
+  const spondProfiles=teamProfiles?.team===rosterTeam?teamProfiles.rows.filter(row=>!row.athlete).map(row=>({
+    id:row.id,name:row.name,number:String(row.number??""),
+  })):[];
   const members: Candidate[] = roster.filter(member => member.role === "athlete").map(member => ({
     id: member.id, memberId: member.id, name: [member.given_name, member.family_name].every(Boolean)
       ? member.given_name + " " + member.family_name : member.name,
@@ -171,6 +182,8 @@ export function LiveMatchLineup({data, teams, fixtures, previous, match, onSave,
       <h3>Spillere på hjemmelaget</h3>
       <p>Kontroller navn og draktnummer i kamptroppen før du lagrer.</p>
       {choices("Mitt lag", members)}
+      {!!spondProfiles.length&&choices("Importerte spillerprofiler",spondProfiles)}
+      {teamProfiles?.team===rosterTeam&&teamProfiles.error&&<small role="alert">Kunne ikke hente importerte spillerprofiler.</small>}
       {rosterTeam !== data.me.squad && (otherRoster?.team !== rosterTeam ? <small role="status">Henter spillerne på laget …</small> :
         otherRoster.error ? <small role="alert">Kunne ikke hente spillerne på laget.</small> : null)}
       {choices("Tidligere brukte spillere", [...historical.values()])}

@@ -42,7 +42,7 @@ const roster: Member[] = [
 ];
 export const today = () => new Intl.DateTimeFormat("sv-SE", {timeZone:"Europe/Oslo"}).format(new Date());
 const prefix = "nhf-beta-v1:";
-async function pages<T>(fetchPage:(start:number,end:number)=>PromiseLike<{data:T[]|null}>):Promise<T[]> {
+export async function pages<T>(fetchPage:(start:number,end:number)=>PromiseLike<{data:T[]|null}>):Promise<T[]> {
   const rows:T[]=[];
   for(;;){
     const {data}=await fetchPage(rows.length,rows.length+499);
