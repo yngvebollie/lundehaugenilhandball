@@ -19,16 +19,30 @@ export function FixtureEventStats({match,ownSide,officialScore}:{match:LiveMatch
   return <div className="event-dashboard">
     <header className="event-dashboard-title"><div><h2>Kampen i tall</h2><p>{match[ownSide].name} · {analysis.rows.length} loggførte hendelser</p></div><Activity size={25} aria-hidden="true"/></header>
     {normalizedScore&&normalizedScore!==loggedScore&&<p className="event-panel" role="status">Kampresultatet er {officialScore}, mens hendelsesloggen gir {loggedScore}. Analysen under bygger på hendelsene som er registrert.</p>}
-    {analysis.totals.some(row=>row.penaltyAttempts||row.redCards)&&<section className="event-panel">
+    {analysis.totals.some(row=>row.awarded||row.penaltyAttempts||row.redCards)&&<section className="event-panel">
       <h3>7-meter og røde kort</h3>
       <dl className="event-insights">{analysis.totals.map(row=><div key={row.side}><dt>{match[row.side].name}</dt>
-        <dd>{row.penaltyAttempts?row.penalties+" av "+row.penaltyAttempts+" på 7-meter ("+percent(row.penalties/row.penaltyAttempts)+")":"Ingen 7-metere med registrert utfall"} · Røde kort: {row.redCards}</dd></div>)}</dl>
+        <dd>{row.awarded>0&&row.awarded+" tildelt · "}{row.penaltyAttempts?row.penalties+" av "+row.penaltyAttempts+" på 7-meter ("+percent(row.penalties/row.penaltyAttempts)+")":"Ingen 7-metere med registrert utfall"} · Røde kort: {row.redCards}</dd></div>)}</dl>
+      <KeeperPenalties match={match} ownSide={ownSide}/>
     </section>}
     <MatchMomentum match={match} analysis={analysis}/>
     <PeriodPanels match={match} analysis={analysis}/>
     <ScorerPanels match={match} analysis={analysis}/>
     <MatchReading match={match} analysis={analysis}/>
   </div>;
+}
+
+function KeeperPenalties({match,ownSide}:{match:LiveMatch;ownSide:MatchSide}){
+  const keepers=new Map<string,{name:string;saves:number}>();
+  for(const event of match.events){
+    if(event.type!=="penalty"||event.outcome!=="saved"||!event.side||event.side===ownSide)continue;
+    const key=event.keeperId||"unknown";
+    const line=keepers.get(key)??{name:event.keeperName||"Ukjent keeper",saves:0};
+    line.saves++;
+    keepers.set(key,line);
+  }
+  if(!keepers.size)return null;
+  return <><h4>Keeperredninger på 7-meter</h4><ul>{[...keepers].map(([id,keeper])=><li key={id}>{keeper.name} · {keeper.saves} {keeper.saves===1?"redning":"redninger"}</li>)}</ul></>;
 }
 
 export function FixtureReportReading({game,team,user,ownSide}:{game:string;team:string;user:string;ownSide:MatchSide}){

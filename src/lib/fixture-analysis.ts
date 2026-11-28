@@ -74,6 +74,7 @@ export function analyzeFixture(match:Pick<LiveMatch,"events"|"periodMinutes"|"fi
     totals:scores.map(score=>({
       ...score,warnings:discipline(score.side,"warning"),suspensions:discipline(score.side,"suspension"),
       redCards:discipline(score.side,"red"),
+      awarded:discipline(score.side,"penalty_awarded"),
       penalties:goals.filter(({event})=>event.side===score.side&&event.type==="penalty").length,
       penaltyAttempts:rows.filter(({event})=>event.side===score.side&&event.type==="penalty"&&event.outcome).length,
     })),

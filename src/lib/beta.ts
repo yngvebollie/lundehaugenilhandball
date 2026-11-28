@@ -157,6 +157,7 @@ export async function createTeam(me:Member,name:string){
     localStorage.setItem(prefix+"membership:"+me.id+id,JSON.stringify({id:me.id,team:id}));
   }else id=(await db!.rpc("beta_new_team",{label:name}).throwOnError()).data as string;
   // Creating a team only extends the coach's switcher; publishing stays in the active team.
+  return id;
 }
 export async function saveTeamDetails(id:string,name:string,logo:string){
   if(demo)localStorage.setItem(prefix+"team:"+id,JSON.stringify({...([seedTeam,...localRows<Team>("team:")].reverse().find(t=>t.id===id)),id,name,logo}));

@@ -23,6 +23,7 @@ export async function checkClubRole(pg,login,uuid,team){
   await pg.exec(await readFile(new URL("../supabase/migrations/20261123093000_club_registration.sql",import.meta.url),"utf8"));
   await pg.exec("alter table auth.users add column if not exists created_at timestamptz default now()");
   await pg.exec(await readFile(new URL("../supabase/migrations/20261123110000_club_owner_activity.sql",import.meta.url),"utf8"));
+  await pg.exec(await readFile(new URL("../supabase/migrations/20261128163000_first_team_setup.sql",import.meta.url),"utf8"));
   await pg.query("insert into nhf_private.club_approval_owner(account) values($1)",[uuid(1)]);
   await pg.query("insert into nhf_private.club_admins values($1)",[uuid(4)]);
   const otherAdminSession=uuid(903),applicant=uuid(905),unverified=uuid(906),declined=uuid(907);
@@ -34,8 +35,11 @@ export async function checkClubRole(pg,login,uuid,team){
   const count=()=>pg.query("select beta_club_request_count() v").then(r=>r.rows[0].v);
   const activity=()=>pg.query("select beta_club_owner_activity() v").then(r=>r.rows[0].v);
   const decide=(id,approve)=>pg.query("select beta_decide_club_request($1,$2) v",[id,approve]).then(r=>r.rows[0].v);
+  const setup=(...args)=>pg.query(args.length?"select beta_first_team_setup($1,$2,$3,$4) v":"select beta_first_team_setup() v",args).then(r=>r.rows[0].v);
   await login(unverified);await assert.rejects(apply());
   await login(applicant);assert.equal(await apply(),"pending");assert.equal(await apply(),"pending");
+  assert.equal(await setup(),null);
+  await assert.rejects(setup("Ungodkjent lag",201068,"2026/27",null));
   await login(declined);assert.equal(await apply(),"pending");
   assert.equal((await pg.query("select count(*) n from beta_teams")).rows[0].n,0);
   await assert.rejects(pending());await assert.rejects(decide(applicant,true));
@@ -59,8 +63,22 @@ export async function checkClubRole(pg,login,uuid,team){
   assert.equal((await pg.query("select beta_club_request_status() v")).rows[0].v,"approved");
   assert.deepEqual((await directory()).teams,[{id:sandnes,name:"Sandnes",admin:true}]);
   await assert.rejects(pg.query("update beta_teams set discoverable=true where id=$1",[sandnes]));
+  await pg.exec("begin");
+  try{
+    assert.deepEqual(await setup(),{club:"Sandnes"});
+    const first=await setup("Jenter 12",201068,"2026/27",787451);
+    assert.ok(first.team&&first.team!==sandnes&&first.registration);
+    assert.equal((await setup("Retry",201068,"2026/27",787451)).team,first.team);
+    assert.equal((await setup()).team,first.team);
+    assert.ok((await directory()).teams.some(row=>row.id===first.team&&row.admin));
+    const season=(await pg.query("select beta_season_settings('read',$1) as v",[first.team])).rows[0].v;
+    assert.equal(season.active,201068);
+    const registration=(await pg.query("select org_id,display_name from beta_team_seasons where id=$1",[first.registration])).rows[0];
+    assert.deepEqual(registration,{org_id:787451,display_name:"Jenter 12"});
+  }finally{await pg.exec("rollback");}
   await login(declined);
   assert.equal((await pg.query("select beta_club_request_status() v")).rows[0].v,"declined");
+  assert.equal(await setup(),null);
   await login(4);
   assert.ok(!(await directory()).teams.some(t=>t.id===sandnes));
   await login(1);await claims(session);

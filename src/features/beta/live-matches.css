@@ -68,3 +68,8 @@ body:has(.fixture-fullscreen[open]){overflow:hidden}
  .fixture-fullscreen .day-strip label{min-width:0}
  .fixture-fullscreen .day-strip select{max-width:135px}
 }
+
+.fixture-quick-group{min-width:0;gap:8px}
+.fixture-quick-group h4,.fixture-quick-group p{margin:0}
+.fixture-quick-group .btn{min-height:44px}
+.fixture-quick-group .fixture-fullscreen-actions .btn{justify-content:center}

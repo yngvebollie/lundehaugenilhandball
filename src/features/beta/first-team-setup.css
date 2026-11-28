@@ -1,0 +1,15 @@
+.first-team-setup{display:grid;gap:14px;padding:clamp(14px,3vw,24px);border:1px solid var(--border);border-inline-start:4px solid var(--accent);border-radius:10px;background:var(--panel,#fff);min-width:0}
+.first-team-setup h2,.first-team-setup p,.first-team-setup dl{margin:0}
+.first-team-setup h2{font-size:1.25rem;overflow-wrap:anywhere}
+.first-team-setup h2 svg{vertical-align:middle}
+.first-team-welcome,.first-team-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.first-team-welcome{justify-content:space-between}
+.first-team-welcome>div{display:grid;gap:4px}
+.first-team-steps{list-style:none;display:flex;flex-wrap:wrap;gap:8px 18px;margin:0;padding:0;color:var(--muted);font-size:.88rem}
+.first-team-steps [aria-current=step]{color:var(--text);font-weight:750;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:4px}
+.first-team-actions .btn{min-height:44px;justify-content:center}
+.first-team-fields,.first-team-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.first-team-review dt{font-size:.85rem;color:var(--muted)}
+.first-team-review dd{margin:4px 0 0;font-weight:650;overflow-wrap:anywhere}
+.first-team-error{padding:8px 10px;border-inline-start:3px solid #a51c45;background:#fff0f3;color:#77132f}
+@media(max-width:480px){.first-team-actions .btn{flex:1 1 130px}.first-team-fields{grid-template-columns:1fr}}

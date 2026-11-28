@@ -8,7 +8,7 @@ export type MatchClock = {
   seconds: number;
   since: number | null;
 };
-export type MatchEventType = "goal" | "penalty" | "warning" | "red" | "suspension" | "timeout" | "clock";
+export type MatchEventType = "goal" | "penalty" | "penalty_awarded" | "warning" | "red" | "suspension" | "timeout" | "clock";
 export type PenaltyOutcome = "goal" | "miss" | "saved";
 export type MatchEvent = {
   id: string;
@@ -21,6 +21,9 @@ export type MatchEvent = {
   playerName?: string;
   number?: number;
   outcome?: PenaltyOutcome;
+  awardId?: string;
+  keeperId?: string;
+  keeperName?: string;
   label?: string;
 };
 export type LiveMatch = {
@@ -40,7 +43,7 @@ export type LiveMatch = {
 };
 
 export const eventNames: Record<Exclude<MatchEventType, "clock">, string> = {
-  goal: "Mål", penalty: "7-meter", warning: "Gult kort", red:"Rødt kort", suspension: "2 min utvisning", timeout: "Timeout",
+  goal: "Mål", penalty: "7-meter", penalty_awarded:"7-meter tildelt", warning: "Gult kort", red:"Rødt kort", suspension: "2 min utvisning", timeout: "Timeout",
 };
 export const penaltyNames: Record<PenaltyOutcome, string> = {goal: "Mål", miss: "Bom", saved: "Redning"};
 export const initialClock: MatchClock = {half: 1, status: "ready", seconds: 0, since: null};

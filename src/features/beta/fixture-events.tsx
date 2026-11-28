@@ -11,14 +11,14 @@ import {FixtureEventStats} from "./fixture-event-stats";
 import {ReportDownload} from "./report-download";
 import {fixturePlayer,FixtureRoster} from "./fixture-roster";
 
-type Props={game:Fixture;data:Snapshot;onChange:()=>Promise<void>;rosterOnly?:boolean;onOpenEvents?:()=>void};
+type Props={game:Fixture;data:Snapshot;onChange:()=>Promise<void>;rosterOnly?:boolean;onOpenEvents?:()=>void;onOpenRoster?:()=>void;fixturePlayers?:FixturePlayer[]};
 const quickActions = [
- ["goal","Mål"],["suspension","2 min"],["warning","Gult kort"],["red","Rødt kort"],["penalty-goal","7 m mål"],
+ ["goal","Mål"],["suspension","2 min"],["warning","Gult kort"],["red","Rødt kort"],["penalty_awarded","7 m tildelt"],["penalty-goal","7 m mål"],
  ["penalty-miss","7 m bom"],["penalty-saved","7 m reddet"],
 ] as const;
 type QuickAction=typeof quickActions[number][0];
 
-export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props) {
+export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpenRoster,fixturePlayers=[]}:Props) {
   const storage=useLiveMatchStorage(game.team,data.me.id,game.id);
   const row=storage.rows.find(row=>row.id===game.id);
   const stored=row?.document;
@@ -34,9 +34,7 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
   const [profileError,setProfileError]=useState("");
   const [profileRetry,retryProfiles]=useState(0);
   const [action,setAction]=useState<QuickAction>("goal");
-  const [quickSide,setQuickSide]=useState<"own"|"opponent">("own");
-  const [quickNumber,setQuickNumber]=useState("");
-  const [quickError,setQuickError]=useState("");
+  const [keeper,setKeeper]=useState("");
   const [fullscreen,setFullscreen]=useState(false);
   const [receipt,setReceipt]=useState<MatchEvent>();
   const screen=useRef<HTMLDialogElement>(null);
@@ -77,9 +75,9 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
       playersByIdentity.set(key,{...player,name:identity?.name??player.name});
   }
   const players=[...playersByIdentity.values()];
-  const logPlayers=match.fixtureRoster?players:roster.map(member=>resolve(member.id)!);
-  const choices=[...logPlayers].filter(p=>p.number!==undefined).sort((a,b)=>a.number!-b.number!);
-  const forEditor=[...new Map([...roster.map(member=>resolve(member.id)!),...logPlayers].map(player=>[player.id,player])).values()];
+  const availablePlayers=[...new Map([...roster.map(member=>resolve(member.id)!),...(profiles??[]).filter(row=>!row.athlete).map(row=>resolve(row.id)!),...fixturePlayers].map(player=>[player.id,player])).values()];
+  const logPlayers=match.fixtureRoster?players:availablePlayers;
+  const choices=[...logPlayers].sort((a,b)=>(a.number??100)-(b.number??100)||a.name.localeCompare(b.name,"nb"));  const forEditor=[...new Map([...roster.map(member=>resolve(member.id)!),...logPlayers].map(player=>[player.id,player])).values()];
   const displayMatch={...match,events:match.events.map(event=>{
     const account=event.side===ownSide&&event.playerId?resolve(event.playerId):undefined;
     return account?{...event,playerId:account.id,playerName:account.name}:event;
@@ -133,13 +131,17 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
     onNumber={(id,number)=>updateRoster(current=>current.map(player=>player.id===id?{...player,number}:player))}
     onRemove={id=>updateRoster(current=>current.filter(player=>(resolve(player.id)?.id??player.id)!==(resolve(id)?.id??id)))}/>;
   const profileFeedback=profileError&&<p role="alert">{profileError} <button className="btn" type="button" onClick={()=>retryProfiles(n=>n+1)}>Prøv igjen</button></p>;
-  function quickEvent(number:number|undefined,player?:FixturePlayer,target:MatchSide=quickSide==="own"?ownSide:opponentSide){
+  function quickEvent(number:number|undefined,player?:FixturePlayer,target:MatchSide=ownSide){
     const penalty=action.startsWith("penalty-");
-    const type=penalty?"penalty":action as "goal"|"suspension"|"warning"|"red";
+    const type=penalty?"penalty":action as "goal"|"suspension"|"warning"|"red"|"penalty_awarded";
     const identity=player?(resolve(player.id)??player):undefined;
     const marker=newMatchEvent(match.clock,type);
+    const outcome=penalty?action.split("-")[1] as PenaltyOutcome:undefined;
+    const usedAwards=new Set(match.events.map(row=>row.awardId));
+    const awardId=penalty?match.events.filter(row=>row.type==="penalty_awarded"&&row.half===marker.half&&row.side===target&&!usedAwards.has(row.id)).at(-1)?.id:undefined;
+    const goalie=target===opponentSide&&outcome==="saved"?choices.find(row=>row.id===keeper):undefined;
     const event={...marker,seconds:Math.min(marker.seconds,periodLimit),side:target,number,
-      playerId:identity?.id,playerName:identity?.name,outcome:penalty?action.split("-")[1] as PenaltyOutcome:undefined};
+      playerId:identity?.id,playerName:identity?.name,outcome,awardId,keeperId:goalie?resolve(goalie.id)?.id??goalie.id:undefined,keeperName:goalie?.name};
     if(keep(event)){setAction("goal");setReceipt(event);}
   }
 
@@ -164,13 +166,27 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
       return {...previous,periodMinutes,eventOrigin:"manual",clock:next,finalized:next.status==="finished",events:[...previous.events,{...marker,label}]};
     });
   }
-  function registerNumber(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();
-    const number=shirtNumber(quickNumber);
-    if(number===null){setQuickError("Bruk et draktnummer fra 0 til 99.");return;}
-    const matches=quickSide==="own"?choices.filter(player=>player.number===number):[];
-    quickEvent(number,matches.length===1?matches[0]:undefined);
-    setQuickNumber("");setQuickError("");
+  function quickButtons(){
+    return <>
+      <section className="grid fixture-quick-group" aria-label="Hendelsestype">
+        <h4>Hendelser</h4>
+        <div className="fixture-fullscreen-actions">{quickActions.filter(([value])=>value!=="goal").map(([value,label])=>
+          <button className={"btn"+(value===action?" primary":"")} type="button" key={value} aria-pressed={value===action}
+            onClick={()=>setAction(current=>current===value?"goal":value)}>{label}</button>)}</div>
+        <p className="fixture-fullscreen-mode" role="status">Neste trykk registrerer <strong>{quickActions.find(([value])=>value===action)?.[1]}</strong>.</p>
+        {action==="penalty-saved"&&choices.length>0&&<label>Vår keeper ved redning<select value={keeper} onChange={e=>setKeeper(e.target.value)}>
+          <option value="">Ukjent keeper</option>{choices.map(player=><option key={player.id} value={player.id}>{player.name}</option>)}
+        </select></label>}
+      </section>
+      <section className="grid fixture-quick-group" aria-label="Spillere og motstander">
+        <h4>{match[ownSide].name}</h4>
+        {choices.length?<div className="fixture-fullscreen-players">{choices.map(player=><button key={player.id} type="button" className="btn primary"
+          onClick={()=>quickEvent(player.number,player,ownSide)} aria-label={player.number===undefined?player.name:"Draktnummer "+player.number+" · "+player.name}>
+          {player.number!==undefined&&<strong>#{player.number}</strong>}<small>{player.name||"Ukjent spiller"}</small></button>)}</div>:
+          <div className="day-strip"><p>Legg til spillere eller draktnumre for å få egne knapper.</p><button className="btn" type="button" onClick={()=>{setFullscreen(false);onOpenRoster?.();}}>Sett opp kamptroppen</button></div>}
+        <button type="button" className="btn fixture-fullscreen-opponent" onClick={()=>quickEvent(undefined,undefined,opponentSide)}>{match[opponentSide].name}</button>
+      </section>
+    </>;
   }
   const clockLabel=match.clock.status==="running"?"Stopp klokka":match.clock.status==="paused"?"Fortsett klokka":"Start "+(match.clock.status==="halftime"?2:1)+". omgang";
   const clockButton=!game.completed&&match.clock.status!=="finished"&&<button type="button" className="btn primary" disabled={storage.loading||!!storage.loadError||!!draft} onClick={()=>clockAction(match.clock.status==="running"?"stop":"start")}>{clockLabel}</button>;
@@ -200,22 +216,7 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
         <div className="live-score"><b>{match.home.name}</b><strong>{liveScore(match.events)}</strong><b>{match.away.name}</b></div>
         <div className="fixture-fullscreen-clock"><strong>{match.clock.half}. omgang · {formatMatchTime(clockTime)}{periodMinutes?" / "+periodMinutes+":00":""}</strong>
           {match.clock.status==="halftime"&&<span>Pause</span>}{match.clock.status==="finished"&&<span>Fulltid</span>}{clockButton}</div>
-        <div className="fixture-fullscreen-actions" role="group" aria-label="Neste hendelse">{quickActions.filter(([value])=>value!=="goal").map(([value,label])=>
-          <button className={"btn"+(value===action?" primary":"")} type="button" key={value} aria-pressed={value===action}
-           onClick={()=>setAction(current=>current===value?"goal":value)}>{label}</button>)}</div>
-        <p className="fixture-fullscreen-mode" role="status">Neste trykk registrerer <strong>{quickActions.find(([value])=>value===action)?.[1]}</strong>.</p>
-        <div className="fixture-fullscreen-players" aria-label="Draktnumre for eget lag">
-          {choices.map(player=><button key={player.id} type="button" className="btn primary" onClick={()=>quickEvent(player.number,player,ownSide)}
-            aria-label={"Draktnummer "+player.number+" · "+player.name}><strong>#{player.number}</strong><small>{player.name}</small></button>)}
-        </div>
-        {!choices.length&&<p>Legg inn draktnumre i kamptroppen eller registrer på nummer nedenfor.</p>}
-        <button type="button" className="btn fixture-fullscreen-opponent" onClick={()=>quickEvent(undefined,undefined,opponentSide)}>{match[opponentSide].name}</button>
-        <form className="day-strip" onSubmit={registerNumber}>
-          <label>Lag<select value={quickSide} onChange={e=>setQuickSide(e.target.value==="own"?"own":"opponent")}><option value="own">{match[ownSide].name}</option><option value="opponent">{match[opponentSide].name}</option></select></label>
-          <label>Draktnummer<input inputMode="numeric" maxLength={2} value={quickNumber} onChange={e=>{setQuickNumber(e.target.value);setQuickError("");}}/></label>
-          <button type="submit" className="btn" disabled={!quickNumber.trim()}>Registrer</button>
-        </form>
-        {quickError&&<p role="alert">{quickError}</p>}
+        {quickButtons()}
         {storage.saveError?<p role="alert">{storage.saveError} {storage.pending&&<button type="button" className="btn" onClick={()=>void storage.retry()}>Prøv igjen</button>}</p>:<p role="status">
           {receipt&&(receipt.number===undefined?match[receipt.side!].name:"#"+receipt.number)+" · "+eventNames[receipt.type as Exclude<MatchEvent["type"],"clock">]+(receipt.outcome?" · "+penaltyNames[receipt.outcome]:"")+" · "}
           {receipt?(storage.pending?"Lagret på enheten. Synkroniserer …":"Lagret."):""}
@@ -229,20 +230,7 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
       {["running","paused"].includes(match.clock.status)&&<button type="button" className="btn" disabled={!!draft} onClick={()=>clockAction("end")}>Avslutt {match.clock.half}. omgang</button>}
     </div>}
     {!draft&&!storage.loading&&!storage.loadError&&<section className="live-panel grid">
-      <h3>Hurtiglogg på draktnummer</h3>
-      <div className="day-strip"><label>Hendelse<select value={action} onChange={e=>setAction(e.target.value as QuickAction)}>
-        {quickActions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Lag<select value={quickSide} onChange={e=>setQuickSide(e.target.value==="own"?"own":"opponent")}>
-          <option value="own">{match[ownSide].name}</option><option value="opponent">{match[opponentSide].name}</option>
-        </select></label></div>
-      {quickSide==="own"&&choices.length>0&&<div className="live-player-buttons">{choices.map(player=><button key={player.id} type="button" className="btn primary"
-        aria-label={"Registrer "+quickActions.find(([value])=>value===action)?.[1]+" for draktnummer "+player.number}
-        onClick={()=>quickEvent(player.number!,player)}><strong>#{player.number}</strong><small>{player.name}</small></button>)}</div>}
-      <form className="day-strip" onSubmit={registerNumber}>
-        <label>Draktnummer<input inputMode="numeric" maxLength={2} value={quickNumber} onChange={e=>{setQuickNumber(e.target.value);setQuickError("");}}/></label>
-        <button type="submit" className="btn" disabled={!quickNumber.trim()}>Registrer på nummer</button>
-        {quickError&&<p role="alert">{quickError}</p>}
-      </form>
+      <h3>Hurtiglogg</h3>{quickButtons()}
       <details className="library-tools"><summary>Administrer kamptroppen</summary>{rosterPanel}{profileFeedback}</details>
     </section>}
     {storage.loading&&<p role="status">Henter hendelser …</p>}
@@ -267,7 +255,7 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents}:Props
         return <EventRows key={event.id} pause={breakRow?timeline[index-1].home+"–"+timeline[index-1].away:undefined}>
           <td><time>{event.half}. {formatMatchTime(event.seconds)}{event.id.startsWith("json:")?"*":""}</time></td>
           <td><button type="button" className="fixture-event-open" data-side={event.side} onClick={()=>setDraft(event)}>
-            <Icon size={15} aria-hidden="true"/><span><strong>{identity||team||type}</strong><small>{[type,identity?team:""].filter(Boolean).join(" · ")}</small></span><Pencil size={13} aria-hidden="true"/>
+            <Icon size={15} aria-hidden="true"/><span><strong>{identity||team||type}</strong><small>{[type,identity?team:"",event.keeperName?"Keeper "+event.keeperName:""].filter(Boolean).join(" · ")}</small></span><Pencil size={13} aria-hidden="true"/>
           </button></td><td><b>{home}–{away}</b></td>
         </EventRows>;
       })}</tbody></table></div>:!storage.loading&&<p>Ingen hendelser registrert på denne kampen.</p>):<div ref={statistics} tabIndex={-1}><FixtureEventStats match={displayMatch} ownSide={ownSide} officialScore={game.score}/></div>}
@@ -339,6 +327,9 @@ function FixtureEventForm({draft,match,roster,ownSide,onSave,onCancel,onRemove}:
       playerName:type==="timeout"||type==="clock"?undefined:player?.name||String(fields.get("player")??"").trim()||undefined,
       number:type==="timeout"||type==="clock"?undefined:number??player?.number,
       outcome:type==="penalty"?outcome:undefined,
+      awardId:type==="penalty"&&draft.side===side?draft.awardId:undefined,
+      keeperId:type==="penalty"&&outcome==="saved"&&draft.side===side?draft.keeperId:undefined,
+      keeperName:type==="penalty"&&outcome==="saved"&&draft.side===side?draft.keeperName:undefined,
     });
   }
   return <form className="grid live-panel live-form" onSubmit={submit}>

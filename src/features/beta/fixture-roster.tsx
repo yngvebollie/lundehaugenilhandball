@@ -23,6 +23,7 @@ export function FixtureRoster({team,members,profiles,players,disabled,onProfiles
  const [raw,setRaw]=useState("");
  const [sort,setSort]=useState("name");
  const [selected,setSelected]=useState("");
+ const [shirt,setShirt]=useState("");
  const [linked,setLinked]=useState("");
  const [athlete,setAthlete]=useState("");
  const [busy,setBusy]=useState(false);
@@ -110,6 +111,15 @@ export function FixtureRoster({team,members,profiles,players,disabled,onProfiles
    </select></label>
    <button type="submit" className="btn" disabled={disabled||busy||!selected}><Plus size={16}/> Legg til i troppen</button>
   </form>
+  <details className="library-tools"><summary>Legg til draktnummer uten navn</summary>
+   <form className="day-strip" onSubmit={e=>{
+    e.preventDefault();
+    const number=shirtNumber(shirt);
+    if(number!==null&&onAdd([{id:"shirt:"+number,name:"Ukjent spiller",number}]))setShirt("");
+   }}><label>Velg draktnummer<select value={shirt} onChange={e=>setShirt(e.target.value)} disabled={disabled||busy}>
+    <option value="">Velg nummer</option>{Array.from({length:100},(_,n)=>n).filter(n=>!players.some(player=>player.number===n)).map(n=><option key={n} value={n}>#{n}</option>)}
+   </select></label><button className="btn" type="submit" disabled={disabled||busy||!shirt}>Legg til nummerknapp</button></form>
+  </details>
   {ordered.length>0&&<>
    <label>Sorter troppen<select value={sort} onChange={e=>setSort(e.target.value)}><option value="name">Navn</option><option value="number">Draktnummer</option></select></label>
    <ul className="fixture-roster-list">{ordered.map(player=><RosterRow key={player.id+":"+player.number} player={player} disabled={disabled||busy} onSave={number=>{

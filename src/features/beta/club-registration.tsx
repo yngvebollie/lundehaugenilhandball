@@ -2,6 +2,7 @@ import {useEffect,useState,type FormEvent} from "react";
 import type {User} from "@supabase/supabase-js";
 import {db} from "@/lib/beta";
 import {clubLink} from "@/lib/club-url";
+import {clearClubDraft,readClubDraft,rememberClubDraft} from "@/lib/club-registration-draft";
 
 export function ClubRegistration(){
   const [user,setUser]=useState<User|null>();
@@ -19,10 +20,17 @@ export function ClubRegistration(){
   useEffect(()=>{
     let active=true;
     if(!user||!db)return;
-    setClub(value=>value||String(user.user_metadata?.requested_club||""));
-    setCoach(value=>value||String(user.user_metadata?.full_name||""));
+    const draft=user.email?readClubDraft(user.email):null;
+    setClub(value=>value||draft?.club||String(user.user_metadata?.requested_club||""));
+    setCoach(value=>value||draft?.coach||String(user.user_metadata?.full_name||""));
     void db.rpc("beta_club_request_status").then(({data,error})=>{
-      if(active){if(error)setError(error.message);else setStatus(data??"");}
+      if(active){
+        if(error)setError(error.message);
+        else {
+          setStatus(data??"");
+          if(data&&user.email)clearClubDraft(user.email);
+        }
+      }
     });
     return ()=>{active=false;};
   },[user]);
@@ -33,11 +41,15 @@ export function ClubRegistration(){
     try{
       if(user){
         const {data}=await db.rpc("beta_request_club",{label:club.trim(),coach:coach.trim()}).throwOnError();
+        if(user.email)clearClubDraft(user.email);
         setStatus(data);
       }else{
-        const {error}=await db.auth.signInWithOtp({email:email.trim(),options:{
+        const address=email.trim();
+        const label=club.trim(),name=coach.trim();
+        rememberClubDraft(address,label,name);
+        const {error}=await db.auth.signInWithOtp({email:address,options:{
           shouldCreateUser:true,emailRedirectTo:clubLink("/login?role=coach&create_club=1"),
-          data:{full_name:coach.trim(),requested_club:club.trim()},
+          data:{full_name:name,requested_club:label},
         }});
         if(error)throw error;
         setSent(true);
@@ -49,10 +61,10 @@ export function ClubRegistration(){
     <a className="entry-back" href="/login?role=coach">Til trenerinnlogging</a>
     <h1>Opprett ny klubb</h1>
     <p>Send en søknad om et privat klubboppsett. Når plattformeieren godkjenner den, blir du administrator for klubben.</p>
-    {user===undefined?<p role="status">Sjekker innlogging …</p>:status==="approved"?<p role="status">Klubben er godkjent. <a href="/">Åpne trenerrommet</a></p>:
+    {user===undefined?<p role="status">Sjekker innlogging …</p>:status==="approved"?<p role="status">Klubben er godkjent. <a href="/?setup=first-team">Sett opp første lag</a></p>:
       status==="pending"?<p role="status">Søknaden er sendt og venter på godkjenning. Åpne denne siden igjen for å se status.</p>:
       status==="declined"?<p role="status">Søknaden ble avslått.</p>:
-      sent&&!user?<p role="status">Sjekk e-posten din. Åpne lenken i denne nettleseren for å bekrefte kontoen og sende søknaden.</p>:
+      sent&&!user?<p role="status">Vi har sendt en bekreftelseslenke til {email.trim()} for <strong>{club.trim()}</strong>. Åpne lenken i samme nettleser for å se over og sende søknaden.</p>:
       <form className="grid" onSubmit={submit}>
         <label>Klubbnavn<input required maxLength={80} value={club} onChange={event=>setClub(event.target.value)}/></label>
         <label>Ditt navn<input required autoComplete="name" maxLength={100} value={coach} onChange={event=>setCoach(event.target.value)}/></label>

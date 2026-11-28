@@ -8,6 +8,7 @@ import { Activity, BookOpen, CalendarDays, Download, Dumbbell, LogOut, Users } f
 import { clubRole,db, demo, readBeta, selectTeam, type Snapshot } from "@/lib/beta";
 
 import {ClubRequestNotice} from "./club-request-notice";
+import {FirstTeamSetup} from "./first-team-setup";
 import { ProgramBuilder, type Run } from "./program-builder";
 import {WizardGate} from "./player-wizard";
 import { AthleteTraining } from "./athlete-training";
@@ -103,6 +104,7 @@ export function Workspace({ athlete = false, view="dashboard" }: { athlete?: boo
     <main className={"main grid coach-main "+(view==="match"?"match-main":"")} id="overview"><div className="phone-brand"><Brand/><button aria-label="Kontomeny" aria-expanded={more} onClick={()=>setMore(!more)}><UserRound/></button></div><header className="page-head"><div><span className="eyeline">Trenerrom / {pageTitle}</span><h1>{pageTitle}</h1></div>{account}</header>{more&&<section className="phone-more"><nav aria-label="Flere trenerverktøy">{navigation}</nav>{account}</section>}
     <nav className="phone-tabs" aria-label="Trenervalg"><a className={view==="dashboard"&&(!hash||hash==="#overview")?"current":""} href="/#overview"><House/>Oversikt</a><a className={view==="dashboard"&&hash==="#weekly"?"current":""} href="/#weekly"><CalendarDays/>Kalender</a><a className={view==="match"?"current":""} href="/match"><Volleyball aria-hidden="true"/>Kamper</a><button aria-expanded={more} onClick={()=>setMore(!more)}><Ellipsis/>Mer</button></nav>{notice}
     {data.club?.eligible&&db&&!preview&&<ClubRequestNotice key={data.me.id} active={data.club.active}/>}
+    {view==="dashboard"&&(!hash||hash==="#overview")&&!preview&&<FirstTeamSetup key={data.me.id} data={data}/>}
     {preview&&data.club?.active?<AdminAthleteView key={data.me.squad} data={data} exit={()=>{setPreview(false);void run(async()=>{await clubRole(restore);});}}/>:view==="court"?<CourtRoom key={data.me.squad} data={data}/>:view==="development"?<Development key={data.me.squad} data={data}/>:view==="live"?<LiveAnalysis key={data.me.squad} data={data}/>:view==="players"||view==="roster"?<PlayerHub key={data.me.squad} data={data} busy={busy} run={run} legacy={view==="players"}/>:view==="badges"?<BadgePanel key={data.me.squad} data={data}/>:view==="directory"?<DirectoryPanel key={String(data.club?.active)} data={data}/>:view==="challenges"?<Challenges key={data.me.squad} data={data}/>:view==="team"?<TeamTools key={data.me.squad+":"+data.admins.includes(data.me.id)} data={data} busy={busy} run={run}/>:view==="match"?<Kamper key={data.me.squad} data={data}/>:<Coach key={data.me.squad} hash={hash} data={data} busy={busy} run={run}/>}<details><summary>About the platform and account roles</summary><About/></details></main></div>;
 }
 function Brand(){return <div className="brand"><ClubCrest/><div>Lundehaugen IL<br/><small>Performance Platform</small></div></div>;}

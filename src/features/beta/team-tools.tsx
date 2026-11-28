@@ -22,7 +22,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
   const [newName,setNewName]=useState(""),[status,setStatus]=useState("");
   const pending=usePending(data.me.squad);
   const [tab,setTab]=useState("Medlemmer"),[method,setMethod]=useState("Lenke");
-  useEffect(()=>{const v=new URLSearchParams(location.search).get("vis");if(v==="posisjoner")setTab("Posisjoner");if(v==="soknader")setTab("Søknader");if(v==="inviter")setTab("Inviter");if(v==='foresatte')setTab('Foresatte');},[]);
+  useEffect(()=>{const v=new URLSearchParams(location.search).get("vis");if(v==="posisjoner")setTab("Posisjoner");if(v==="soknader")setTab("Søknader");if(v==="inviter")setTab("Inviter");if(v==="lagprofil")setTab("Lagprofil");if(v==='foresatte')setTab('Foresatte');},[]);
   const [email,setEmail]=useState("");
   const [role,setRole]=useState<Member["role"]>("athlete");
   const [links,setLinks]=useState<{email:string;url:string}[]>([]);
@@ -43,7 +43,7 @@ export function TeamTools({data,busy,run}:{data:Snapshot;busy:boolean;run:Run}){
     <form className="grid" onSubmit={async e=>{e.preventDefault();const next=name.trim();if(next&&await run(()=>saveTeamDetails(data.me.squad,next,logo))){setName(next);setStatus("Team details saved.");}}}><label>Team name<input value={name} maxLength={80} required onChange={e=>{setName(e.target.value);setStatus("");}}/></label>
     {logo&&<img src={logo} width={72} height={72} alt="Team logo preview"/>}<label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e=>{const file=e.target.files?.[0];if(file)try{setLogo(await thumbnail(file,true));}catch(err){setStatus((err as Error).message);}}}/></label>
     {logo&&<button className="btn" type="button" onClick={()=>setLogo("")}>Remove logo</button>}<button className="btn primary" disabled={busy||!name.trim()||(name.trim()===teamName&&logo===savedLogo)}>Save</button></form>
-    <details className="library-tools"><summary>Add another team</summary><FeatureInfo topic="team"/><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(()=>createTeam(data.me,next))){setNewName("");setStatus(next+" created. Publishing team: "+teamName+".");}}}><label>New team name<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Create team</button></form></details>
+    <details className="library-tools"><summary>Legg til et lag</summary><FeatureInfo topic="team"/><form className="grid" onSubmit={async e=>{e.preventDefault();const next=newName.trim();if(next&&await run(async()=>{await createTeam(data.me,next);})){setNewName("");setStatus(next+" er opprettet. Aktivt lag: "+teamName+".");}}}><label>Nytt lagnavn<input value={newName} required maxLength={80} onChange={e=>setNewName(e.target.value)}/></label><button className="btn" disabled={busy||!newName.trim()}>Opprett lag</button></form></details>
     </>}
     {tab==="Posisjoner"&&<CoachPositions data={data}/>}
     {tab==="Medlemmer"&&<TeamStaff data={data} busy={busy} run={run}/>}
