@@ -84,6 +84,14 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
     return account?{...event,playerId:account.id,playerName:account.name}:event;
   })};
   const timeline=matchTimeline(match.events);
+  const recent=timeline.filter(({event})=>event.type!=="clock").slice(-5).reverse();
+  function eventDetails(event:MatchEvent){
+    const type=event.type==="clock"?event.label:eventNames[event.type]+(event.type==="penalty"&&event.outcome?" · "+penaltyNames[event.outcome]:"");
+    const player=(event.side===ownSide&&event.playerId?resolve(event.playerId)?.name:undefined)??event.playerName;
+    const identity=[event.number===undefined?null:"#"+event.number,player].filter(Boolean).join(" ");
+    const team=event.side?match[event.side].name:"";
+    return {type,identity,team};
+  }
   const manualProtected=origin==="api"&&(match.eventOrigin==="manual"||(!match.eventOrigin&&match.events.length>0));
   useEffect(()=>{
     if(!refreshAfterSave.current||storage.pending||storage.syncing||storage.saveError)return;
@@ -227,6 +235,17 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
           if(latest)setDraft(latest);
           else{setTab("events");setFullscreen(false);}
         }}>{receipt?"Rett siste hendelse":"Åpne hendelsesloggen"}</button>
+        <section className="fixture-recent" aria-labelledby="fixture-recent-title">
+          <h4 id="fixture-recent-title">Siste hendelser</h4>
+          {recent.length?<ol>{recent.map(({event,home,away})=>{
+            const {type,identity,team}=eventDetails(event);
+            return <li key={event.id}><button className="btn fixture-recent-row" type="button" onClick={()=>setDraft(event)}>
+              <time>{event.half}. · {formatMatchTime(event.seconds)}</time>
+              <span><strong>{identity||team||type}</strong><small>{type}{identity&&team?" · "+team:""}</small></span>
+              <b>{home}–{away}</b><Pencil size={15} aria-hidden="true"/>
+            </button></li>;
+          })}</ol>:<p>Ingen hendelser registrert ennå.</p>}
+        </section>
       </div>}
     </dialog>
     {!game.completed&&match.clock.status!=="finished"&&<div className="day-strip">
@@ -257,11 +276,8 @@ export function FixtureEvents({game,data,onChange,rosterOnly,onOpenEvents,onOpen
     {tab==="events"?(timeline.length?<div className="fixture-event-scroll" role="region" aria-label="Alle kamphendelser" tabIndex={0}>
       <table className="table fixture-event-table"><thead><tr><th scope="col">Omg. tid</th><th scope="col">Hendelse</th><th scope="col">Stilling</th></tr></thead>
       <tbody>{timeline.map(({event,home,away},index)=>{
-        const type=event.type==="clock"?event.label:eventNames[event.type]+(event.type==="penalty"&&event.outcome?" · "+penaltyNames[event.outcome]:"");
+        const {type,identity,team}=eventDetails(event);
         const Icon=event.type==="goal"||event.type==="penalty"?Volleyball:event.type==="warning"?Square:Timer;
-        const player=(event.side===ownSide&&event.playerId?resolve(event.playerId)?.name:undefined)??event.playerName;
-        const identity=[event.number===undefined?null:"#"+event.number,player].filter(Boolean).join(" ");
-        const team=event.side?match[event.side].name:"";
         const breakRow=index>0&&timeline[index-1].event.half!==event.half;
         return <EventRows key={event.id} pause={breakRow?timeline[index-1].home+"–"+timeline[index-1].away:undefined}>
           <td><time>{event.half}. {formatMatchTime(event.seconds)}{event.id.startsWith("json:")?"*":""}</time></td>

@@ -98,3 +98,12 @@ body:has(.match-event-dialog[open]){overflow:hidden}
  .match-event-dialog-form{padding:12px 12px max(12px,env(safe-area-inset-bottom))}
  .match-event-dialog-actions .btn{flex:1 1 110px;justify-content:center}
 }
+
+.fixture-recent{display:grid;gap:6px;min-width:0}
+.fixture-recent h4,.fixture-recent ol{margin:0}
+.fixture-recent ol{display:grid;gap:4px;padding:0;list-style:none}
+.fixture-recent ol li{min-width:0}
+.fixture-recent .fixture-recent-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;width:100%;text-align:left}
+.fixture-recent-row span{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
+.fixture-recent-row time,.fixture-recent-row b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.fixture-recent-row small{color:var(--muted)}

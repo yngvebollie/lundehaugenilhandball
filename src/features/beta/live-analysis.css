@@ -17,3 +17,29 @@
 .live-timeline{list-style:none;padding:0;margin:0}.live-timeline li{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .live-timeline time{font-variant-numeric:tabular-nums}.live-undo{justify-self:start}.live-note{margin:0;min-height:1.4em}
 @media(max-width:700px){.live-layout{grid-template-columns:1fr;gap:10px}.live-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.live-controls h3{grid-column:1/-1}.live-controls input,.live-analysis select{min-width:0;width:100%}.live-select{gap:6px}.live-select label{flex-basis:140px}.live-numbers{gap:10px}.live-clock h2{font-size:1.75rem}.live-analysis .workspace-tabs{flex-wrap:wrap}}
+
+.live-keeper-picker,.live-keeper-form{display:grid;gap:8px;min-width:0}
+.live-keeper-picker label,.live-keeper-form label{display:grid;gap:4px;min-width:0}
+.live-keeper-picker select,.live-keeper-form input{width:100%;min-width:0}
+.live-keeper-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.live-keeper-actions .btn{min-height:38px}
+.live-keeper-form{padding:10px;border:1px solid var(--border);border-radius:8px}
+.live-keeper-form [role=alert]{color:#8c1538}
+@media(max-width:700px){.live-keeper-picker{grid-column:1/-1}}
+
+.keeper-fullscreen{position:fixed;inset:0;margin:0;padding:0;border:0;width:100%;max-width:none;height:100dvh;max-height:none;overflow:auto;overscroll-behavior:contain;color:var(--text);background:var(--panel,#fff)}
+.keeper-fullscreen-content{max-width:760px;margin:auto;display:grid;gap:12px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.keeper-fullscreen-content h3{margin:0}
+.keeper-fullscreen-content>header,.keeper-fullscreen-clock{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.keeper-fullscreen-clock strong{font-variant-numeric:tabular-nums}
+.keeper-fullscreen-content .btn{min-height:44px;touch-action:manipulation}
+.keeper-fullscreen-content .live-board{grid-template-columns:minmax(0,1fr)}
+.keeper-fullscreen-content .day-strip{gap:8px}
+.keeper-shot-context{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:8px}
+.keeper-shot-context select{width:100%;min-width:0}
+body:has(.keeper-fullscreen[open]){overflow:hidden}
+@media(max-width:600px){
+ .keeper-fullscreen-content{gap:8px}
+ .keeper-fullscreen-content .live-board{gap:8px}
+ .keeper-fullscreen-content .live-keeper-actions .btn{font-size:.85rem}
+}
